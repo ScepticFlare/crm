@@ -1,8 +1,5 @@
 package com.compact.crm.dto.request;
 
-import com.compact.crm.enums.LeadSource;
-import com.compact.crm.enums.LeadStatus;
-import com.compact.crm.enums.LeadValidity;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -16,7 +13,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class LeadRequest {
+public class CustomerRequest {
 
     @NotBlank(message = "Company name is required")
     private String companyName;
@@ -38,6 +35,7 @@ public class LeadRequest {
     private String email;
 
     private String secondaryEmail;
+
     private String website;
 
     @NotBlank(message = "City is required")
@@ -47,17 +45,18 @@ public class LeadRequest {
     private String state;
 
     private String pincode;
-    private String interestedProduct;
-    private String description;
 
-    @NotNull(message = "Lead status is required")
-    private LeadStatus leadStatus;
+    @NotBlank(message = "Billing address is required")
+    private String billingAddress;
 
-    private LeadValidity leadValidity;
+    @NotBlank(message = "Shipping address is required")
+    private String shippingAddress;
 
-    @NotNull(message = "Lead source is required")
-    private LeadSource leadSource;
+    private String gstNumber;
 
-    @NotNull(message = "Assigned employee is required")
+    @NotNull(message = "Assigned employee ID is required")
     private Long assignedEmployeeId;
+
+    @NotNull(message = "Opportunity ID is required")
+    private Long opportunityId;
 }

@@ -1,6 +1,7 @@
 package com.compact.crm.service;
 
 import com.compact.crm.dto.request.OpportunityRequest;
+import com.compact.crm.exception.ResourceNotFoundException;
 import com.compact.crm.entity.Lead;
 import com.compact.crm.entity.Opportunity;
 import com.compact.crm.repository.LeadRepository;
@@ -19,7 +20,7 @@ public class OpportunityService {
 
     public Opportunity createOpportunity(OpportunityRequest request) {
         Lead lead = leadRepository.findById(request.getLeadId())
-                .orElseThrow(() -> new RuntimeException("Lead not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Lead not found"));
 
         Opportunity opportunity = Opportunity.builder()
                 .title(request.getTitle())
@@ -38,15 +39,15 @@ public class OpportunityService {
 
     public Opportunity getOpportunityById(Long id) {
         return opportunityRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Opportunity not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Opportunity not found"));
     }
 
     public Opportunity updateOpportunity(Long id, OpportunityRequest request) {
         Opportunity opportunity = opportunityRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Opportunity not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Opportunity not found"));
 
         Lead lead = leadRepository.findById(request.getLeadId())
-                .orElseThrow(() -> new RuntimeException("Lead not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Lead not found"));
 
         opportunity.setTitle(request.getTitle());
         opportunity.setProductValue(request.getProductValue());
@@ -59,7 +60,7 @@ public class OpportunityService {
 
     public void deleteOpportunity(Long id) {
         Opportunity opportunity = opportunityRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Opportunity not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Opportunity not found"));
         opportunityRepository.delete(opportunity);
     }
 }

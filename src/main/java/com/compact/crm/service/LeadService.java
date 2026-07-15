@@ -1,7 +1,10 @@
 package com.compact.crm.service;
 
 import com.compact.crm.dto.request.LeadRequest;
+import com.compact.crm.exception.ResourceNotFoundException;
+import com.compact.crm.entity.Employee;
 import com.compact.crm.entity.Lead;
+import com.compact.crm.repository.EmployeeRepository;
 import com.compact.crm.repository.LeadRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,8 +16,12 @@ import java.util.List;
 public class LeadService {
 
     private final LeadRepository leadRepository;
+    private final EmployeeRepository employeeRepository;
 
     public Lead createLead(LeadRequest request) {
+
+        Employee employee = employeeRepository.findById(request.getAssignedEmployeeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
         Lead lead = Lead.builder()
                 .companyName(request.getCompanyName())
@@ -33,7 +40,7 @@ public class LeadService {
                 .leadStatus(request.getLeadStatus())
                 .leadValidity(request.getLeadValidity())
                 .leadSource(request.getLeadSource())
-                .assignedUserId(request.getAssignedUserId())
+                .assignedEmployee(employee)
                 .build();
 
         return leadRepository.save(lead);
@@ -45,12 +52,16 @@ public class LeadService {
 
     public Lead getLeadById(Long id) {
         return leadRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Lead not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Lead not found"));
     }
 
     public Lead updateLead(Long id, LeadRequest request) {
+
         Lead lead = leadRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Lead not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Lead not found"));
+
+        Employee employee = employeeRepository.findById(request.getAssignedEmployeeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
         lead.setCompanyName(request.getCompanyName());
         lead.setContactPerson(request.getContactPerson());
@@ -68,14 +79,16 @@ public class LeadService {
         lead.setLeadStatus(request.getLeadStatus());
         lead.setLeadValidity(request.getLeadValidity());
         lead.setLeadSource(request.getLeadSource());
-        lead.setAssignedUserId(request.getAssignedUserId());
+        lead.setAssignedEmployee(employee);
 
         return leadRepository.save(lead);
     }
 
     public void deleteLead(Long id) {
+
         Lead lead = leadRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Lead not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Lead not found"));
+
         leadRepository.delete(lead);
     }
 }
