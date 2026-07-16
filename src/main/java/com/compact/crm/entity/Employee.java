@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "employees")
@@ -25,7 +26,9 @@ public class Employee {
     @Column(unique = true, nullable = false)
     private String phone;
     @Column(nullable = false)
+    @JsonIgnore
     private String password;
+
 
     private Boolean isActive;
 

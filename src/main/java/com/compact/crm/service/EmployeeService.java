@@ -1,10 +1,11 @@
 package com.compact.crm.service;
 
 import com.compact.crm.dto.request.EmployeeRequest;
-import com.compact.crm.exception.ResourceNotFoundException;
 import com.compact.crm.entity.Employee;
+import com.compact.crm.exception.ResourceNotFoundException;
 import com.compact.crm.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.List;
 public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public Employee createEmployee(EmployeeRequest request) {
 
@@ -21,7 +23,7 @@ public class EmployeeService {
                 .name(request.getName())
                 .email(request.getEmail())
                 .phone(request.getPhone())
-                .password(request.getPassword())
+                .password(passwordEncoder.encode(request.getPassword()))
                 .build();
 
         return employeeRepository.save(employee);
@@ -44,7 +46,9 @@ public class EmployeeService {
         employee.setName(request.getName());
         employee.setEmail(request.getEmail());
         employee.setPhone(request.getPhone());
-        employee.setPassword(request.getPassword());
+
+        // Encode password before saving
+        employee.setPassword(passwordEncoder.encode(request.getPassword()));
 
         return employeeRepository.save(employee);
     }
