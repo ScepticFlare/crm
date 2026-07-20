@@ -5,6 +5,7 @@ import com.compact.crm.entity.Lead;
 import com.compact.crm.service.LeadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -16,7 +17,7 @@ public class LeadController {
     private final LeadService leadService;
 
     @PostMapping
-    public Lead createLead(@RequestBody LeadRequest request) {
+    public Lead createLead(@Valid @RequestBody LeadRequest request) {
         return leadService.createLead(request);
     }
 

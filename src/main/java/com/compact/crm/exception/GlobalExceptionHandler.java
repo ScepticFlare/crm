@@ -14,6 +14,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiError> handleResourceNotFound(ResourceNotFoundException ex) {
 
+        ex.printStackTrace();
+
         ApiError error = new ApiError(
                 LocalDateTime.now().toString(),
                 HttpStatus.NOT_FOUND.value(),
@@ -27,6 +29,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleIllegalArgument(IllegalArgumentException ex) {
 
+        ex.printStackTrace();
+
         ApiError error = new ApiError(
                 LocalDateTime.now().toString(),
                 HttpStatus.BAD_REQUEST.value(),
@@ -37,20 +41,10 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiError> handleGeneralException(Exception ex) {
-
-        ApiError error = new ApiError(
-                LocalDateTime.now().toString(),
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
-                "An unexpected error occurred."
-        );
-
-        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidationException(MethodArgumentNotValidException ex) {
+
+        ex.printStackTrace();
 
         String message = ex.getBindingResult()
                 .getFieldErrors()
@@ -67,5 +61,21 @@ public class GlobalExceptionHandler {
         );
 
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleGeneralException(Exception ex) {
+
+        // Print the full exception to the IntelliJ console
+        ex.printStackTrace();
+
+        ApiError error = new ApiError(
+                LocalDateTime.now().toString(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+                ex.getClass().getSimpleName() + ": " + ex.getMessage()
+        );
+
+        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
