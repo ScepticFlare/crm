@@ -1,0 +1,229 @@
+/* ==========================
+   GLOBAL
+========================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #f4f7fc;
+    font-family: "Segoe UI", sans-serif;
+    color: #1f2937;
+}
+
+a {
+    text-decoration: none;
+}
+
+/* ==========================
+   SIDEBAR
+========================== */
+
+.sidebar {
+    width: 260px;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    background: linear-gradient(180deg,#1e293b,#0f172a);
+    color: white;
+    padding: 30px 18px;
+}
+
+.logo {
+    text-align: center;
+    font-size: 34px;
+    font-weight: bold;
+    margin-bottom: 45px;
+    color: white;
+}
+
+.logo span {
+    color: #3b82f6;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    width: 100%;
+
+    color: #cbd5e1;
+
+    padding: 14px 18px;
+
+    border-radius: 12px;
+
+    margin-bottom: 10px;
+
+    transition: .25s;
+
+    font-size: 16px;
+}
+
+.sidebar-link:hover {
+    background: rgba(255,255,255,.08);
+    color: white;
+}
+
+.sidebar-link.active {
+    background: #2563eb;
+    color: white;
+}
+
+.sidebar-link i {
+    font-size: 20px;
+}
+
+/* ==========================
+   MAIN
+========================== */
+
+.main-content {
+    margin-left: 260px;
+    min-height: 100vh;
+}
+
+/* ==========================
+   NAVBAR
+========================== */
+
+.topbar {
+
+    height: 72px;
+
+    background: white;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    padding: 0 35px;
+
+    box-shadow: 0 2px 18px rgba(0,0,0,.08);
+}
+
+.topbar-title{
+    font-size:24px;
+    font-weight:700;
+}
+
+/* ==========================
+   PAGE
+========================== */
+
+.page-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:30px;
+}
+
+.page-title{
+    font-size:42px;
+    font-weight:700;
+}
+
+.page-subtitle{
+    color:#6b7280;
+    margin-top:5px;
+}
+
+/* ==========================
+   BUTTONS
+========================== */
+
+.btn-primary{
+    background:#2563eb;
+    border:none;
+    border-radius:12px;
+    padding:11px 22px;
+}
+
+.btn-primary:hover{
+    background:#1d4ed8;
+}
+
+/* ==========================
+   CARDS
+========================== */
+
+.card{
+
+    border:none;
+
+    border-radius:18px;
+
+    box-shadow:0 8px 22px rgba(0,0,0,.08);
+}
+
+/* ==========================
+   TABLE
+========================== */
+
+.table{
+    margin-bottom:0;
+}
+
+.table thead{
+    background:#f8fafc;
+}
+
+.table th{
+    font-weight:600;
+    color:#374151;
+}
+
+.table tbody tr:hover{
+    background:#f3f8ff;
+}
+
+/* ==========================
+   SEARCH
+========================== */
+
+.search-input{
+
+    border-radius:14px;
+
+    padding:12px 16px;
+
+}
+
+/* ==========================
+   STATUS BADGES
+========================== */
+
+.badge{
+    padding:8px 12px;
+    border-radius:20px;
+}
+.quick-action-btn{
+    transition:0.25s;
+}
+
+.quick-action-btn:hover{
+    transform:translateY(-3px);
+    box-shadow:0 .75rem 1.5rem rgba(0,0,0,.12)!important;
+}
+
+.dashboard-widget{
+    border-radius:20px;
+    border:none;
+    box-shadow:0 8px 30px rgba(0,0,0,.06);
+}
+
+.dashboard-widget .card-body{
+    padding:24px;
+}
+
+.widget-title{
+    font-weight:700;
+    margin-bottom:20px;
+}
