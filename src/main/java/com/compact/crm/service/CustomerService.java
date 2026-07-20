@@ -59,7 +59,7 @@ public class CustomerService {
         return customerRepository.save(customer);
     }
 
-    public Customer convertOpportunity(Long opportunityId) {
+    public Customer convertOpportunity(Long opportunityId, CustomerRequest request) {
 
         Opportunity opportunity = opportunityRepository.findById(opportunityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Opportunity not found"));
@@ -87,6 +87,12 @@ public class CustomerService {
                 .city(lead.getCity())
                 .state(lead.getState())
                 .pincode(lead.getPincode())
+
+                // Customer-specific fields entered during conversion
+                .gstNumber(request.getGstNumber())
+                .billingAddress(request.getBillingAddress())
+                .shippingAddress(request.getShippingAddress())
+
                 .assignedEmployee(lead.getAssignedEmployee())
                 .opportunity(opportunity)
                 .build();

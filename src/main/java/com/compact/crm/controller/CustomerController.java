@@ -21,8 +21,11 @@ public class CustomerController {
     }
 
     @PostMapping("/convert/{opportunityId}")
-    public Customer convertOpportunity(@PathVariable Long opportunityId) {
-        return customerService.convertOpportunity(opportunityId);
+    public Customer convertOpportunity(
+            @PathVariable Long opportunityId,
+            @RequestBody CustomerRequest request) {
+
+        return customerService.convertOpportunity(opportunityId, request);
     }
 
     @GetMapping

@@ -15,9 +15,12 @@ public class OpportunityController {
 
     private final OpportunityService opportunityService;
 
-    @PostMapping
-    public Opportunity createOpportunity(@RequestBody OpportunityRequest request) {
-        return opportunityService.createOpportunity(request);
+    @PostMapping("/convert/{leadId}")
+    public Opportunity convertLeadToOpportunity(
+            @PathVariable Long leadId,
+            @RequestBody OpportunityRequest request) {
+
+        return opportunityService.convertLeadToOpportunity(leadId, request);
     }
 
     @GetMapping
@@ -31,7 +34,10 @@ public class OpportunityController {
     }
 
     @PutMapping("/{id}")
-    public Opportunity updateOpportunity(@PathVariable Long id, @RequestBody OpportunityRequest request) {
+    public Opportunity updateOpportunity(
+            @PathVariable Long id,
+            @RequestBody OpportunityRequest request) {
+
         return opportunityService.updateOpportunity(id, request);
     }
 

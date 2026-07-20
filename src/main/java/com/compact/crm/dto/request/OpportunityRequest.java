@@ -16,9 +16,6 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class OpportunityRequest {
 
-    @NotNull(message = "Lead is required")
-    private Long leadId;
-
     @NotBlank(message = "Opportunity title is required")
     private String title;
 
