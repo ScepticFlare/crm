@@ -5,6 +5,9 @@ import com.compact.crm.enums.LeadStatus;
 import com.compact.crm.enums.LeadValidity;
 import jakarta.persistence.*;
 import lombok.*;
+import com.compact.crm.entity.Product;
+import com.compact.crm.entity.Industry;
+import com.compact.crm.entity.LeadSourceMaster;
 
 import java.time.LocalDateTime;
 
@@ -43,7 +46,13 @@ public class Lead {
 
     private String pincode;
 
-    private String interestedProduct;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id")
+    private Product product;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "industry_id")
+    private Industry industry;
 
     @Column(columnDefinition = "TEXT")
     private String description;
@@ -54,8 +63,9 @@ public class Lead {
     @Enumerated(EnumType.STRING)
     private LeadValidity leadValidity;
 
-    @Enumerated(EnumType.STRING)
-    private LeadSource leadSource;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lead_source_id")
+    private LeadSourceMaster leadSource;
 
     @ManyToOne
     @JoinColumn(name = "assigned_employee_id")

@@ -47,7 +47,9 @@ public class LeadRequest {
     private String state;
 
     private String pincode;
-    private String interestedProduct;
+    private Long productId;
+    private Long industryId;
+    private Long leadSourceId;
     private String description;
 
     @NotNull(message = "Lead status is required")
@@ -55,8 +57,6 @@ public class LeadRequest {
 
     private LeadValidity leadValidity;
 
-    @NotNull(message = "Lead source is required")
-    private LeadSource leadSource;
 
     @NotNull(message = "Assigned employee is required")
     private Long assignedEmployeeId;

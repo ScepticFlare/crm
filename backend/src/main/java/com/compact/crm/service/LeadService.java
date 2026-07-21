@@ -1,11 +1,14 @@
 package com.compact.crm.service;
 
 import com.compact.crm.dto.request.LeadRequest;
-import com.compact.crm.exception.ResourceNotFoundException;
 import com.compact.crm.entity.Employee;
 import com.compact.crm.entity.Lead;
+import com.compact.crm.exception.ResourceNotFoundException;
 import com.compact.crm.repository.EmployeeRepository;
+import com.compact.crm.repository.IndustryRepository;
 import com.compact.crm.repository.LeadRepository;
+import com.compact.crm.repository.LeadSourceMasterRepository;
+import com.compact.crm.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +20,9 @@ public class LeadService {
 
     private final LeadRepository leadRepository;
     private final EmployeeRepository employeeRepository;
+    private final ProductRepository productRepository;
+    private final IndustryRepository industryRepository;
+    private final LeadSourceMasterRepository leadSourceMasterRepository;
 
     public Lead createLead(LeadRequest request) {
 
@@ -35,11 +41,21 @@ public class LeadService {
                 .city(request.getCity())
                 .state(request.getState())
                 .pincode(request.getPincode())
-                .interestedProduct(request.getInterestedProduct())
+                .product(
+                        productRepository.findById(request.getProductId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Product not found"))
+                )
+                .industry(
+                        industryRepository.findById(request.getIndustryId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Industry not found"))
+                )
                 .description(request.getDescription())
                 .leadStatus(request.getLeadStatus())
                 .leadValidity(request.getLeadValidity())
-                .leadSource(request.getLeadSource())
+                .leadSource(
+                        leadSourceMasterRepository.findById(request.getLeadSourceId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Lead Source not found"))
+                )
                 .assignedEmployee(employee)
                 .build();
 
@@ -74,11 +90,26 @@ public class LeadService {
         lead.setCity(request.getCity());
         lead.setState(request.getState());
         lead.setPincode(request.getPincode());
-        lead.setInterestedProduct(request.getInterestedProduct());
+
+        lead.setProduct(
+                productRepository.findById(request.getProductId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Product not found"))
+        );
+
+        lead.setIndustry(
+                industryRepository.findById(request.getIndustryId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Industry not found"))
+        );
+
         lead.setDescription(request.getDescription());
         lead.setLeadStatus(request.getLeadStatus());
         lead.setLeadValidity(request.getLeadValidity());
-        lead.setLeadSource(request.getLeadSource());
+
+        lead.setLeadSource(
+                leadSourceMasterRepository.findById(request.getLeadSourceId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Lead Source not found"))
+        );
+
         lead.setAssignedEmployee(employee);
 
         return leadRepository.save(lead);
