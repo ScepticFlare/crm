@@ -10,6 +10,17 @@ export const getFollowUpById = async (id) => {
     return response.data;
 };
 
+// ADD THESE TWO FUNCTIONS 👇
+export const getFollowUpsByLead = async (leadId) => {
+    const response = await api.get(`/followups/lead/${leadId}`);
+    return response.data;
+};
+
+export const getFollowUpsByOpportunity = async (opportunityId) => {
+    const response = await api.get(`/followups/opportunity/${opportunityId}`);
+    return response.data;
+};
+
 export const createFollowUp = async (followUp) => {
     const response = await api.post("/followups", followUp);
     return response.data;

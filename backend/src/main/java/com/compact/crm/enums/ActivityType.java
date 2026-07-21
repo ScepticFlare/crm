@@ -6,8 +6,10 @@ public enum ActivityType {
     EMAIL,
     MEETING,
     VISIT,
-    WHATSAPP,
     DEMO,
     QUOTATION,
-    OTHER
+    WHATSAPP,
+    OTHER,
+    CUSTOM
+
 }

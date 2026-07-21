@@ -25,6 +25,22 @@ public class FollowUpController {
         return followUpService.getAllFollowUps();
     }
 
+    @GetMapping("/lead/{leadId}")
+    public List<FollowUp> getFollowUpsByLead(
+            @PathVariable Long leadId) {
+
+        return followUpService.getFollowUpsByLead(leadId);
+
+    }
+
+    @GetMapping("/opportunity/{opportunityId}")
+    public List<FollowUp> getFollowUpsByOpportunity(
+            @PathVariable Long opportunityId) {
+
+        return followUpService.getFollowUpsByOpportunity(opportunityId);
+
+    }
+
     @GetMapping("/{id}")
     public FollowUp getFollowUpById(@PathVariable Long id) {
         return followUpService.getFollowUpById(id);

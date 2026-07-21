@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-
+import FollowUpSection from "../components/FollowUpSection";
 import PageHeader from "../components/PageHeader";
 import { getLeadById } from "../services/leadService";
 
@@ -288,6 +288,10 @@ export default function LeadDetails() {
                 </div>
 
             </div>
+
+            <FollowUpSection
+                leadId={lead.id}
+            />
 
         </>
 

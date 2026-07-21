@@ -94,7 +94,7 @@ export default function FollowUps() {
 
             followUp.employee?.name?.toLowerCase().includes(text) ||
 
-            followUp.activityType?.toLowerCase().includes(text) ||
+            followUp.activityType?.name?.toLowerCase().includes(text) ||
 
             followUp.status?.toLowerCase().includes(text) ||
 
@@ -141,7 +141,8 @@ export default function FollowUps() {
         followUps.filter(f =>
             f.scheduledDate?.startsWith(today)
         ).length;
-            const columns = [
+
+    const columns = [
 
         {
             key: "lead",
@@ -172,7 +173,7 @@ export default function FollowUps() {
             label: "Activity",
 
             render: (row) =>
-                row.activityType?.replaceAll("_", " ")
+                row.activityType?.name || "-"
         },
 
         {
@@ -211,10 +212,7 @@ export default function FollowUps() {
                 title="Follow Ups"
                 subtitle={`${filteredFollowUps.length} Follow Up(s) Found`}
                 buttonText="Add Follow Up"
-                onButtonClick={() => {
-                    alert("clicked");
-                    navigate("/followups/add");
-                    }}
+                onButtonClick={() => navigate("/followups/add")}
             />
 
             <div className="row mb-4">
@@ -304,9 +302,7 @@ export default function FollowUps() {
                     <div className="input-group">
 
                         <span className="input-group-text bg-white">
-
                             <i className="bi bi-search"></i>
-
                         </span>
 
                         <input
@@ -361,7 +357,7 @@ export default function FollowUps() {
                 title="Delete Follow Up"
                 message={
                     selectedFollowUp
-                        ? `Delete this follow up?`
+                        ? "Delete this follow up?"
                         : ""
                 }
                 onClose={closeDeleteModal}

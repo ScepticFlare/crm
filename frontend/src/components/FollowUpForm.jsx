@@ -1,372 +1,313 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 
-import PageHeader from "../components/PageHeader";
-import DataTable from "../components/DataTable";
-import DeleteModal from "../components/DeleteModal";
+import { getAllActivityTypes } from "../services/activityTypeService";
+import ActivityTypeModal from "./ActivityTypeModal";
 
-import {
-    getAllFollowUps,
-    deleteFollowUp
-} from "../services/followUpService";
+export default function FollowUpForm({
+    form,
+    setForm,
+    employees,
+    leads,
+    opportunities,
+    onSubmit,
+    submitText,
+    hideLead = false,
+    hideOpportunity = false,
+}) {
 
-export default function FollowUps() {
-
-    const navigate = useNavigate();
-
-    const [followUps, setFollowUps] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    const [search, setSearch] = useState("");
-
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [selectedFollowUp, setSelectedFollowUp] = useState(null);
+    const [activityTypes, setActivityTypes] = useState([]);
+    const [showActivityModal, setShowActivityModal] = useState(false);
 
     useEffect(() => {
-        loadFollowUps();
+        loadActivityTypes();
     }, []);
 
-    async function loadFollowUps() {
-
+    async function loadActivityTypes() {
         try {
+            const data = await getAllActivityTypes();
+            setActivityTypes(data);
+        } catch (err) {
+            console.error("Failed to load activity types", err);
+        }
+    }
 
-            const data = await getAllFollowUps();
+    function handleChange(e) {
+        const { name, value } = e.target;
 
-            setFollowUps(data);
-
-        } catch (error) {
-
-            console.error(error);
-
-        } finally {
-
-            setLoading(false);
-
+        if (name === "activityTypeId" && value === "__NEW__") {
+            setShowActivityModal(true);
+            return;
         }
 
+        setForm(prev => ({
+            ...prev,
+            [name]: value
+        }));
     }
 
-    function openDeleteModal(followUp) {
+    async function handleActivityCreated(activity) {
 
-        setSelectedFollowUp(followUp);
+        await loadActivityTypes();
 
-        setShowDeleteModal(true);
-
+        setForm(prev => ({
+            ...prev,
+            activityTypeId: activity.id.toString()
+        }));
     }
-
-    function closeDeleteModal() {
-
-        setSelectedFollowUp(null);
-
-        setShowDeleteModal(false);
-
-    }
-
-    async function confirmDelete() {
-
-        try {
-
-            await deleteFollowUp(selectedFollowUp.id);
-
-            closeDeleteModal();
-
-            await loadFollowUps();
-
-        } catch (error) {
-
-            console.error(error);
-
-            alert("Unable to delete follow up.");
-
-        }
-
-    }
-
-    const filteredFollowUps = useMemo(() => {
-
-        const text = search.toLowerCase();
-
-        return followUps.filter((followUp) =>
-
-            followUp.lead?.companyName?.toLowerCase().includes(text) ||
-
-            followUp.opportunity?.title?.toLowerCase().includes(text) ||
-
-            followUp.employee?.name?.toLowerCase().includes(text) ||
-
-            followUp.activityType?.toLowerCase().includes(text) ||
-
-            followUp.status?.toLowerCase().includes(text) ||
-
-            followUp.remarks?.toLowerCase().includes(text)
-
-        );
-
-    }, [followUps, search]);
-
-    function statusColor(status) {
-
-        switch (status) {
-
-            case "PENDING":
-                return "warning";
-
-            case "COMPLETED":
-                return "success";
-
-            case "MISSED":
-                return "danger";
-
-            case "CANCELLED":
-                return "secondary";
-
-            default:
-                return "dark";
-
-        }
-
-    }
-
-    const totalFollowUps = followUps.length;
-
-    const pendingFollowUps =
-        followUps.filter(f => f.status === "PENDING").length;
-
-    const completedFollowUps =
-        followUps.filter(f => f.status === "COMPLETED").length;
-
-    const today = new Date().toISOString().split("T")[0];
-
-    const todayFollowUps =
-        followUps.filter(f =>
-            f.scheduledDate?.startsWith(today)
-        ).length;
-            const columns = [
-
-        {
-            key: "lead",
-            label: "Lead",
-
-            render: (row) =>
-                row.lead?.companyName || "-"
-        },
-
-        {
-            key: "opportunity",
-            label: "Opportunity",
-
-            render: (row) =>
-                row.opportunity?.title || "-"
-        },
-
-        {
-            key: "employee",
-            label: "Employee",
-
-            render: (row) =>
-                row.employee?.name || "-"
-        },
-
-        {
-            key: "activity",
-            label: "Activity",
-
-            render: (row) =>
-                row.activityType?.replaceAll("_", " ")
-        },
-
-        {
-            key: "scheduledDate",
-            label: "Scheduled",
-
-            render: (row) =>
-                row.scheduledDate
-                    ? new Date(row.scheduledDate).toLocaleString()
-                    : "-"
-        },
-
-        {
-            key: "status",
-            label: "Status",
-
-            render: (row) => (
-
-                <span
-                    className={`badge bg-${statusColor(row.status)}`}
-                >
-                    {row.status}
-                </span>
-
-            )
-
-        }
-
-    ];
 
     return (
-
         <>
+            <div className="card shadow-sm border-0">
 
-            <PageHeader
-                title="Follow Ups"
-                subtitle={`${filteredFollowUps.length} Follow Up(s) Found`}
-                buttonText="Add Follow Up"
-                onButtonClick={() => navigate("/followups/add")}
-            />
+                <div className="card-body p-4">
 
-            <div className="row mb-4">
+                    <form onSubmit={onSubmit}>
 
-                <div className="col-md-3">
+                        <div className="row g-3">
 
-                    <div className="card shadow-sm border-0">
+                            {/* Lead */}
 
-                        <div className="card-body">
+                            {!hideLead && (
 
-                            <small className="text-muted">
-                                Total Follow Ups
-                            </small>
+                                <div className="col-md-6">
 
-                            <h3>{totalFollowUps}</h3>
+                                    <label className="form-label">
+
+                                        Lead
+
+                                    </label>
+
+                                <select
+                                    className="form-select"
+                                    name="leadId"
+                                    value={form.leadId}
+                                    onChange={handleChange}
+                                >
+
+                                    <option value="">
+
+                                        Select Lead
+
+                                    </option>
+
+                                    {leads.map(lead => (
+
+                                        <option
+                                            key={lead.id}
+                                            value={lead.id}
+                                        >
+
+                                            {lead.companyName}
+
+                                         </option>
+
+                                ))}
+
+    </select>
+
+</div>
+
+)}
+
+                            {/* Opportunity */}
+
+                            {!hideOpportunity && (
+
+                                <div className="col-md-6">
+
+                                    <label className="form-label">
+
+                                        Opportunity
+
+                                    </label>
+
+                                    <select
+                                        className="form-select"
+                                        name="opportunityId"
+                                        value={form.opportunityId}
+                                        onChange={handleChange}
+                                    >
+
+                                        <option value="">
+
+                                            Select Opportunity
+
+                                        </option>
+
+                                         {opportunities.map(opp => (
+
+                                            <option
+                                                key={opp.id}
+                                                value={opp.id}
+                                            >
+
+                                                {opp.title}
+
+                                         </option>
+
+                            ))}
+
+    </select>
+
+</div>
+
+)}
+
+                            {/* Employee */}
+
+                            <div className="col-md-6">
+                                <label className="form-label">
+                                    Assigned Employee
+                                </label>
+
+                                <select
+                                    className="form-select"
+                                    name="employeeId"
+                                    value={form.employeeId}
+                                    onChange={handleChange}
+                                    required
+                                >
+                                    <option value="">Select Employee</option>
+
+                                    {employees.map(emp => (
+                                        <option key={emp.id} value={emp.id}>
+                                            {emp.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Activity Type */}
+
+                            <div className="col-md-6">
+
+                                <label className="form-label">
+                                    Activity Type
+                                </label>
+
+                                <select
+                                    className="form-select"
+                                    name="activityTypeId"
+                                    value={form.activityTypeId}
+                                    onChange={handleChange}
+                                    required
+                                >
+                                    <option value="">
+                                        Select Activity
+                                    </option>
+
+                                    {activityTypes.map(activity => (
+
+                                        <option
+                                            key={activity.id}
+                                            value={activity.id}
+                                        >
+                                            {activity.name}
+                                        </option>
+
+                                    ))}
+
+                                    <option value="__NEW__">
+                                        ➕ Add New Activity...
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+                            {/* Status */}
+
+                            <div className="col-md-6">
+                                <label className="form-label">
+                                    Status
+                                </label>
+
+                                <select
+                                    className="form-select"
+                                    name="status"
+                                    value={form.status}
+                                    onChange={handleChange}
+                                >
+                                    <option value="PENDING">Pending</option>
+                                    <option value="COMPLETED">Completed</option>
+                                    <option value="MISSED">Missed</option>
+                                    <option value="CANCELLED">Cancelled</option>
+                                </select>
+                            </div>
+
+                            {/* Scheduled Date */}
+
+                            <div className="col-md-6">
+                                <label className="form-label">
+                                    Scheduled Date
+                                </label>
+
+                                <input
+                                    type="datetime-local"
+                                    className="form-control"
+                                    name="scheduledDate"
+                                    value={form.scheduledDate}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </div>
+
+                            {/* Completed Date */}
+
+                            <div className="col-md-6">
+                                <label className="form-label">
+                                    Completed Date
+                                </label>
+
+                                <input
+                                    type="datetime-local"
+                                    className="form-control"
+                                    name="completedDate"
+                                    value={form.completedDate}
+                                    onChange={handleChange}
+                                />
+                            </div>
+
+                            {/* Remarks */}
+
+                            <div className="col-12">
+                                <label className="form-label">
+                                    Remarks
+                                </label>
+
+                                <textarea
+                                    className="form-control"
+                                    rows="4"
+                                    name="remarks"
+                                    value={form.remarks}
+                                    onChange={handleChange}
+                                />
+                            </div>
 
                         </div>
 
-                    </div>
+                        <div className="mt-4">
 
-                </div>
-
-                <div className="col-md-3">
-
-                    <div className="card shadow-sm border-0">
-
-                        <div className="card-body">
-
-                            <small className="text-muted">
-                                Pending
-                            </small>
-
-                            <h3 className="text-warning">
-                                {pendingFollowUps}
-                            </h3>
+                            <button
+                                className="btn btn-primary"
+                                type="submit"
+                            >
+                                {submitText}
+                            </button>
 
                         </div>
 
-                    </div>
-
-                </div>
-
-                <div className="col-md-3">
-
-                    <div className="card shadow-sm border-0">
-
-                        <div className="card-body">
-
-                            <small className="text-muted">
-                                Completed
-                            </small>
-
-                            <h3 className="text-success">
-                                {completedFollowUps}
-                            </h3>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <div className="col-md-3">
-
-                    <div className="card shadow-sm border-0">
-
-                        <div className="card-body">
-
-                            <small className="text-muted">
-                                Today's Follow Ups
-                            </small>
-
-                            <h3>{todayFollowUps}</h3>
-
-                        </div>
-
-                    </div>
+                    </form>
 
                 </div>
 
             </div>
 
-            <div className="card shadow-sm border-0 mb-4">
-
-                <div className="card-body">
-
-                    <div className="input-group">
-
-                        <span className="input-group-text bg-white">
-
-                            <i className="bi bi-search"></i>
-
-                        </span>
-
-                        <input
-                            className="form-control border-start-0"
-                            placeholder="Search follow up..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <DataTable
-                columns={columns}
-                data={filteredFollowUps}
-                loading={loading}
-                renderActions={(row) => (
-
-                    <div className="btn-group">
-
-                        <button
-                            className="btn btn-sm btn-primary"
-                            onClick={() => navigate(`/followups/${row.id}`)}
-                        >
-                            <i className="bi bi-eye"></i>
-                        </button>
-
-                        <button
-                            className="btn btn-sm btn-warning"
-                            onClick={() => navigate(`/followups/edit/${row.id}`)}
-                        >
-                            <i className="bi bi-pencil"></i>
-                        </button>
-
-                        <button
-                            className="btn btn-sm btn-danger"
-                            onClick={() => openDeleteModal(row)}
-                        >
-                            <i className="bi bi-trash"></i>
-                        </button>
-
-                    </div>
-
-                )}
+            <ActivityTypeModal
+                show={showActivityModal}
+                onClose={() => setShowActivityModal(false)}
+                onCreated={handleActivityCreated}
             />
-
-            <DeleteModal
-                show={showDeleteModal}
-                title="Delete Follow Up"
-                message={
-                    selectedFollowUp
-                        ? `Delete this follow up?`
-                        : ""
-                }
-                onClose={closeDeleteModal}
-                onConfirm={confirmDelete}
-            />
-
         </>
-
     );
-
 }

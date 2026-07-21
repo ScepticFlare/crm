@@ -1,6 +1,5 @@
 package com.compact.crm.entity;
 
-import com.compact.crm.enums.ActivityType;
 import com.compact.crm.enums.FollowUpStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -32,7 +31,8 @@ public class FollowUp {
     @JoinColumn(name = "employee_id")
     private Employee employee;
 
-    @Enumerated(EnumType.STRING)
+    @ManyToOne
+    @JoinColumn(name = "activity_type_id")
     private ActivityType activityType;
 
     @Enumerated(EnumType.STRING)

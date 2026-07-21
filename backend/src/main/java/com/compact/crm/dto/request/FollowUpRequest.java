@@ -1,6 +1,5 @@
 package com.compact.crm.dto.request;
 
-import com.compact.crm.enums.ActivityType;
 import com.compact.crm.enums.FollowUpStatus;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
@@ -24,8 +23,8 @@ public class FollowUpRequest {
     @NotNull(message = "Assigned employee is required")
     private Long employeeId;
 
-    @NotNull(message = "Activity type is required")
-    private ActivityType activityType;
+    @NotNull(message = "Activity Type is required")
+    private Long activityTypeId;
 
     private FollowUpStatus status;
 

@@ -25,7 +25,7 @@ import FollowUpDetails from "./pages/FollowUpDetails";
 
 import MainLayout from "./layouts/MainLayout";
 import ProtectedRoute from "./routes/ProtectedRoute";
-
+import ConvertCustomer from "./pages/ConvertCustomer";
 function App() {
 
     return (
@@ -135,6 +135,10 @@ function App() {
                     <Route
                         path="/followups/:id"
                         element={<FollowUpDetails />}
+                    />
+                    <Route
+                         path="/customers/convert/:id"
+                        element={<ConvertCustomer />}
                     />
 
                 </Route>

@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import PageHeader from "../components/PageHeader";
 import QuickActionCard from "../components/QuickActionCard";
 import StatCard from "../components/StatCard";
@@ -10,6 +12,8 @@ import { getAllFollowUps } from "../services/followupService";
 
 export default function Dashboard() {
 
+    const navigate = useNavigate();
+
     const [loading, setLoading] = useState(true);
 
     const [stats, setStats] = useState({
@@ -20,6 +24,8 @@ export default function Dashboard() {
     });
 
     const [recentLeads, setRecentLeads] = useState([]);
+    const [upcomingFollowUps, setUpcomingFollowUps] = useState([]);
+
     const [pipeline, setPipeline] = useState({
         NEW: 0,
         QUOTATION_SENT: 0,
@@ -29,8 +35,33 @@ export default function Dashboard() {
         LOST: 0
     });
 
+    const greeting = useMemo(() => {
+
+        const hour = new Date().getHours();
+
+        if (hour < 12) return "Good Morning";
+        if (hour < 18) return "Good Afternoon";
+
+        return "Good Evening";
+
+    }, []);
+
+    const employeeName =
+        localStorage.getItem("employeeName") || "Employee";
+
+    const pipelineColors = {
+        NEW: "primary",
+        QUOTATION_SENT: "warning",
+        NEGOTIATION: "info",
+        POSTPONED: "secondary",
+        WON: "success",
+        LOST: "danger"
+    };
+
     useEffect(() => {
+
         loadDashboard();
+
     }, []);
 
     async function loadDashboard() {
@@ -38,30 +69,41 @@ export default function Dashboard() {
         try {
 
             const [
+
                 leadRes,
                 customerRes,
                 opportunityRes,
                 followupRes
+
             ] = await Promise.all([
+
                 getAllLeads(),
                 getAllCustomers(),
                 getAllOpportunities(),
                 getAllFollowUps()
-            ]);
 
-            const leads = leadRes.data;
-            const customers = customerRes.data;
-            const opportunities = opportunityRes.data;
-            const followups = followupRes.data;
+            ]);
+            console.log(leadRes);
+            console.log(customerRes);
+            console.log(opportunityRes);
+            console.log(followupRes);
+
+            const leads = leadRes || [];
+            const customers = customerRes || [];
+            const opportunities = opportunityRes || [];
+            const followups = followupRes || [];
+            console.log("Follow Ups:", followups);
 
             setStats({
+
                 leads: leads.length,
                 customers: customers.length,
                 opportunities: opportunities.length,
                 followups: followups.length
+
             });
 
-            const latest = [...leads]
+            const latestLeads = [...leads]
                 .sort(
                     (a, b) =>
                         new Date(b.createdAt) -
@@ -69,15 +111,41 @@ export default function Dashboard() {
                 )
                 .slice(0, 5);
 
-            setRecentLeads(latest);
+            setRecentLeads(latestLeads);
+
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const nextFollowUps = [...followups]
+                .filter((followUp) => {
+
+                    if (followUp.status !== "PENDING") return false;
+
+                    const scheduledDate = new Date(followUp.scheduledDate);
+                    scheduledDate.setHours(0, 0, 0, 0);
+
+                    return scheduledDate >= today;
+
+                })
+                .sort(
+                    (a, b) =>
+                        new Date(a.scheduledDate) -
+                        new Date(b.scheduledDate)
+                )
+                .slice(0, 5);
+
+            setUpcomingFollowUps(nextFollowUps);
 
             const stageCount = {
+
                 NEW: 0,
                 QUOTATION_SENT: 0,
                 NEGOTIATION: 0,
                 POSTPONED: 0,
                 WON: 0,
                 LOST: 0
+
             };
 
             opportunities.forEach((opp) => {
@@ -92,13 +160,35 @@ export default function Dashboard() {
 
             setPipeline(stageCount);
 
-        } catch (err) {
+        }
+
+        catch (err) {
 
             console.log(err);
 
-        } finally {
+        }
+
+        finally {
 
             setLoading(false);
+
+        }
+
+    }
+
+    function openFollowUp(item) {
+
+        if (item.lead) {
+
+            navigate(`/leads/${item.lead.id}`);
+
+            return;
+
+        }
+
+        if (item.opportunity) {
+
+            navigate(`/opportunities/${item.opportunity.id}`);
 
         }
 
@@ -110,10 +200,18 @@ export default function Dashboard() {
 
             <div className="text-center mt-5">
 
-                <div className="spinner-border text-primary"></div>
+                <div
+                    className="spinner-border text-primary"
+                    style={{
+                        width: "3rem",
+                        height: "3rem"
+                    }}
+                ></div>
 
-                <p className="mt-3">
+                <p className="mt-3 text-muted">
+
                     Loading Dashboard...
+
                 </p>
 
             </div>
@@ -124,101 +222,111 @@ export default function Dashboard() {
 
     return (
 
-        <>
+    <>
 
-            <PageHeader
-                title="Dashboard"
-                subtitle="Welcome back 👋 Here's what's happening today."
-            />
+        <PageHeader
+            title={`${greeting}, ${employeeName} 👋`}
+            subtitle="Here's a quick overview of your CRM."
+        />
 
-            {/* Statistics */}
+        <div className="row g-4">
 
-            <div className="row g-4">
+            <div className="col-lg-3 col-md-6">
 
-                <div className="col-lg-3">
-
-                    <StatCard
-                        title="Leads"
-                        value={stats.leads}
-                        icon="bi-person-lines-fill"
-                        color="#2563eb"
-                    />
-
-                </div>
-
-                <div className="col-lg-3">
-
-                    <StatCard
-                        title="Customers"
-                        value={stats.customers}
-                        icon="bi-people-fill"
-                        color="#10b981"
-                    />
-
-                </div>
-
-                <div className="col-lg-3">
-
-                    <StatCard
-                        title="Opportunities"
-                        value={stats.opportunities}
-                        icon="bi-briefcase-fill"
-                        color="#f59e0b"
-                    />
-
-                </div>
-
-                <div className="col-lg-3">
-
-                    <StatCard
-                        title="Follow Ups"
-                        value={stats.followups}
-                        icon="bi-calendar-check"
-                        color="#ef4444"
-                    />
-
-                </div>
+                <StatCard
+                    title="Leads"
+                    value={stats.leads}
+                    icon="bi-person-lines-fill"
+                    color="#2563eb"
+                />
 
             </div>
 
-            {/* Quick Actions */}
+            <div className="col-lg-3 col-md-6">
 
-            <div className="card mt-4">
+                <StatCard
+                    title="Customers"
+                    value={stats.customers}
+                    icon="bi-people-fill"
+                    color="#10b981"
+                />
 
-                <div className="card-body">
+            </div>
 
-                    <h5 className="mb-4">
+            <div className="col-lg-3 col-md-6">
+
+                <StatCard
+                    title="Opportunities"
+                    value={stats.opportunities}
+                    icon="bi-briefcase-fill"
+                    color="#f59e0b"
+                />
+
+            </div>
+
+            <div className="col-lg-3 col-md-6">
+
+                <StatCard
+                    title="Follow Ups"
+                    value={stats.followups}
+                    icon="bi-calendar-check-fill"
+                    color="#ef4444"
+                />
+
+            </div>
+
+        </div>
+                {/* Quick Actions */}
+
+        <div className="card shadow-sm border-0 mt-4">
+
+            <div className="card-body">
+
+                <div className="d-flex justify-content-between align-items-center mb-4">
+
+                    <h5 className="fw-bold mb-0">
+
                         Quick Actions
+
                     </h5>
 
-                    <div className="row g-3">
+                    <span className="text-muted small">
 
-                        <div className="col-md-4">
+                        Frequently Used
 
-                            <QuickActionCard
-                                icon="bi-person-plus-fill"
-                                title="Add Lead"
-                            />
+                    </span>
 
-                        </div>
+                </div>
 
-                        <div className="col-md-4">
+                <div className="row g-3">
 
-                            <QuickActionCard
-                                icon="bi-people-fill"
-                                title="Add Customer"
-                            />
+                    <div className="col-md-4">
 
-                        </div>
+                        <QuickActionCard
+                            icon="bi-person-plus-fill"
+                            title="Add Lead"
+                            onClick={() => navigate("/leads/add")}
+                        />
 
-                        <div className="col-md-4">
+                    </div>
 
-                            <QuickActionCard
-                                icon="bi-briefcase-fill"
-                                title="New Opportunity"
-                            />
+                    <div className="col-md-4">
 
-                        </div>
+                        <QuickActionCard
+                            icon="bi-calendar-plus-fill"
+                            title="Add Follow Up"
+                            onClick={() => navigate("/followups/add")}
+                        />
+
+                    </div>
+
+                    <div className="col-md-4">
+
+                        <QuickActionCard
+                            icon="bi-people-fill"
+                            title="Employees"
+                            onClick={() => navigate("/employees")}
+                        />
 
                     </div>
 
@@ -226,121 +334,324 @@ export default function Dashboard() {
 
             </div>
 
-            {/* Recent Leads + Pipeline */}
+        </div>
 
-            <div className="row mt-4">
+        {/* Recent Leads + Upcoming Follow Ups */}
 
-                <div className="col-lg-8">
+        <div className="row mt-4">
 
-                    <div className="card h-100">
+            <div className="col-lg-7">
 
-                        <div className="card-body">
+                <div className="card shadow-sm border-0 h-100">
 
-                            <h5 className="mb-4">
-                                Recent Leads
+                    <div className="card-body">
+
+                        <div className="d-flex justify-content-between align-items-center mb-4">
+
+                            <h5 className="fw-bold mb-0">
+
+                                🧾 Recent Leads
+
                             </h5>
 
-                            <table className="table align-middle">
+                            <button
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() => navigate("/leads")}
+                            >
 
-                                <thead>
+                                View All
 
-                                <tr>
+                            </button>
 
-                                    <th>Company</th>
+                        </div>
 
-                                    <th>Contact</th>
+                        <table className="table table-hover align-middle">
 
-                                    <th>Status</th>
+                            <thead>
 
-                                </tr>
+                            <tr>
 
-                                </thead>
+                                <th>Company</th>
 
-                                <tbody>
+                                <th>Contact</th>
 
-                                {
+                                <th>Status</th>
 
-                                    recentLeads.length === 0 ?
+                            </tr>
 
-                                        <tr>
+                            </thead>
 
-                                            <td
-                                                colSpan="3"
-                                                className="text-center text-muted py-4"
+                            <tbody>
+
+                            {
+
+                                recentLeads.length === 0 ?
+
+                                    <tr>
+
+                                        <td
+                                            colSpan="3"
+                                            className="text-center py-5"
+                                        >
+
+                                            <i
+                                                className="bi bi-inbox display-6 text-secondary"
+                                            ></i>
+
+                                            <h6 className="mt-3">
+
+                                                No Recent Leads
+
+                                            </h6>
+
+                                            <p className="text-muted">
+
+                                                Start by creating your first lead.
+
+                                            </p>
+
+                                            <button
+                                                className="btn btn-primary"
+                                                onClick={() => navigate("/leads/add")}
                                             >
 
-                                                No Leads Available
+                                                Add Lead
+
+                                            </button>
+
+                                        </td>
+
+                                    </tr>
+
+                                    :
+
+                                    recentLeads.map((lead) => (
+
+                                        <tr
+                                            key={lead.id}
+                                            style={{
+                                                cursor: "pointer"
+                                            }}
+                                            onClick={() =>
+                                                navigate(`/leads/${lead.id}`)
+                                            }
+                                        >
+
+                                            <td className="fw-semibold">
+
+                                                {lead.companyName}
+
+                                            </td>
+
+                                            <td>
+
+                                                {lead.contactPerson}
+
+                                            </td>
+
+                                            <td>
+
+                                                <span className="badge bg-primary">
+
+                                                    {lead.leadStatus}
+
+                                                </span>
 
                                             </td>
 
                                         </tr>
 
-                                        :
+                                    ))
 
-                                        recentLeads.map((lead) => (
+                            }
 
-                                            <tr key={lead.id}>
+                            </tbody>
 
-                                                <td>
-                                                    {lead.companyName}
-                                                </td>
-
-                                                <td>
-                                                    {lead.contactPerson}
-                                                </td>
-
-                                                <td>
-
-                                                    <span className="badge bg-primary">
-
-                                                        {lead.leadStatus}
-
-                                                    </span>
-
-                                                </td>
-
-                                            </tr>
-
-                                        ))
-
-                                }
-
-                                </tbody>
-
-                            </table>
-
-                        </div>
+                        </table>
 
                     </div>
 
                 </div>
 
-                <div className="col-lg-4">
+            </div>
 
-                    <div className="card h-100">
+            <div className="col-lg-5">
 
-                        <div className="card-body">
+                <div className="card shadow-sm border-0 h-100">
 
-                            <h5 className="mb-4">
-                                Opportunity Pipeline
+                    <div className="card-body">
+
+                        <div className="d-flex justify-content-between align-items-center mb-4">
+
+                            <h5 className="fw-bold mb-0">
+
+                                📅 Upcoming Follow Ups
+
                             </h5>
 
-                            {
+                            <button
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() => navigate("/followups")}
+                            >
 
-                                Object.entries(pipeline).map(([stage, count]) => (
+                                View All
+
+                            </button>
+
+                        </div>
+
+                        {
+
+                            upcomingFollowUps.length === 0 ?
+
+                                <div className="text-center py-5">
+
+                                    <i
+                                        className="bi bi-calendar-x display-6 text-secondary"
+                                    ></i>
+
+                                    <h6 className="mt-3">
+
+                                        No Upcoming Follow Ups
+
+                                    </h6>
+
+                                    <p className="text-muted">
+
+                                        Everything is up to date.
+
+                                    </p>
+
+                                </div>
+
+                                :
+
+                                upcomingFollowUps.map((item) => (
 
                                     <div
-                                        key={stage}
-                                        className="d-flex justify-content-between align-items-center mb-3"
+                                        key={item.id}
+                                        className="border rounded p-3 mb-3 shadow-sm"
+                                        style={{
+                                            cursor: "pointer",
+                                            transition: "0.2s"
+                                        }}
+                                        onClick={() => openFollowUp(item)}
                                     >
 
-                                        <span>
+                                        <div className="fw-bold">
 
-                                            {stage.replaceAll("_", " ")}
+                                            {
 
-                                        </span>
+                                                item.lead?.companyName ||
 
-                                        <span className="badge bg-dark">
+                                                item.opportunity?.lead?.companyName ||
+
+                                                "Unknown"
+
+                                            }
+
+                                        </div>
+
+                                        <div className="text-muted small">
+
+                                            {
+
+                                                item.activityType?.name ||
+
+                                                "Follow Up"
+
+                                            }
+
+                                        </div>
+
+                                        <div className="mt-2">
+
+                                            <span className="badge bg-light text-dark">
+
+                                                {new Date(item.scheduledDate).toLocaleString()}
+
+                                            </span>
+
+                                        </div>
+
+                                    </div>
+
+                                ))
+
+                        }
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+                {/* Opportunity Pipeline */}
+
+        <div className="card shadow-sm border-0 mt-4">
+
+            <div className="card-body">
+
+                <div className="d-flex justify-content-between align-items-center mb-4">
+
+                    <h5 className="fw-bold mb-0">
+
+                        📈 Opportunity Pipeline
+
+                    </h5>
+
+                    <span className="text-muted small">
+
+                        Current Sales Stages
+
+                    </span>
+
+                </div>
+
+                <div className="row g-3">
+
+                    {
+
+                        Object.entries(pipeline).map(([stage, count]) => (
+
+                            <div
+                                key={stage}
+                                className="col-lg-4 col-md-6"
+                            >
+
+                                <div
+                                    className="border rounded-4 p-3 h-100 shadow-sm"
+                                    style={{
+                                        transition: "0.25s",
+                                        cursor: "default"
+                                    }}
+                                >
+
+                                    <div className="d-flex justify-content-between align-items-center">
+
+                                        <div>
+
+                                            <div
+                                                className="fw-semibold"
+                                                style={{ fontSize: "0.95rem" }}
+                                            >
+
+                                                {stage.replaceAll("_", " ")}
+
+                                            </div>
+
+                                            <small className="text-muted">
+
+                                                Opportunities
+
+                                            </small>
+
+                                        </div>
+
+                                        <span
+                                            className={`badge bg-${pipelineColors[stage]} fs-6 px-3 py-2`}
+                                        >
 
                                             {count}
 
@@ -348,19 +659,21 @@ export default function Dashboard() {
 
                                     </div>
 
-                                ))
+                                </div>
 
-                            }
+                            </div>
 
-                        </div>
+                        ))
 
-                    </div>
+                    }
 
                 </div>
 
             </div>
 
-        </>
+        </div>
+
+    </>
 
     );
 

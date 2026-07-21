@@ -24,16 +24,17 @@ export default function EditFollowUp() {
 
     const [loading, setLoading] = useState(true);
 
-    const [form, setForm] = useState({
-        leadId: "",
-        opportunityId: "",
-        employeeId: "",
-        activityType: "",
-        status: "PENDING",
-        scheduledDate: "",
-        completedDate: "",
-        remarks: ""
-    });
+   const [form, setForm] = useState({
+    leadId: "",
+    opportunityId: "",
+    employeeId: "",
+    activityType: "",
+    customActivityType: "",
+    status: "PENDING",
+    scheduledDate: "",
+    completedDate: "",
+    remarks: ""
+});
 
     useEffect(() => {
         loadPage();

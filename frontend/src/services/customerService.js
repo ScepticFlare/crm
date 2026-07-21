@@ -39,3 +39,21 @@ export const convertOpportunity = async (opportunityId, customerData) => {
 
     return response.data;
 };
+export const convertCustomer = async (opportunityId, customer) => {
+
+    const response = await api.post(
+        `/customers/convert/${opportunityId}`,
+        customer
+    );
+
+    return response.data;
+
+};
+
+export const getCustomerOpportunity = async (id) => {
+
+    const response = await api.get(`/opportunities/${id}`);
+
+    return response.data;
+
+};

@@ -1,27 +1,65 @@
 export default function QuickActionCard({
+
     icon,
     title,
     onClick
+
 }) {
+
     return (
-        <button
-            className="btn btn-light border rounded-4 w-100 p-3 d-flex align-items-center shadow-sm quick-action-btn"
+
+        <div
+            className="card border-0 shadow-sm h-100"
+            role="button"
             onClick={onClick}
+            style={{
+                cursor: "pointer",
+                borderRadius: "16px",
+                transition: ".25s"
+            }}
+            onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-4px)";
+                e.currentTarget.style.boxShadow =
+                    "0 12px 24px rgba(0,0,0,.12)";
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0px)";
+                e.currentTarget.style.boxShadow = "";
+            }}
         >
-            <div
-                className="rounded-circle bg-primary text-white d-flex justify-content-center align-items-center"
-                style={{
-                    width: 45,
-                    height: 45,
-                    fontSize: 20
-                }}
-            >
-                <i className={`bi ${icon}`}></i>
+
+            <div className="card-body text-center py-4">
+
+                <div
+                    className="mx-auto mb-3 d-flex justify-content-center align-items-center"
+                    style={{
+                        width: 60,
+                        height: 60,
+                        borderRadius: "50%",
+                        background: "#eff6ff"
+                    }}
+                >
+
+                    <i
+                        className={`bi ${icon}`}
+                        style={{
+                            fontSize: "1.7rem",
+                            color: "#2563eb"
+                        }}
+                    />
+
+                </div>
+
+                <h6 className="fw-semibold mb-0">
+
+                    {title}
+
+                </h6>
+
             </div>
 
-            <div className="ms-3 text-start">
-                <div className="fw-semibold">{title}</div>
-            </div>
-        </button>
+        </div>
+
     );
+
 }

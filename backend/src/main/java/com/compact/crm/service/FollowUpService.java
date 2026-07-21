@@ -1,10 +1,13 @@
 package com.compact.crm.service;
-import com.compact.crm.exception.ResourceNotFoundException;
+
 import com.compact.crm.dto.request.FollowUpRequest;
+import com.compact.crm.entity.ActivityType;
 import com.compact.crm.entity.Employee;
 import com.compact.crm.entity.FollowUp;
 import com.compact.crm.entity.Lead;
 import com.compact.crm.entity.Opportunity;
+import com.compact.crm.exception.ResourceNotFoundException;
+import com.compact.crm.repository.ActivityTypeRepository;
 import com.compact.crm.repository.EmployeeRepository;
 import com.compact.crm.repository.FollowUpRepository;
 import com.compact.crm.repository.LeadRepository;
@@ -22,12 +25,15 @@ public class FollowUpService {
     private final LeadRepository leadRepository;
     private final OpportunityRepository opportunityRepository;
     private final EmployeeRepository employeeRepository;
-
+    private final ActivityTypeRepository activityTypeRepository;
 
     public FollowUp createFollowUp(FollowUpRequest request) {
+
         if (request.getLeadId() == null && request.getOpportunityId() == null) {
-            throw new ResourceNotFoundException("FollowUp must belong to either a Lead or an Opportunity");
+            throw new ResourceNotFoundException(
+                    "FollowUp must belong to either a Lead or an Opportunity");
         }
+
         Lead lead = null;
         Opportunity opportunity = null;
 
@@ -44,11 +50,15 @@ public class FollowUpService {
         Employee employee = employeeRepository.findById(request.getEmployeeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
+        ActivityType activityType = activityTypeRepository
+                .findById(request.getActivityTypeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Activity Type not found"));
+
         FollowUp followUp = FollowUp.builder()
                 .lead(lead)
                 .opportunity(opportunity)
                 .employee(employee)
-                .activityType(request.getActivityType())
+                .activityType(activityType)
                 .status(request.getStatus())
                 .scheduledDate(request.getScheduledDate())
                 .completedDate(request.getCompletedDate())
@@ -63,6 +73,7 @@ public class FollowUpService {
     }
 
     public FollowUp getFollowUpById(Long id) {
+
         return followUpRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("FollowUp not found"));
     }
@@ -88,16 +99,31 @@ public class FollowUpService {
         Employee employee = employeeRepository.findById(request.getEmployeeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
+        ActivityType activityType = activityTypeRepository
+                .findById(request.getActivityTypeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Activity Type not found"));
+
         followUp.setLead(lead);
         followUp.setOpportunity(opportunity);
         followUp.setEmployee(employee);
-        followUp.setActivityType(request.getActivityType());
+        followUp.setActivityType(activityType);
         followUp.setStatus(request.getStatus());
         followUp.setScheduledDate(request.getScheduledDate());
         followUp.setCompletedDate(request.getCompletedDate());
         followUp.setRemarks(request.getRemarks());
 
         return followUpRepository.save(followUp);
+    }
+    public List<FollowUp> getFollowUpsByLead(Long leadId) {
+
+        return followUpRepository.findByLeadId(leadId);
+
+    }
+
+    public List<FollowUp> getFollowUpsByOpportunity(Long opportunityId) {
+
+        return followUpRepository.findByOpportunityId(opportunityId);
+
     }
 
     public void deleteFollowUp(Long id) {
