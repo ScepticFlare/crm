@@ -135,19 +135,19 @@ export default function FollowUpDetails() {
 
                         <div className="col-md-6">
                             <strong>Assigned Employee</strong>
-                            <div>{followUp.employee?.name}</div>
+                            <div>{followUp.employee?.name || "-"}</div>
                         </div>
 
                         <div className="col-md-6">
                             <strong>Activity Type</strong>
-                            <div>{followUp.activityType}</div>
+                            <div>{followUp.activityType?.name || "-"}</div>
                         </div>
 
                         <div className="col-md-6">
                             <strong>Status</strong>
                             <div>
                                 <span className={`badge bg-${badgeColor(followUp.status)}`}>
-                                    {followUp.status}
+                                    {followUp.status?.replaceAll("_", " ")}
                                 </span>
                             </div>
                         </div>

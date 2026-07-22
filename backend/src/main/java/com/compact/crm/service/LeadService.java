@@ -3,13 +3,16 @@ package com.compact.crm.service;
 import com.compact.crm.dto.request.LeadRequest;
 import com.compact.crm.entity.Employee;
 import com.compact.crm.entity.Lead;
+import com.compact.crm.enums.Role;
 import com.compact.crm.exception.ResourceNotFoundException;
 import com.compact.crm.repository.EmployeeRepository;
 import com.compact.crm.repository.IndustryRepository;
 import com.compact.crm.repository.LeadRepository;
 import com.compact.crm.repository.LeadSourceMasterRepository;
 import com.compact.crm.repository.ProductRepository;
+import com.compact.crm.security.CurrentUserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,6 +21,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LeadService {
 
+    private final CurrentUserService currentUserService;
     private final LeadRepository leadRepository;
     private final EmployeeRepository employeeRepository;
     private final ProductRepository productRepository;
@@ -63,21 +67,23 @@ public class LeadService {
     }
 
     public List<Lead> getAllLeads() {
-        return leadRepository.findAll();
+
+        Employee currentEmployee = currentUserService.getCurrentEmployee();
+
+        if (currentEmployee.getRole() == Role.ADMIN) {
+            return leadRepository.findAll();
+        }
+
+        return leadRepository.findByAssignedEmployee(currentEmployee);
     }
 
     public Lead getLeadById(Long id) {
-        return leadRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Lead not found"));
+        return getAuthorizedLead(id);
     }
 
     public Lead updateLead(Long id, LeadRequest request) {
 
-        Lead lead = leadRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Lead not found"));
-
-        Employee employee = employeeRepository.findById(request.getAssignedEmployeeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+        Lead lead = getAuthorizedLead(id);
 
         lead.setCompanyName(request.getCompanyName());
         lead.setContactPerson(request.getContactPerson());
@@ -110,16 +116,40 @@ public class LeadService {
                         .orElseThrow(() -> new ResourceNotFoundException("Lead Source not found"))
         );
 
-        lead.setAssignedEmployee(employee);
+        // Only ADMIN can reassign a lead
+        if (currentUserService.getCurrentEmployee().getRole() == Role.ADMIN) {
+
+            Employee employee = employeeRepository.findById(request.getAssignedEmployeeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+
+            lead.setAssignedEmployee(employee);
+        }
 
         return leadRepository.save(lead);
     }
 
     public void deleteLead(Long id) {
 
+        Lead lead = getAuthorizedLead(id);
+
+        leadRepository.delete(lead);
+    }
+
+    private Lead getAuthorizedLead(Long id) {
+
         Lead lead = leadRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Lead not found"));
 
-        leadRepository.delete(lead);
+        Employee currentEmployee = currentUserService.getCurrentEmployee();
+
+        if (currentEmployee.getRole() == Role.ADMIN) {
+            return lead;
+        }
+
+        if (!lead.getAssignedEmployee().getId().equals(currentEmployee.getId())) {
+            throw new AccessDeniedException("You are not authorized to access this lead.");
+        }
+
+        return lead;
     }
 }

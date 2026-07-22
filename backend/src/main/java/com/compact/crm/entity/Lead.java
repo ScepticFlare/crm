@@ -46,11 +46,11 @@ public class Lead {
 
     private String pincode;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "product_id")
     private Product product;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "industry_id")
     private Industry industry;
 
@@ -63,7 +63,7 @@ public class Lead {
     @Enumerated(EnumType.STRING)
     private LeadValidity leadValidity;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "lead_source_id")
     private LeadSourceMaster leadSource;
 

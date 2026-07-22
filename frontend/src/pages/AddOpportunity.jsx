@@ -39,26 +39,27 @@ export default function AddOpportunity() {
 
         try {
 
-            await createOpportunity({
+            const opportunity = await createOpportunity(
+    Number(leadId),
+    {
 
-                leadId: Number(leadId),
+        title: form.title,
 
-                title: form.title,
+        productValue:
+            form.productValue === ""
+                ? null
+                : Number(form.productValue),
 
-                productValue:
-                    form.productValue === ""
-                        ? null
-                        : Number(form.productValue),
+        expectedClosingDate: form.expectedClosingDate,
 
-                expectedClosingDate: form.expectedClosingDate,
+        salesStage: form.salesStage
 
-                salesStage: form.salesStage
-
-            });
+    }
+);
 
             alert("Opportunity created successfully.");
 
-            navigate("/opportunities");
+            navigate(`/opportunities/${opportunity.id}`);
 
         } catch (error) {
 
@@ -68,7 +69,7 @@ export default function AddOpportunity() {
 
         } finally {
 
-            setLoading(false);
+            setLoading(false); 
 
         }
 

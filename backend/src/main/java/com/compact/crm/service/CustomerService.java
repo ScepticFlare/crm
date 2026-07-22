@@ -1,16 +1,19 @@
 package com.compact.crm.service;
 
 import com.compact.crm.dto.request.CustomerRequest;
-import com.compact.crm.exception.ResourceNotFoundException;
 import com.compact.crm.entity.Customer;
 import com.compact.crm.entity.Employee;
 import com.compact.crm.entity.Lead;
 import com.compact.crm.entity.Opportunity;
+import com.compact.crm.enums.Role;
 import com.compact.crm.enums.SalesStage;
+import com.compact.crm.exception.ResourceNotFoundException;
 import com.compact.crm.repository.CustomerRepository;
 import com.compact.crm.repository.EmployeeRepository;
 import com.compact.crm.repository.OpportunityRepository;
+import com.compact.crm.security.CurrentUserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -22,6 +25,7 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final EmployeeRepository employeeRepository;
     private final OpportunityRepository opportunityRepository;
+    private final CurrentUserService currentUserService;
 
     private String generateCustomerCode() {
         long count = customerRepository.count() + 1;
@@ -64,6 +68,13 @@ public class CustomerService {
         Opportunity opportunity = opportunityRepository.findById(opportunityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Opportunity not found"));
 
+        Employee currentEmployee = currentUserService.getCurrentEmployee();
+
+        if (currentEmployee.getRole() != Role.ADMIN &&
+                !opportunity.getLead().getAssignedEmployee().getId().equals(currentEmployee.getId())) {
+            throw new AccessDeniedException("You are not authorized to convert this opportunity.");
+        }
+
         if (opportunity.getSalesStage() != SalesStage.WON) {
             throw new ResourceNotFoundException("Only WON opportunities can be converted.");
         }
@@ -87,12 +98,9 @@ public class CustomerService {
                 .city(lead.getCity())
                 .state(lead.getState())
                 .pincode(lead.getPincode())
-
-                // Customer-specific fields entered during conversion
                 .gstNumber(request.getGstNumber())
                 .billingAddress(request.getBillingAddress())
                 .shippingAddress(request.getShippingAddress())
-
                 .assignedEmployee(lead.getAssignedEmployee())
                 .opportunity(opportunity)
                 .build();
@@ -101,24 +109,23 @@ public class CustomerService {
     }
 
     public List<Customer> getAllCustomers() {
-        return customerRepository.findAll();
+
+        Employee currentEmployee = currentUserService.getCurrentEmployee();
+
+        if (currentEmployee.getRole() == Role.ADMIN) {
+            return customerRepository.findAll();
+        }
+
+        return customerRepository.findByOpportunity_Lead_AssignedEmployee(currentEmployee);
     }
 
     public Customer getCustomerById(Long id) {
-        return customerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+        return getAuthorizedCustomer(id);
     }
 
     public Customer updateCustomer(Long id, CustomerRequest request) {
 
-        Customer customer = customerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
-
-        Employee employee = employeeRepository.findById(request.getAssignedEmployeeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
-
-        Opportunity opportunity = opportunityRepository.findById(request.getOpportunityId())
-                .orElseThrow(() -> new ResourceNotFoundException("Opportunity not found"));
+        Customer customer = getAuthorizedCustomer(id);
 
         customer.setCompanyName(request.getCompanyName());
         customer.setContactPerson(request.getContactPerson());
@@ -134,17 +141,49 @@ public class CustomerService {
         customer.setBillingAddress(request.getBillingAddress());
         customer.setShippingAddress(request.getShippingAddress());
         customer.setGstNumber(request.getGstNumber());
-        customer.setAssignedEmployee(employee);
-        customer.setOpportunity(opportunity);
+
+        if (currentUserService.getCurrentEmployee().getRole() == Role.ADMIN) {
+
+            Employee employee = employeeRepository.findById(request.getAssignedEmployeeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+
+            Opportunity opportunity = opportunityRepository.findById(request.getOpportunityId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Opportunity not found"));
+
+            customer.setAssignedEmployee(employee);
+            customer.setOpportunity(opportunity);
+        }
 
         return customerRepository.save(customer);
     }
 
     public void deleteCustomer(Long id) {
 
+        Customer customer = getAuthorizedCustomer(id);
+
+        customerRepository.delete(customer);
+    }
+
+    private Customer getAuthorizedCustomer(Long id) {
+
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
 
-        customerRepository.delete(customer);
+        Employee currentEmployee = currentUserService.getCurrentEmployee();
+
+        if (currentEmployee.getRole() == Role.ADMIN) {
+            return customer;
+        }
+
+        if (!customer.getOpportunity()
+                .getLead()
+                .getAssignedEmployee()
+                .getId()
+                .equals(currentEmployee.getId())) {
+
+            throw new AccessDeniedException("You are not authorized to access this customer.");
+        }
+
+        return customer;
     }
 }

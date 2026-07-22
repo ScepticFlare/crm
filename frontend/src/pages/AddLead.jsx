@@ -22,11 +22,16 @@ export default function AddLead() {
         city: "",
         state: "",
         pincode: "",
-        interestedProduct: "",
+
+        productId: "",
+        industryId: "",
+        leadSourceId: "",
+
         description: "",
+
         leadStatus: "NEW",
-        leadSource: "WEBSITE",
         leadValidity: "VALID",
+
         assignedEmployeeId: 2
     });
 

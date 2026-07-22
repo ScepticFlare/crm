@@ -175,8 +175,10 @@ export default function Leads() {
 
         {
             key: "leadSource",
-            label: "Source"
-        }
+            label: "Source",
+
+            render: (row) => row.leadSource?.name || "-"
+}
 
     ];
 

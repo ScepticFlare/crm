@@ -1,33 +1,42 @@
 import api from "./api";
 
-export const getAllOpportunities = async () => {
-    const response = await api.get("/opportunities");
-    return response.data;
-};
-
-export const getOpportunityById = async (id) => {
-    const response = await api.get(`/opportunities/${id}`);
-    return response.data;
-};
-
-export const createOpportunity = async (opportunity) => {
-
-    const { leadId, ...opportunityData } = opportunity;
+export const createOpportunity = async (leadId, data) => {
 
     const response = await api.post(
         `/opportunities/convert/${leadId}`,
-        opportunityData
+        data
     );
 
     return response.data;
+
 };
 
-export const updateOpportunity = async (id, opportunity) => {
-    const response = await api.put(`/opportunities/${id}`, opportunity);
+export const getAllOpportunities = async () => {
+
+    const response = await api.get("/opportunities");
+
     return response.data;
+
+};
+
+export const getOpportunityById = async (id) => {
+
+    const response = await api.get(`/opportunities/${id}`);
+
+    return response.data;
+
+};
+
+export const updateOpportunity = async (id, data) => {
+
+    const response = await api.put(`/opportunities/${id}`, data);
+
+    return response.data;
+
 };
 
 export const deleteOpportunity = async (id) => {
-    const response = await api.delete(`/opportunities/${id}`);
-    return response.data;
+
+    await api.delete(`/opportunities/${id}`);
+
 };

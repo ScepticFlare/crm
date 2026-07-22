@@ -87,8 +87,28 @@ export default function DataTable({
                                     <td key={column.key}>
 
                                         {column.render
-                                            ? column.render(row)
-                                            : row[column.key] ?? "-"}
+    ? column.render(row)
+    : (() => {
+
+        const value = row[column.key];
+
+        if (value == null) return "-";
+
+        if (typeof value === "object") {
+
+            if ("name" in value) return value.name;
+
+            if ("companyName" in value) return value.companyName;
+
+            if ("contactPerson" in value) return value.contactPerson;
+
+            return "-";
+
+        }
+
+        return value;
+
+    })()}
 
                                     </td>
 

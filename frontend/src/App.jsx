@@ -26,10 +26,7 @@ import FollowUpDetails from "./pages/FollowUpDetails";
 import MainLayout from "./layouts/MainLayout";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import ConvertCustomer from "./pages/ConvertCustomer";
-import Products from "./pages/Products";
-import Industries from "./pages/Industries";
-import LeadSources from "./pages/LeadSources";
-import LostReasons from "./pages/LostReasons";
+
 function App() {
 
     return (
@@ -144,6 +141,7 @@ function App() {
                          path="/customers/convert/:id"
                         element={<ConvertCustomer />}
                     />
+                   
                     
 
 

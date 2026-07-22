@@ -103,6 +103,36 @@ export default function OpportunityForm({
 
                 </div>
 
+                <div className="col-md-6 mb-3">
+
+                <label className="form-label fw-bold">
+                    Product
+                </label>
+
+                <input
+                className="form-control"
+                value={lead?.product?.name || ""}
+                disabled
+                />
+
+                </div>
+                
+                <div className="col-md-6 mb-3">
+
+                <label className="form-label fw-bold">
+                     Industry
+                </label>
+
+                <input
+                className="form-control"
+                value={lead?.industry?.name || ""}
+                disabled
+                />
+
+                </div>
+
+
+
             </div>
 
             <hr className="my-4"/>

@@ -87,9 +87,21 @@ export default function LeadDetails() {
 
                         <div className="col-md-4 mb-3">
 
-                            <label className="fw-bold">Company</label>
+                            <label className="fw-bold">Product</label>
 
-                            <div>{lead.companyName || "-"}</div>
+                            <div>{lead.product?.name || "-"}</div>
+
+                        </div>
+
+                        <div className="col-md-4 mb-3">
+
+                        <label className="fw-bold">
+                                     Industry
+                        </label>
+
+                        <div>
+                            {lead.industry?.name || "-"}
+                         </div>
 
                         </div>
 
@@ -217,9 +229,21 @@ export default function LeadDetails() {
 
                             <div>
 
-                                <span className="badge bg-success">
+                                <span className={`badge bg-${
+                                    lead.leadStatus === "NEW"
+                                        ? "primary"
+                                        : lead.leadStatus === "CONTACTED"
+                                        ? "info"
+                                        : lead.leadStatus === "QUOTATION_SENT"
+                                        ? "warning"
+                                        : lead.leadStatus === "NEGOTIATION"
+                                        ? "secondary"
+                                        : lead.leadStatus === "WON"
+                                        ? "success"
+                                        : "danger"
+                                }`}>
 
-                                    {lead.leadStatus}
+                        {lead.leadStatus.replaceAll("_", " ")}
 
                                 </span>
 
@@ -231,7 +255,7 @@ export default function LeadDetails() {
 
                             <label className="fw-bold">Source</label>
 
-                            <div>{lead.leadSource || "-"}</div>
+                            <div>{lead.leadSource?.name || "-"}</div>
 
                         </div>
 

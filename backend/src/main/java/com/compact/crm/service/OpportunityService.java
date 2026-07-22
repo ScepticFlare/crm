@@ -1,12 +1,16 @@
 package com.compact.crm.service;
 
 import com.compact.crm.dto.request.OpportunityRequest;
+import com.compact.crm.entity.Employee;
 import com.compact.crm.entity.Lead;
 import com.compact.crm.entity.Opportunity;
+import com.compact.crm.enums.Role;
 import com.compact.crm.exception.ResourceNotFoundException;
 import com.compact.crm.repository.LeadRepository;
 import com.compact.crm.repository.OpportunityRepository;
+import com.compact.crm.security.CurrentUserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,6 +21,7 @@ public class OpportunityService {
 
     private final OpportunityRepository opportunityRepository;
     private final LeadRepository leadRepository;
+    private final CurrentUserService currentUserService;
 
     /**
      * Convert a Lead into an Opportunity.
@@ -26,12 +31,16 @@ public class OpportunityService {
         Lead lead = leadRepository.findById(leadId)
                 .orElseThrow(() -> new ResourceNotFoundException("Lead not found"));
 
-        // Prevent duplicate conversion
-        boolean alreadyConverted = opportunityRepository.findAll()
-                .stream()
-                .anyMatch(o -> o.getLead().getId().equals(leadId));
+        Employee currentEmployee = currentUserService.getCurrentEmployee();
 
-        if (alreadyConverted) {
+        // Admin can convert any lead
+        if (currentEmployee.getRole() != Role.ADMIN &&
+                !lead.getAssignedEmployee().getId().equals(currentEmployee.getId())) {
+            throw new AccessDeniedException("You are not authorized to convert this lead.");
+        }
+
+        // Prevent duplicate conversion
+        if (opportunityRepository.existsByLeadId(leadId)) {
             throw new RuntimeException("This lead has already been converted into an Opportunity.");
         }
 
@@ -47,18 +56,23 @@ public class OpportunityService {
     }
 
     public List<Opportunity> getAllOpportunities() {
-        return opportunityRepository.findAll();
+
+        Employee currentEmployee = currentUserService.getCurrentEmployee();
+
+        if (currentEmployee.getRole() == Role.ADMIN) {
+            return opportunityRepository.findAll();
+        }
+
+        return opportunityRepository.findByLead_AssignedEmployee(currentEmployee);
     }
 
     public Opportunity getOpportunityById(Long id) {
-        return opportunityRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Opportunity not found"));
+        return getAuthorizedOpportunity(id);
     }
 
     public Opportunity updateOpportunity(Long id, OpportunityRequest request) {
 
-        Opportunity opportunity = opportunityRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Opportunity not found"));
+        Opportunity opportunity = getAuthorizedOpportunity(id);
 
         opportunity.setTitle(request.getTitle());
         opportunity.setProductValue(request.getProductValue());
@@ -70,9 +84,26 @@ public class OpportunityService {
 
     public void deleteOpportunity(Long id) {
 
+        Opportunity opportunity = getAuthorizedOpportunity(id);
+
+        opportunityRepository.delete(opportunity);
+    }
+
+    private Opportunity getAuthorizedOpportunity(Long id) {
+
         Opportunity opportunity = opportunityRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Opportunity not found"));
 
-        opportunityRepository.delete(opportunity);
+        Employee currentEmployee = currentUserService.getCurrentEmployee();
+
+        if (currentEmployee.getRole() == Role.ADMIN) {
+            return opportunity;
+        }
+
+        if (!opportunity.getLead().getAssignedEmployee().getId().equals(currentEmployee.getId())) {
+            throw new AccessDeniedException("You are not authorized to access this opportunity.");
+        }
+
+        return opportunity;
     }
 }

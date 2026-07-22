@@ -2,6 +2,7 @@ package com.compact.crm.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.compact.crm.enums.Role;
 
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -20,7 +21,9 @@ public class Employee {
     private Long id;
     @Column(nullable = false)
     private String name;
-
+    @Enumerated(EnumType.STRING)
+    @Column(nullable =false)
+    private Role role;
     @Column(unique = true,nullable = false)
     private String email;
     @Column(unique = true, nullable = false)

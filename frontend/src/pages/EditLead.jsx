@@ -24,11 +24,16 @@ export default function EditLead() {
         city: "",
         state: "",
         pincode: "",
-        interestedProduct: "",
+
+        productId: "",
+        industryId: "",
+        leadSourceId: "",
+
         description: "",
+
         leadStatus: "NEW",
-        leadSource: "WEBSITE",
         leadValidity: "VALID",
+
         assignedEmployeeId: 2
     });
 
@@ -43,6 +48,7 @@ export default function EditLead() {
             const data = await getLeadById(id);
 
             setForm({
+
                 companyName: data.companyName || "",
                 contactPerson: data.contactPerson || "",
                 designation: data.designation || "",
@@ -54,12 +60,21 @@ export default function EditLead() {
                 city: data.city || "",
                 state: data.state || "",
                 pincode: data.pincode || "",
-                interestedProduct: data.interestedProduct || "",
+
+                productId: data.product?.id || "",
+                industryId: data.industry?.id || "",
+                leadSourceId: data.leadSource?.id || "",
+
                 description: data.description || "",
+
                 leadStatus: data.leadStatus || "NEW",
-                leadSource: data.leadSource || "WEBSITE",
                 leadValidity: data.leadValidity || "VALID",
-                assignedEmployeeId: data.assignedEmployeeId || 2
+
+                assignedEmployeeId:
+                    data.assignedEmployee?.id ||
+                    data.assignedEmployeeId ||
+                    2
+
             });
 
         } catch (err) {
@@ -102,7 +117,10 @@ export default function EditLead() {
 
             console.log(err);
 
-            alert(err.response?.data?.message || "Unable to update lead.");
+            alert(
+                err.response?.data?.message ||
+                "Unable to update lead."
+            );
 
         } finally {
 
@@ -115,9 +133,13 @@ export default function EditLead() {
     if (loading) {
 
         return (
+
             <div className="text-center mt-5">
+
                 <div className="spinner-border text-primary"></div>
+
             </div>
+
         );
 
     }

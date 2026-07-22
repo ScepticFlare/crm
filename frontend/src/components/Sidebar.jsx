@@ -1,58 +1,43 @@
 import { NavLink } from "react-router-dom";
 
 export default function Sidebar() {
+
     const menuItems = [
-    {
-        name: "Dashboard",
-        path: "/dashboard",
-        icon: "bi-speedometer2",
-    },
-    {
-        name: "Leads",
-        path: "/leads",
-        icon: "bi-person-lines-fill",
-    },
-    {
-        name: "Customers",
-        path: "/customers",
-        icon: "bi-people-fill",
-    },
-    {
-        name: "Opportunities",
-        path: "/opportunities",
-        icon: "bi-briefcase-fill",
-    },
-    {
-        name: "Follow Ups",
-        path: "/followups",
-        icon: "bi-calendar-check",
-    },
 
-    // Masters
+        {
+            name: "Dashboard",
+            path: "/dashboard",
+            icon: "bi-speedometer2",
+        },
 
-    {
-        name: "Products",
-        path: "/products",
-        icon: "bi-box-seam",
-    },
-    {
-        name: "Industries",
-        path: "/industries",
-        icon: "bi-building",
-    },
-    {
-        name: "Lead Sources",
-        path: "/lead-sources",
-        icon: "bi-diagram-3",
-    },
-    {
-        name: "Lost Reasons",
-        path: "/lost-reasons",
-        icon: "bi-x-circle",
-    },
-];
+        {
+            name: "Leads",
+            path: "/leads",
+            icon: "bi-person-lines-fill",
+        },
+
+        {
+            name: "Customers",
+            path: "/customers",
+            icon: "bi-people-fill",
+        },
+
+        {
+            name: "Opportunities",
+            path: "/opportunities",
+            icon: "bi-briefcase-fill",
+        },
+
+        {
+            name: "Follow Ups",
+            path: "/followups",
+            icon: "bi-calendar-check",
+        }
+
+    ];
 
     return (
+
         <aside className="sidebar">
 
             <div className="logo">
@@ -107,7 +92,7 @@ export default function Sidebar() {
                         </div>
 
                         <small style={{ color: "#cbd5e1" }}>
-                            CRM 
+                            CRM
                         </small>
 
                     </div>
@@ -117,5 +102,7 @@ export default function Sidebar() {
             </div>
 
         </aside>
+
     );
+
 }
