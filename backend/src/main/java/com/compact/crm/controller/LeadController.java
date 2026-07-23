@@ -32,7 +32,7 @@ public class LeadController {
     }
 
     @PutMapping("/{id}")
-    public Lead updateLead(@PathVariable Long id, @RequestBody LeadRequest request) {
+    public Lead updateLead(@PathVariable Long id, @Valid @RequestBody LeadRequest request) {
         return leadService.updateLead(id, request);
     }
 

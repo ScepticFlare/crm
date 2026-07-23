@@ -177,7 +177,7 @@ export default function CustomerForm({
                 <div className="col-md-6 mb-3">
 
                     <label className="form-label">
-                        Billing Address
+                        Billing Address *
                     </label>
 
                     <textarea
@@ -194,7 +194,7 @@ export default function CustomerForm({
                 <div className="col-md-6 mb-3">
 
                     <label className="form-label">
-                        Shipping Address
+                        Shipping Address *
                     </label>
 
                     <textarea

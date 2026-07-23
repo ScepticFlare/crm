@@ -16,6 +16,9 @@ export default function AddFollowUp() {
     const leadIdFromUrl = searchParams.get("leadId");
     const opportunityIdFromUrl = searchParams.get("opportunityId");
 
+    const role = localStorage.getItem("role");
+    const loggedInEmployeeId = localStorage.getItem("employeeId");
+
     const [employees, setEmployees] = useState([]);
     const [leads, setLeads] = useState([]);
     const [opportunities, setOpportunities] = useState([]);
@@ -23,7 +26,10 @@ export default function AddFollowUp() {
     const [form, setForm] = useState({
         leadId: leadIdFromUrl || "",
         opportunityId: opportunityIdFromUrl || "",
-        employeeId: "",
+        employeeId:
+            role === "ADMIN"
+                ? ""
+                : loggedInEmployeeId || "",
         activityTypeId: "",
         status: "PENDING",
         scheduledDate: "",
@@ -39,17 +45,22 @@ export default function AddFollowUp() {
 
         try {
 
-            const [emp, lead, opp] = await Promise.all([
-                getAllEmployees(),
+            let emp = [];
+
+            if (role === "ADMIN") {
+                emp = await getAllEmployees();
+                setEmployees(emp);
+            }
+
+            const [lead, opp] = await Promise.all([
                 getAllLeads(),
                 getAllOpportunities()
             ]);
 
-            setEmployees(emp);
             setLeads(lead);
             setOpportunities(opp);
 
-            // Auto assign employee if opened from Lead Details
+            // Opened from Lead Details
             if (leadIdFromUrl) {
 
                 const selectedLead = lead.find(
@@ -61,32 +72,32 @@ export default function AddFollowUp() {
                     setForm(prev => ({
                         ...prev,
                         employeeId:
-                            selectedLead.assignedEmployee?.id || ""
+                            role === "ADMIN"
+                                ? selectedLead.assignedEmployee?.id || ""
+                                : loggedInEmployeeId
                     }));
 
                 }
 
             }
 
-            // Auto assign employee if opened from Opportunity Details
+            // Opened from Opportunity Details
             if (opportunityIdFromUrl) {
 
                 const selectedOpportunity = opp.find(
                     o => o.id === Number(opportunityIdFromUrl)
                 );
 
-                if (
-                    selectedOpportunity &&
-                    selectedOpportunity.lead
-                ) {
+                if (selectedOpportunity && selectedOpportunity.lead) {
 
                     setForm(prev => ({
                         ...prev,
                         employeeId:
-                            selectedOpportunity
-                                .lead
-                                .assignedEmployee
-                                ?.id || ""
+                            role === "ADMIN"
+                                ? selectedOpportunity
+                                      .lead
+                                      .assignedEmployee?.id || ""
+                                : loggedInEmployeeId
                     }));
 
                 }
@@ -127,7 +138,6 @@ export default function AddFollowUp() {
         } catch (err) {
 
             console.error(err);
-
             alert("Unable to create Follow Up.");
 
         }

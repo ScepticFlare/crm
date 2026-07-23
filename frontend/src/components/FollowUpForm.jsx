@@ -18,6 +18,8 @@ export default function FollowUpForm({
     const [activityTypes, setActivityTypes] = useState([]);
     const [showActivityModal, setShowActivityModal] = useState(false);
 
+    const role = localStorage.getItem("role");
+
     useEffect(() => {
         loadActivityTypes();
     }, []);
@@ -72,42 +74,36 @@ export default function FollowUpForm({
                                 <div className="col-md-6">
 
                                     <label className="form-label">
-
                                         Lead
-
                                     </label>
 
-                                <select
-                                    className="form-select"
-                                    name="leadId"
-                                    value={form.leadId}
-                                    onChange={handleChange}
-                                >
+                                    <select
+                                        className="form-select"
+                                        name="leadId"
+                                        value={form.leadId}
+                                        onChange={handleChange}
+                                    >
 
-                                    <option value="">
+                                        <option value="">
+                                            Select Lead
+                                        </option>
 
-                                        Select Lead
+                                        {leads.map(lead => (
 
-                                    </option>
+                                            <option
+                                                key={lead.id}
+                                                value={lead.id}
+                                            >
+                                                {lead.companyName}
+                                            </option>
 
-                                    {leads.map(lead => (
+                                        ))}
 
-                                        <option
-                                            key={lead.id}
-                                            value={lead.id}
-                                        >
+                                    </select>
 
-                                            {lead.companyName}
+                                </div>
 
-                                         </option>
-
-                                ))}
-
-    </select>
-
-</div>
-
-)}
+                            )}
 
                             {/* Opportunity */}
 
@@ -116,9 +112,7 @@ export default function FollowUpForm({
                                 <div className="col-md-6">
 
                                     <label className="form-label">
-
                                         Opportunity
-
                                     </label>
 
                                     <select
@@ -129,60 +123,71 @@ export default function FollowUpForm({
                                     >
 
                                         <option value="">
-
                                             Select Opportunity
-
                                         </option>
 
-                                         {opportunities.map(opp => (
+                                        {opportunities.map(opp => (
 
                                             <option
                                                 key={opp.id}
                                                 value={opp.id}
                                             >
-
                                                 {opp.title}
+                                            </option>
 
-                                         </option>
+                                        ))}
 
-                            ))}
+                                    </select>
 
-    </select>
+                                </div>
 
-</div>
+                            )}
 
-)}
+                            {/* Employee (ADMIN only) */}
 
-                            {/* Employee */}
+                            {role === "ADMIN" && (
 
-                            <div className="col-md-6">
-                                <label className="form-label">
-                                    Assigned Employee
-                                </label>
+                                <div className="col-md-6">
 
-                                <select
-                                    className="form-select"
-                                    name="employeeId"
-                                    value={form.employeeId}
-                                    onChange={handleChange}
-                                    required
-                                >
-                                    <option value="">Select Employee</option>
+                                    <label className="form-label">
+                                        Assigned Employee *
+                                    </label>
 
-                                    {employees.map(emp => (
-                                        <option key={emp.id} value={emp.id}>
-                                            {emp.name}
+                                    <select
+                                        className="form-select"
+                                        name="employeeId"
+                                        value={form.employeeId}
+                                        onChange={handleChange}
+                                        required
+                                    >
+
+                                        <option value="">
+                                            Select Employee
                                         </option>
-                                    ))}
-                                </select>
-                            </div>
+
+                                        {employees.map(emp => (
+
+                                            <option
+                                                key={emp.id}
+                                                value={emp.id}
+                                            >
+                                                {emp.name}
+                                            </option>
+
+                                        ))}
+
+                                    </select>
+
+                                </div>
+
+                            )}
 
                             {/* Activity Type */}
 
                             <div className="col-md-6">
 
                                 <label className="form-label">
-                                    Activity Type
+                                    Activity Type *
                                 </label>
 
                                 <select
@@ -192,6 +197,7 @@ export default function FollowUpForm({
                                     onChange={handleChange}
                                     required
                                 >
+
                                     <option value="">
                                         Select Activity
                                     </option>
@@ -218,6 +224,7 @@ export default function FollowUpForm({
                             {/* Status */}
 
                             <div className="col-md-6">
+
                                 <label className="form-label">
                                     Status
                                 </label>
@@ -233,13 +240,15 @@ export default function FollowUpForm({
                                     <option value="MISSED">Missed</option>
                                     <option value="CANCELLED">Cancelled</option>
                                 </select>
+
                             </div>
 
                             {/* Scheduled Date */}
 
                             <div className="col-md-6">
+
                                 <label className="form-label">
-                                    Scheduled Date
+                                    Scheduled Date *
                                 </label>
 
                                 <input
@@ -249,12 +258,17 @@ export default function FollowUpForm({
                                     value={form.scheduledDate}
                                     onChange={handleChange}
                                     required
+                                   min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+                                        .toISOString()
+                                        .slice(0, 16)}
                                 />
+
                             </div>
 
                             {/* Completed Date */}
 
                             <div className="col-md-6">
+
                                 <label className="form-label">
                                     Completed Date
                                 </label>
@@ -266,11 +280,13 @@ export default function FollowUpForm({
                                     value={form.completedDate}
                                     onChange={handleChange}
                                 />
+
                             </div>
 
                             {/* Remarks */}
 
                             <div className="col-12">
+
                                 <label className="form-label">
                                     Remarks
                                 </label>
@@ -282,6 +298,7 @@ export default function FollowUpForm({
                                     value={form.remarks}
                                     onChange={handleChange}
                                 />
+
                             </div>
 
                         </div>
@@ -308,6 +325,8 @@ export default function FollowUpForm({
                 onClose={() => setShowActivityModal(false)}
                 onCreated={handleActivityCreated}
             />
+
         </>
     );
+
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../services/authService";
+import { jwtDecode } from "jwt-decode";
 
 function Login() {
 
@@ -24,6 +25,12 @@ function Login() {
             const response = await login(email, password);
 
             localStorage.setItem("token", response.token);
+
+            const decoded = jwtDecode(response.token);
+
+            localStorage.setItem("role", decoded.role);
+            localStorage.setItem("employeeId", response.employeeId);
+            localStorage.setItem("employeeName", response.employeeName);
 
             navigate("/dashboard");
 
@@ -149,7 +156,6 @@ function Login() {
 
                 </div>
 
-                {/* Error Message */}
                 {error && (
                     <div className="alert alert-danger">
                         {error}

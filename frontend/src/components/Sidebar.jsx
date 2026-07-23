@@ -2,6 +2,8 @@ import { NavLink } from "react-router-dom";
 
 export default function Sidebar() {
 
+    const role = localStorage.getItem("role");
+
     const menuItems = [
 
         {
@@ -35,6 +37,16 @@ export default function Sidebar() {
         }
 
     ];
+
+    if (role === "ADMIN") {
+
+        menuItems.push({
+            name: "Employees",
+            path: "/employees",
+            icon: "bi-person-badge-fill",
+        });
+
+    }
 
     return (
 

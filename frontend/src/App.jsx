@@ -27,6 +27,10 @@ import MainLayout from "./layouts/MainLayout";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import ConvertCustomer from "./pages/ConvertCustomer";
 
+import Employees from "./pages/Employees";
+import AddEmployee from "./pages/AddEmployee";
+import EditEmployee from "./pages/EditEmployee";
+
 function App() {
 
     return (
@@ -140,6 +144,19 @@ function App() {
                     <Route
                          path="/customers/convert/:id"
                         element={<ConvertCustomer />}
+                    />
+                    
+                    <Route
+                    path="/employees"
+                    element={<Employees />}
+                    />
+                    <Route
+                    path="/employees/add"
+                    element={<AddEmployee />}
+                    />
+                    <Route
+                    path="/employees/edit/:id"
+                    element={<EditEmployee />}
                     />
                    
                     

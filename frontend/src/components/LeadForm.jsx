@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-
+import { getAllEmployees } from "../services/employeeService";
 import {
     getAllProducts,
     createProduct
@@ -31,18 +31,24 @@ export default function LeadForm({
     const [products, setProducts] = useState([]);
     const [industries, setIndustries] = useState([]);
     const [leadSources, setLeadSources] = useState([]);
+    const role = localStorage.getItem("role");
 
+    const [employees, setEmployees] = useState([]);
     const [showProductModal, setShowProductModal] = useState(false);
     const [showIndustryModal, setShowIndustryModal] = useState(false);
     const [showLeadSourceModal, setShowLeadSourceModal] = useState(false);
 
     useEffect(() => {
 
-        loadProducts();
-        loadIndustries();
-        loadLeadSources();
+    loadProducts();
+    loadIndustries();
+    loadLeadSources();
 
-    }, []);
+    if (role === "ADMIN") {
+        loadEmployees();
+    }
+
+}, []);
 
     async function loadProducts() {
 
@@ -88,6 +94,20 @@ export default function LeadForm({
         }
 
     }
+    async function loadEmployees() {
+
+    try {
+
+        const data = await getAllEmployees();
+        setEmployees(data);
+
+    } catch (err) {
+
+        console.error(err);
+
+    }
+
+}
 
     async function handleProductCreated(product) {
 
@@ -196,7 +216,7 @@ export default function LeadForm({
     <div className="col-md-6 mb-3">
 
         <label className="form-label">
-            Product
+            Product *
         </label>
 
         <select
@@ -204,6 +224,7 @@ export default function LeadForm({
             name="productId"
             value={form.productId}
             onChange={onProductChange}
+            required
         >
 
             <option value="">
@@ -252,7 +273,7 @@ export default function LeadForm({
     <div className="col-md-6 mb-3">
 
         <label className="form-label">
-            Industry
+            Industry *
         </label>
 
         <select
@@ -260,6 +281,7 @@ export default function LeadForm({
             name="industryId"
             value={form.industryId}
             onChange={onIndustryChange}
+            required
         >
 
             <option value="">
@@ -319,7 +341,7 @@ export default function LeadForm({
     <div className="col-md-6 mb-3">
 
         <label className="form-label">
-            Designation
+            Designation *
         </label>
 
         <input
@@ -339,12 +361,15 @@ export default function LeadForm({
         </label>
 
         <input
-            type="text"
+            type="tel"
             className="form-control"
             name="phone"
             value={form.phone}
             onChange={handleChange}
             required
+            maxLength={10}
+            pattern="[0-9]{10}"
+            title="Phone number must be exactly 10 digits"
         />
 
     </div>
@@ -401,7 +426,7 @@ export default function LeadForm({
     <div className="col-md-6 mb-3">
 
         <label className="form-label">
-            City
+            City *
         </label>
 
         <input
@@ -417,7 +442,7 @@ export default function LeadForm({
     <div className="col-md-6 mb-3">
 
         <label className="form-label">
-            State
+            State *
         </label>
 
         <input
@@ -449,16 +474,54 @@ export default function LeadForm({
 </div>
 
 <hr className="my-4" />
+
 <h5 className="mb-4">
     Lead Details
 </h5>
+
+{role === "ADMIN" && (
+
+    <div className="mb-4">
+
+        <label className="form-label">
+            Assigned Employee *
+        </label>
+
+        <select
+            className="form-select"
+            name="assignedEmployeeId"
+            value={form.assignedEmployeeId}
+            onChange={handleChange}
+            required
+        >
+
+            <option value="">
+                Select Employee
+            </option>
+
+            {employees.map(emp => (
+
+                <option
+                    key={emp.id}
+                    value={emp.id}
+                >
+                    {emp.name}
+                </option>
+
+            ))}
+
+        </select>
+
+    </div>
+
+)}
 
 <div className="row">
 
     <div className="col-md-4 mb-3">
 
         <label className="form-label">
-            Lead Status
+            Lead Status *
         </label>
 
         <select
@@ -466,6 +529,7 @@ export default function LeadForm({
             name="leadStatus"
             value={form.leadStatus}
             onChange={handleChange}
+            required
         >
 
             <option value="NEW">NEW</option>
@@ -482,7 +546,7 @@ export default function LeadForm({
     <div className="col-md-4 mb-3">
 
         <label className="form-label">
-            Lead Source
+            Lead Source *
         </label>
 
         <select
@@ -490,6 +554,7 @@ export default function LeadForm({
             name="leadSourceId"
             value={form.leadSourceId}
             onChange={onLeadSourceChange}
+            required
         >
 
             <option value="">
@@ -611,13 +676,7 @@ export default function LeadForm({
     title="Lead Source"
     create={createLeadSource}
 />
-<MasterDropdownModal
-    show={showLeadSourceModal}
-    onClose={() => setShowLeadSourceModal(false)}
-    onCreated={handleLeadSourceCreated}
-    title="Lead Source"
-    create={createLeadSource}
-/>
+
 
 </form>
 

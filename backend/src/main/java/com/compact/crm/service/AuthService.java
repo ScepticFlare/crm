@@ -2,8 +2,10 @@ package com.compact.crm.service;
 
 import com.compact.crm.dto.auth.LoginRequest;
 import com.compact.crm.dto.auth.LoginResponse;
+import com.compact.crm.entity.Employee;
 import com.compact.crm.security.CustomUserDetailsService;
 import com.compact.crm.security.JwtService;
+import com.compact.crm.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -33,6 +35,13 @@ public class AuthService {
         String jwt =
                 jwtService.generateToken(user);
 
-        return new LoginResponse(jwt);
+        Employee employee =
+                ((UserPrincipal) user).getEmployee();
+
+        return new LoginResponse(
+                jwt,
+                employee.getId(),
+                employee.getName()
+        );
     }
 }

@@ -46,8 +46,12 @@ export default function Dashboard() {
 
     }, []);
 
-    const employeeName =
-        localStorage.getItem("employeeName") || "Employee";
+    
+const role = localStorage.getItem("role");
+const employeeName =
+    role === "ADMIN"
+        ? "Administrator"
+        : localStorage.getItem("employeeName") || "Employee";
 
     const pipelineColors = {
         NEW: "primary",
@@ -83,10 +87,7 @@ export default function Dashboard() {
                 getAllFollowUps()
 
             ]);
-            console.log(leadRes);
-            console.log(customerRes);
-            console.log(opportunityRes);
-            console.log(followupRes);
+            
 
             const leads = leadRes || [];
             const customers = customerRes || [];
@@ -278,63 +279,63 @@ export default function Dashboard() {
         </div>
                 {/* Quick Actions */}
 
-        <div className="card shadow-sm border-0 mt-4">
+<div className="card shadow-sm border-0 mt-4">
 
-            <div className="card-body">
+    <div className="card-body">
 
-                <div className="d-flex justify-content-between align-items-center mb-4">
+        <div className="d-flex justify-content-between align-items-center mb-4">
 
-                    <h5 className="fw-bold mb-0">
+            <h5 className="fw-bold mb-0">
+                Quick Actions
+            </h5>
 
-                        Quick Actions
+            <span className="text-muted small">
+                Frequently Used
+            </span>
 
-                    </h5>
+        </div>
 
-                    <span className="text-muted small">
+        <div className="row g-3">
 
-                        Frequently Used
+            <div className={role === "ADMIN" ? "col-lg-4 col-md-6" : "col-md-6"}>
 
-                    </span>
-
-                </div>
-
-                <div className="row g-3">
-
-                    <div className="col-md-4">
-
-                        <QuickActionCard
-                            icon="bi-person-plus-fill"
-                            title="Add Lead"
-                            onClick={() => navigate("/leads/add")}
-                        />
-
-                    </div>
-
-                    <div className="col-md-4">
-
-                        <QuickActionCard
-                            icon="bi-calendar-plus-fill"
-                            title="Add Follow Up"
-                            onClick={() => navigate("/followups/add")}
-                        />
-
-                    </div>
-
-                    <div className="col-md-4">
-
-                        <QuickActionCard
-                            icon="bi-people-fill"
-                            title="Employees"
-                            onClick={() => navigate("/employees")}
-                        />
-
-                    </div>
-
-                </div>
+                <QuickActionCard
+                    icon="bi-person-plus-fill"
+                    title="Add Lead"
+                    onClick={() => navigate("/leads/add")}
+                />
 
             </div>
 
+            <div className={role === "ADMIN" ? "col-lg-4 col-md-6" : "col-md-6"}>
+
+                <QuickActionCard
+                    icon="bi-calendar-plus-fill"
+                    title="Add Follow Up"
+                    onClick={() => navigate("/followups/add")}
+                />
+
+            </div>
+
+            {role === "ADMIN" && (
+
+                <div className="col-lg-4 col-md-6">
+
+                    <QuickActionCard
+                        icon="bi-people-fill"
+                        title="Employees"
+                        onClick={() => navigate("/employees")}
+                    />
+
+                </div>
+
+            )}
+
         </div>
+
+    </div>
+
+</div>
 
         {/* Recent Leads + Upcoming Follow Ups */}
 

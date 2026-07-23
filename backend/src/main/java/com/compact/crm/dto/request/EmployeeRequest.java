@@ -1,7 +1,9 @@
 package com.compact.crm.dto.request;
 
+import com.compact.crm.enums.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -25,7 +27,9 @@ public class EmployeeRequest {
     @Size(min = 10, max = 10, message = "Phone number must be exactly 10 digits")
     private String phone;
 
-    @NotBlank(message = "Password is required")
     @Size(min = 8, message = "Password must be at least 8 characters long")
     private String password;
+
+    @NotNull(message = "Role is required")
+    private Role role;
 }

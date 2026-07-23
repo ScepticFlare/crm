@@ -8,6 +8,9 @@ export default function AddLead() {
 
     const navigate = useNavigate();
 
+    const role = localStorage.getItem("role");
+    const loggedInEmployeeId = localStorage.getItem("employeeId");
+
     const [loading, setLoading] = useState(false);
 
     const [form, setForm] = useState({
@@ -32,7 +35,10 @@ export default function AddLead() {
         leadStatus: "NEW",
         leadValidity: "VALID",
 
-        assignedEmployeeId: 2
+        assignedEmployeeId:
+            role === "ADMIN"
+                ? ""
+                : loggedInEmployeeId
     });
 
     const handleChange = (e) => {
@@ -46,13 +52,18 @@ export default function AddLead() {
 
     const handleSubmit = async (e) => {
 
+        //console.log("HANDLE SUBMIT CALLED");
+
         e.preventDefault();
 
         try {
 
             setLoading(true);
 
-            await createLead(form);
+            await createLead({
+                ...form,
+                assignedEmployeeId: Number(form.assignedEmployeeId)
+            });
 
             alert("Lead Created Successfully");
 
@@ -60,13 +71,11 @@ export default function AddLead() {
 
         } catch (err) {
 
-            console.log(err);
+    alert(err.response?.data?.message || "Unable to create lead");
 
-            alert(err.response?.data?.message || "Unable to create lead");
+} finally {
 
-        } finally {
-
-            setLoading(false);
+        setLoading(false);
 
         }
 

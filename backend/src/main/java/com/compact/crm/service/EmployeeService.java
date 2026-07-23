@@ -5,11 +5,12 @@ import com.compact.crm.entity.Employee;
 import com.compact.crm.enums.Role;
 import com.compact.crm.exception.ResourceNotFoundException;
 import com.compact.crm.repository.EmployeeRepository;
+import com.compact.crm.security.CurrentUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.compact.crm.security.CurrentUserService;
+
 import java.util.List;
 
 @Service
@@ -29,12 +30,16 @@ public class EmployeeService {
                     "Only administrators can create employees.");
         }
 
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            throw new IllegalArgumentException("Password is required.");
+        }
+
         Employee employee = Employee.builder()
                 .name(request.getName())
                 .email(request.getEmail())
                 .phone(request.getPhone())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.EMPLOYEE)
+                .role(request.getRole())          // <-- FIXED
                 .build();
 
         return employeeRepository.save(employee);
@@ -69,6 +74,7 @@ public class EmployeeService {
 
         return employee;
     }
+
     public Employee updateEmployee(Long id, EmployeeRequest request) {
 
         Employee employee = employeeRepository.findById(id)
@@ -87,6 +93,9 @@ public class EmployeeService {
         employee.setName(request.getName());
         employee.setEmail(request.getEmail());
         employee.setPhone(request.getPhone());
+
+        // <-- NEW
+        employee.setRole(request.getRole());
 
         if (request.getPassword() != null &&
                 !request.getPassword().isBlank()) {
@@ -107,9 +116,15 @@ public class EmployeeService {
                     "Only administrators can delete employees.");
         }
 
+
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Employee not found"));
+        if (currentEmployee.getId().equals(employee.getId())) {
+            throw new IllegalArgumentException(
+                    "You cannot delete your own account."
+            );
+        }
 
         employeeRepository.delete(employee);
     }

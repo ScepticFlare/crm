@@ -195,7 +195,7 @@ export default function OpportunityForm({
                 <div className="col-md-6 mb-3">
 
                     <label className="form-label">
-                        Sales Stage
+                        Sales Stage *
                     </label>
 
                     <select
@@ -203,6 +203,7 @@ export default function OpportunityForm({
                         name="salesStage"
                         value={form.salesStage}
                         onChange={handleChange}
+                        required
                     >
 
                         <option value="NEW">NEW</option>
