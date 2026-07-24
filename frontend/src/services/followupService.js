@@ -1,8 +1,21 @@
 import api from "./api";
 
-export const getAllFollowUps = async () => {
-    const response = await api.get("/followups");
+export const getAllFollowUps = async (
+    page = 0,
+    size = 50,
+    search = ""
+) => {
+
+    const response = await api.get("/followups", {
+        params: {
+            page,
+            size,
+            search
+        }
+    });
+
     return response.data;
+
 };
 
 export const getFollowUpById = async (id) => {

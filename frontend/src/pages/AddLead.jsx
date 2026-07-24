@@ -31,6 +31,7 @@ export default function AddLead() {
         leadSourceId: "",
 
         description: "",
+        finalRemarks: "",
 
         leadStatus: "NEW",
         leadValidity: "VALID",

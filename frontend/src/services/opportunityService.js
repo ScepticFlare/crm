@@ -11,9 +11,19 @@ export const createOpportunity = async (leadId, data) => {
 
 };
 
-export const getAllOpportunities = async () => {
+export const getAllOpportunities = async (
+    page = 0,
+    size = 50,
+    search = ""
+) => {
 
-    const response = await api.get("/opportunities");
+    const response = await api.get("/opportunities", {
+        params: {
+            page,
+            size,
+            search
+        }
+    });
 
     return response.data;
 

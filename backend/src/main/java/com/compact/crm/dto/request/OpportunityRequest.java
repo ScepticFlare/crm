@@ -1,8 +1,6 @@
 package com.compact.crm.dto.request;
 
-import com.compact.crm.enums.SalesStage;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,6 +21,6 @@ public class OpportunityRequest {
 
     private LocalDate expectedClosingDate;
 
-    @NotNull(message = "Sales stage is required")
-    private SalesStage salesStage;
+    @NotBlank(message = "Sales stage is required")
+    private String salesStage;
 }

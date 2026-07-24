@@ -142,7 +142,7 @@ export default function CustomerForm({
                     <label className="form-label">Sales Stage</label>
                     <input
                         className="form-control"
-                        value={opportunity?.salesStage || ""}
+                        value={opportunity?.salesStage?.name || ""}
                         readOnly
                     />
                 </div>

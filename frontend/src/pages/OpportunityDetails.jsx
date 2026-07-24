@@ -151,9 +151,9 @@ export default function OpportunityDetails() {
 
                             </h5>
 
-                            <span className={`badge bg-${stageColor(opportunity.salesStage)} px-3 py-2`}>
+                            <span className={`badge bg-${stageColor(opportunity.salesStage?.name)} px-3 py-2`}>
 
-                                {opportunity.salesStage?.replaceAll("_", " ")}
+                                {(opportunity.salesStage?.name || "Not Set").replaceAll("_", " ")}
 
                             </span>
 
@@ -179,12 +179,13 @@ export default function OpportunityDetails() {
                             </button>
 <button
     className="btn btn-success me-2"
-    disabled={opportunity.salesStage !== "WON"}
-    title={
-        opportunity.salesStage !== "WON"
-            ? "Only WON opportunities can be converted to customers."
-            : ""
-    }
+    disabled={opportunity.salesStage?.name !== "WON"}
+
+title={
+    opportunity.salesStage?.name !== "WON"
+        ? "Only WON opportunities can be converted to customers."
+        : ""
+}
     onClick={() =>
         navigate(`/customers/convert/${opportunity.id}`)
     }
@@ -249,11 +250,9 @@ export default function OpportunityDetails() {
 
                             <h5 className="mt-2">
 
-                                <span className={`badge bg-${stageColor(opportunity.salesStage)}`}>
-
-                                    {opportunity.salesStage}
-
-                                </span>
+                                <span className={`badge bg-${stageColor(opportunity.salesStage?.name)}`}>
+    {opportunity.salesStage?.name || "Not Set"}
+</span>
 
                             </h5>
 

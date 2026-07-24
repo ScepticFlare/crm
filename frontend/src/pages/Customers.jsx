@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import PageHeader from "../components/PageHeader";
@@ -19,20 +19,33 @@ export default function Customers() {
 
     const [search, setSearch] = useState("");
 
+    const [page, setPage] = useState(0);
+    const [pageSize, setPageSize] = useState(50);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
 
     useEffect(() => {
         loadCustomers();
-    }, []);
+    }, [page, pageSize, search]);
 
     async function loadCustomers() {
 
         try {
 
-            const data = await getAllCustomers();
+            setLoading(true);
 
-            setCustomers(data);
+            const response = await getAllCustomers(
+                page,
+                pageSize,
+                search
+            );
+
+            setCustomers(response.content);
+            setTotalPages(response.totalPages);
+            setTotalElements(response.totalElements);
 
         } catch (error) {
 
@@ -82,24 +95,6 @@ export default function Customers() {
 
     }
 
-    const filteredCustomers = useMemo(() => {
-
-        const text = search.toLowerCase();
-
-        return customers.filter(customer =>
-
-            customer.companyName?.toLowerCase().includes(text) ||
-
-            customer.contactPerson?.toLowerCase().includes(text) ||
-
-            customer.phone?.includes(text) ||
-
-            customer.city?.toLowerCase().includes(text)
-
-        );
-
-    }, [customers, search]);
-
     const columns = [
 
         {
@@ -137,14 +132,13 @@ export default function Customers() {
 
     const uniqueEmployees =
         new Set(customers.map(c => c.assignedEmployee?.id)).size;
-
-    return (
+            return (
 
         <>
 
             <PageHeader
                 title="Customers"
-                subtitle={`${filteredCustomers.length} Customer(s) Found`}
+                subtitle={`${totalElements} Customer(s) Found`}
             />
 
             <div className="row mb-4">
@@ -159,7 +153,7 @@ export default function Customers() {
                                 Total Customers
                             </small>
 
-                            <h3>{customers.length}</h3>
+                            <h3>{totalElements}</h3>
 
                         </div>
 
@@ -243,9 +237,14 @@ export default function Customers() {
 
                         <input
                             className="form-control border-start-0"
-                            placeholder="Search customer..."
+                            placeholder="Search by company, contact, phone, email, city, GST or employee..."
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => {
+
+                                setSearch(e.target.value);
+                                setPage(0);
+
+                            }}
                         />
 
                     </div>
@@ -256,7 +255,7 @@ export default function Customers() {
 
             <DataTable
                 columns={columns}
-                data={filteredCustomers}
+                data={customers}
                 loading={loading}
                 renderActions={(row) => (
 
@@ -287,6 +286,70 @@ export default function Customers() {
 
                 )}
             />
+
+            {!loading && customers.length === 0 && (
+
+                <div className="alert alert-light border text-center mt-3">
+
+                    <i className="bi bi-search me-2"></i>
+
+                    No matching customers found.
+
+                </div>
+
+            )}
+
+            <div className="d-flex justify-content-between align-items-center mt-3">
+
+                <div>
+
+                    <select
+                        className="form-select"
+                        style={{ width: "100px" }}
+                        value={pageSize}
+                        onChange={(e) => {
+
+                            setPageSize(Number(e.target.value));
+                            setPage(0);
+
+                        }}
+                    >
+
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+
+                    </select>
+
+                </div>
+
+                <div>
+
+                    <button
+                        className="btn btn-outline-primary me-2"
+                        disabled={page === 0}
+                        onClick={() => setPage(page - 1)}
+                    >
+                        Previous
+                    </button>
+
+                    <span className="mx-2">
+
+                        Page {page + 1} of {totalPages || 1}
+
+                    </span>
+
+                    <button
+                        className="btn btn-outline-primary"
+                        disabled={page + 1 >= totalPages}
+                        onClick={() => setPage(page + 1)}
+                    >
+                        Next
+                    </button>
+
+                </div>
+
+            </div>
 
             <DeleteModal
                 show={showDeleteModal}

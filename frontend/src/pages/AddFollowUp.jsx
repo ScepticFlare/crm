@@ -52,13 +52,16 @@ export default function AddFollowUp() {
                 setEmployees(emp);
             }
 
-            const [lead, opp] = await Promise.all([
-                getAllLeads(),
-                getAllOpportunities()
-            ]);
+            const [leadResponse, oppResponse] = await Promise.all([
+    getAllLeads(0, 1000, ""),
+    getAllOpportunities(0, 1000, "")
+]);
 
-            setLeads(lead);
-            setOpportunities(opp);
+const lead = leadResponse.content || [];
+const opp = oppResponse.content || [];
+
+setLeads(lead);
+setOpportunities(opp);
 
             // Opened from Lead Details
             if (leadIdFromUrl) {

@@ -89,20 +89,19 @@ const employeeName =
             ]);
             
 
-            const leads = leadRes || [];
-            const customers = customerRes || [];
-            const opportunities = opportunityRes || [];
-            const followups = followupRes || [];
-            console.log("Follow Ups:", followups);
+            const leads = leadRes.content || [];
+            const customers = customerRes.content || [];
+            const opportunities = opportunityRes.content || [];
+            const followups = followupRes.content || [];
 
             setStats({
 
-                leads: leads.length,
-                customers: customers.length,
-                opportunities: opportunities.length,
-                followups: followups.length
+    leads: leadRes.totalElements,
+    customers: customerRes.totalElements,
+    opportunities: opportunityRes.totalElements,
+    followups: followupRes.totalElements
 
-            });
+});
 
             const latestLeads = [...leads]
                 .sort(

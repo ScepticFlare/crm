@@ -44,22 +44,22 @@ export default function EditFollowUp() {
 
         try {
 
-            const [followUp, emp, lead, opp] = await Promise.all([
-                getFollowUpById(id),
-                getAllEmployees(),
-                getAllLeads(),
-                getAllOpportunities()
-            ]);
+            const [followUp, emp, leadResponse, oppResponse] = await Promise.all([
+    getFollowUpById(id),
+    getAllEmployees(),
+    getAllLeads(0, 1000, ""),
+    getAllOpportunities(0, 1000, "")
+]);
 
-            setEmployees(emp);
-            setLeads(lead);
-            setOpportunities(opp);
+setEmployees(emp);
+setLeads(leadResponse.content || []);
+setOpportunities(oppResponse.content || []);
 
             setForm({
                 leadId: followUp.lead?.id || "",
                 opportunityId: followUp.opportunity?.id || "",
                 employeeId: followUp.employee?.id || "",
-                activityType: followUp.activityType || "",
+                activityTypeId: followUp.activityType?.id || "",
                 status: followUp.status || "PENDING",
                 scheduledDate: followUp.scheduledDate
                     ? followUp.scheduledDate.substring(0,16)

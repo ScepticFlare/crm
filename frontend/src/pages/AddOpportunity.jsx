@@ -19,7 +19,7 @@ export default function AddOpportunity() {
         title: "",
         productValue: "",
         expectedClosingDate: "",
-        salesStage: "NEW"
+        salesStage: ""
     });
 
     function handleChange(e) {

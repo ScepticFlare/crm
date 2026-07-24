@@ -4,6 +4,7 @@ import com.compact.crm.dto.request.OpportunityRequest;
 import com.compact.crm.entity.Employee;
 import com.compact.crm.entity.Lead;
 import com.compact.crm.entity.Opportunity;
+import com.compact.crm.entity.SalesStage;
 import com.compact.crm.enums.Role;
 import com.compact.crm.exception.ResourceNotFoundException;
 import com.compact.crm.repository.LeadRepository;
@@ -12,7 +13,9 @@ import com.compact.crm.security.CurrentUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 @Service
@@ -22,6 +25,7 @@ public class OpportunityService {
     private final OpportunityRepository opportunityRepository;
     private final LeadRepository leadRepository;
     private final CurrentUserService currentUserService;
+    private final SalesStageService salesStageService;
 
     /**
      * Convert a Lead into an Opportunity.
@@ -44,26 +48,45 @@ public class OpportunityService {
             throw new RuntimeException("This lead has already been converted into an Opportunity.");
         }
 
+        SalesStage salesStage = salesStageService.getByName(request.getSalesStage());
+
         Opportunity opportunity = Opportunity.builder()
                 .title(request.getTitle())
                 .productValue(request.getProductValue())
                 .expectedClosingDate(request.getExpectedClosingDate())
-                .salesStage(request.getSalesStage())
+                .salesStage(salesStage)
                 .lead(lead)
                 .build();
 
         return opportunityRepository.save(opportunity);
     }
 
-    public List<Opportunity> getAllOpportunities() {
+    public Page<Opportunity> getAllOpportunities(int page, int size, String search) {
 
         Employee currentEmployee = currentUserService.getCurrentEmployee();
 
-        if (currentEmployee.getRole() == Role.ADMIN) {
-            return opportunityRepository.findAll();
+        Pageable pageable = PageRequest.of(page, size);
+
+        if (search == null) {
+            search = "";
         }
 
-        return opportunityRepository.findByLead_AssignedEmployee(currentEmployee);
+        if (currentEmployee.getRole() == Role.ADMIN) {
+
+            return opportunityRepository.searchOpportunities(
+                    null,
+                    search,
+                    pageable
+            );
+
+        }
+
+        return opportunityRepository.searchOpportunities(
+                currentEmployee,
+                search,
+                pageable
+        );
+
     }
 
     public Opportunity getOpportunityById(Long id) {
@@ -74,10 +97,12 @@ public class OpportunityService {
 
         Opportunity opportunity = getAuthorizedOpportunity(id);
 
+        SalesStage salesStage = salesStageService.findOrCreate(request.getSalesStage());
+
         opportunity.setTitle(request.getTitle());
         opportunity.setProductValue(request.getProductValue());
         opportunity.setExpectedClosingDate(request.getExpectedClosingDate());
-        opportunity.setSalesStage(request.getSalesStage());
+        opportunity.setSalesStage(salesStage);
 
         return opportunityRepository.save(opportunity);
     }

@@ -46,6 +46,12 @@ export default function Sidebar() {
             icon: "bi-person-badge-fill",
         });
 
+        menuItems.push({
+            name: "Import Leads",
+            path: "/import-leads",
+            icon: "bi-file-earmark-arrow-up-fill",
+        });
+
     }
 
     return (

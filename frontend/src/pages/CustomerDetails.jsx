@@ -471,10 +471,10 @@ export default function CustomerDetails() {
 
                             <DetailField
                                 label="Sales Stage"
-                                badge={opportunity?.salesStage}
-                                badgeColor={
-                                    stageColor(opportunity?.salesStage)
-                                }
+                                badge={opportunity?.salesStage?.name || "-"}
+                            badgeColor={
+                                stageColor(opportunity?.salesStage?.name)
+                            }
                             />
 
                             <DetailField

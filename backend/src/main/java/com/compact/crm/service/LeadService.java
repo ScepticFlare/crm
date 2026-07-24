@@ -14,7 +14,9 @@ import com.compact.crm.security.CurrentUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 @Service
@@ -62,19 +64,37 @@ public class LeadService {
                 )
                 .assignedEmployee(employee)
                 .build();
+        lead.setFinalRemarks(request.getFinalRemarks());
 
         return leadRepository.save(lead);
     }
 
-    public List<Lead> getAllLeads() {
+    public Page<Lead> getAllLeads(int page, int size, String search) {
 
         Employee currentEmployee = currentUserService.getCurrentEmployee();
 
-        if (currentEmployee.getRole() == Role.ADMIN) {
-            return leadRepository.findAll();
+        Pageable pageable = PageRequest.of(page, size);
+
+        if (search == null) {
+            search = "";
         }
 
-        return leadRepository.findByAssignedEmployee(currentEmployee);
+        if (currentEmployee.getRole() == Role.ADMIN) {
+
+            return leadRepository.searchLeads(
+                    null,
+                    search,
+                    pageable
+            );
+
+        }
+
+        return leadRepository.searchLeads(
+                currentEmployee,
+                search,
+                pageable
+        );
+
     }
 
     public Lead getLeadById(Long id) {
@@ -96,6 +116,7 @@ public class LeadService {
         lead.setCity(request.getCity());
         lead.setState(request.getState());
         lead.setPincode(request.getPincode());
+        lead.setFinalRemarks(request.getFinalRemarks());
 
         lead.setProduct(
                 productRepository.findById(request.getProductId())

@@ -17,7 +17,9 @@ import com.compact.crm.security.CurrentUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 @Service
@@ -89,22 +91,32 @@ public class FollowUpService {
 
         return followUpRepository.save(followUp);
     }
-    public List<FollowUp> getAllFollowUps() {
+    public Page<FollowUp> getAllFollowUps(int page, int size, String search) {
 
         Employee currentEmployee = currentUserService.getCurrentEmployee();
 
-        if (currentEmployee.getRole() == Role.ADMIN) {
-            return followUpRepository.findAll();
+        Pageable pageable = PageRequest.of(page, size);
+
+        if (search == null) {
+            search = "";
         }
 
-        List<FollowUp> followUps =
-                followUpRepository.findByLead_AssignedEmployee(currentEmployee);
+        if (currentEmployee.getRole() == Role.ADMIN) {
 
-        followUps.addAll(
-                followUpRepository.findByOpportunity_Lead_AssignedEmployee(currentEmployee)
+            return followUpRepository.searchFollowUps(
+                    null,
+                    search,
+                    pageable
+            );
+
+        }
+
+        return followUpRepository.searchFollowUps(
+                currentEmployee,
+                search,
+                pageable
         );
 
-        return followUps;
     }
 
     public FollowUp getFollowUpById(Long id) {

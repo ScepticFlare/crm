@@ -36,13 +36,16 @@ export default function EditOpportunity() {
         try {
 
             const data = await getOpportunityById(id);
+            console.log("Opportunity API Response:", data);
+            console.log("Sales Stage:", data.salesStage);
+            console.log("Sales Stage Name:", data.salesStage?.name);
 
             setForm({
                 leadId: data.lead?.id || "",
                 title: data.title || "",
                 productValue: data.productValue || "",
                 expectedClosingDate: data.expectedClosingDate || "",
-                salesStage: data.salesStage || "NEW"
+                salesStage: data.salesStage?.name || "NEW"
             });
 
         } catch (error) {

@@ -5,7 +5,7 @@ import com.compact.crm.entity.Customer;
 import com.compact.crm.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.data.domain.Page;
 import java.util.List;
 
 @RestController
@@ -29,10 +29,23 @@ public class CustomerController {
     }
 
     @GetMapping
-    public List<Customer> getAllCustomers() {
-        return customerService.getAllCustomers();
-    }
+    public Page<Customer> getAllCustomers(
 
+            @RequestParam(defaultValue = "0") int page,
+
+            @RequestParam(defaultValue = "50") int size,
+
+            @RequestParam(defaultValue = "") String search
+
+    ) {
+
+        return customerService.getAllCustomers(
+                page,
+                size,
+                search
+        );
+
+    }
     @GetMapping("/{id}")
     public Customer getCustomerById(@PathVariable Long id) {
         return customerService.getCustomerById(id);

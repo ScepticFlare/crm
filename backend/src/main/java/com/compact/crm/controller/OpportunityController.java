@@ -5,7 +5,7 @@ import com.compact.crm.entity.Opportunity;
 import com.compact.crm.service.OpportunityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.data.domain.Page;
 import java.util.List;
 
 @RestController
@@ -24,8 +24,23 @@ public class OpportunityController {
     }
 
     @GetMapping
-    public List<Opportunity> getAllOpportunities() {
-        return opportunityService.getAllOpportunities();
+
+    public Page<Opportunity> getAllOpportunities(
+
+            @RequestParam(defaultValue = "0") int page,
+
+            @RequestParam(defaultValue = "50") int size,
+
+            @RequestParam(defaultValue = "") String search
+
+    ) {
+
+        return opportunityService.getAllOpportunities(
+                page,
+                size,
+                search
+        );
+
     }
 
     @GetMapping("/{id}")

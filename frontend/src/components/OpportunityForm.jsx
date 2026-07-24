@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { getLeadById } from "../services/leadService";
+import { getAllSalesStages } from "../services/salesStageService";
+import AddSalesStageModal from "./AddSalesStageModal";
 
 export default function OpportunityForm({
     form,
@@ -12,11 +14,17 @@ export default function OpportunityForm({
 }) {
 
     const [lead, setLead] = useState(null);
+    const [salesStages, setSalesStages] = useState([]);
+    const [showStageModal, setShowStageModal] = useState(false);
 
     useEffect(() => {
+
         if (leadId) {
             loadLead();
         }
+
+        loadSalesStages();
+
     }, [leadId]);
 
     async function loadLead() {
@@ -37,208 +45,267 @@ export default function OpportunityForm({
 
     }
 
+    async function loadSalesStages() {
+
+        try {
+
+            const data = await getAllSalesStages();
+
+            setSalesStages(data);
+
+        } catch (error) {
+
+            console.error(error);
+
+            alert("Unable to load sales stages.");
+
+        }
+
+    }
+
+    async function handleSalesStageCreated(stage) {
+
+        await loadSalesStages();
+
+        handleChange({
+            target: {
+                name: "salesStage",
+                value: stage.name
+            }
+        });
+
+    }
+
     return (
 
-        <form onSubmit={handleSubmit}>
+        <>
 
-            <h5 className="mb-4">
-                Lead Information
-            </h5>
+            <form onSubmit={handleSubmit}>
 
-            <div className="row">
+                <h5 className="mb-4">
+                    Lead Information
+                </h5>
 
-                <div className="col-md-6 mb-3">
+                <div className="row">
 
-                    <label className="form-label fw-bold">
-                        Company
-                    </label>
+                    <div className="col-md-6 mb-3">
 
-                    <input
-                        className="form-control"
-                        value={lead?.companyName || ""}
-                        disabled
-                    />
+                        <label className="form-label fw-bold">
+                            Company
+                        </label>
 
-                </div>
+                        <input
+                            className="form-control"
+                            value={lead?.companyName || ""}
+                            disabled
+                        />
 
-                <div className="col-md-6 mb-3">
+                    </div>
 
-                    <label className="form-label fw-bold">
-                        Contact Person
-                    </label>
+                    <div className="col-md-6 mb-3">
 
-                    <input
-                        className="form-control"
-                        value={lead?.contactPerson || ""}
-                        disabled
-                    />
+                        <label className="form-label fw-bold">
+                            Contact Person
+                        </label>
 
-                </div>
+                        <input
+                            className="form-control"
+                            value={lead?.contactPerson || ""}
+                            disabled
+                        />
 
-                <div className="col-md-6 mb-3">
+                    </div>
 
-                    <label className="form-label fw-bold">
-                        Phone
-                    </label>
+                    <div className="col-md-6 mb-3">
 
-                    <input
-                        className="form-control"
-                        value={lead?.phone || ""}
-                        disabled
-                    />
+                        <label className="form-label fw-bold">
+                            Phone
+                        </label>
 
-                </div>
+                        <input
+                            className="form-control"
+                            value={lead?.phone || ""}
+                            disabled
+                        />
 
-                <div className="col-md-6 mb-3">
+                    </div>
 
-                    <label className="form-label fw-bold">
-                        Email
-                    </label>
+                    <div className="col-md-6 mb-3">
 
-                    <input
-                        className="form-control"
-                        value={lead?.email || ""}
-                        disabled
-                    />
+                        <label className="form-label fw-bold">
+                            Email
+                        </label>
 
-                </div>
+                        <input
+                            className="form-control"
+                            value={lead?.email || ""}
+                            disabled
+                        />
 
-                <div className="col-md-6 mb-3">
+                    </div>
 
-                <label className="form-label fw-bold">
-                    Product
-                </label>
+                    <div className="col-md-6 mb-3">
 
-                <input
-                className="form-control"
-                value={lead?.product?.name || ""}
-                disabled
-                />
+                        <label className="form-label fw-bold">
+                            Product
+                        </label>
 
-                </div>
-                
-                <div className="col-md-6 mb-3">
+                        <input
+                            className="form-control"
+                            value={lead?.product?.name || ""}
+                            disabled
+                        />
 
-                <label className="form-label fw-bold">
-                     Industry
-                </label>
+                    </div>
 
-                <input
-                className="form-control"
-                value={lead?.industry?.name || ""}
-                disabled
-                />
+                    <div className="col-md-6 mb-3">
 
-                </div>
+                        <label className="form-label fw-bold">
+                            Industry
+                        </label>
 
+                        <input
+                            className="form-control"
+                            value={lead?.industry?.name || ""}
+                            disabled
+                        />
 
-
-            </div>
-
-            <hr className="my-4"/>
-
-            <h5 className="mb-4">
-                Opportunity Information
-            </h5>
-
-            <div className="row">
-
-                <div className="col-md-6 mb-3">
-
-                    <label className="form-label">
-                        Opportunity Title *
-                    </label>
-
-                    <input
-                        type="text"
-                        className="form-control"
-                        name="title"
-                        value={form.title}
-                        onChange={handleChange}
-                        required
-                    />
+                    </div>
 
                 </div>
 
-                <div className="col-md-6 mb-3">
+                <hr className="my-4"/>
 
-                    <label className="form-label">
-                        Product Value
-                    </label>
+                <h5 className="mb-4">
+                    Opportunity Information
+                </h5>
 
-                    <input
-                        type="number"
-                        className="form-control"
-                        name="productValue"
-                        value={form.productValue}
-                        onChange={handleChange}
-                    />
+                <div className="row">
+
+                    <div className="col-md-6 mb-3">
+
+                        <label className="form-label">
+                            Opportunity Title *
+                        </label>
+
+                        <input
+                            type="text"
+                            className="form-control"
+                            name="title"
+                            value={form.title}
+                            onChange={handleChange}
+                            required
+                        />
+
+                    </div>
+
+                    <div className="col-md-6 mb-3">
+
+                        <label className="form-label">
+                            Product Value
+                        </label>
+
+                        <input
+                            type="number"
+                            className="form-control"
+                            name="productValue"
+                            value={form.productValue}
+                            onChange={handleChange}
+                        />
+
+                    </div>
+
+                    <div className="col-md-6 mb-3">
+
+                        <label className="form-label">
+                            Expected Closing Date
+                        </label>
+
+                        <input
+                            type="date"
+                            className="form-control"
+                            name="expectedClosingDate"
+                            value={form.expectedClosingDate}
+                            onChange={handleChange}
+                        />
+
+                    </div>
+
+                    <div className="col-md-6 mb-3">
+
+                        <label className="form-label">
+                            Sales Stage *
+                        </label>
+
+                        <div className="d-flex gap-2">
+
+                            <select
+                                className="form-select"
+                                name="salesStage"
+                                value={form.salesStage}
+                                onChange={handleChange}
+                                required
+                            >
+
+                                <option value="">
+                                    Select Sales Stage
+                                </option>
+
+                                {salesStages.map((stage) => (
+
+                                    <option
+                                        key={stage.id}
+                                        value={stage.name}
+                                    >
+                                        {stage.name}
+                                    </option>
+
+                                ))}
+
+                            </select>
+
+                            <button
+                                type="button"
+                                className="btn btn-outline-primary"
+                                onClick={() => setShowStageModal(true)}
+                            >
+                               AddStage
+                            </button>
+
+                        </div>
+
+                    </div>
 
                 </div>
 
-                <div className="col-md-6 mb-3">
+                <div className="d-flex justify-content-end gap-2 mt-4">
 
-                    <label className="form-label">
-                        Expected Closing Date
-                    </label>
-
-                    <input
-                        type="date"
-                        className="form-control"
-                        name="expectedClosingDate"
-                        value={form.expectedClosingDate}
-                        onChange={handleChange}
-                    />
-
-                </div>
-
-                <div className="col-md-6 mb-3">
-
-                    <label className="form-label">
-                        Sales Stage *
-                    </label>
-
-                    <select
-                        className="form-select"
-                        name="salesStage"
-                        value={form.salesStage}
-                        onChange={handleChange}
-                        required
+                    <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        onClick={onCancel}
                     >
+                        Cancel
+                    </button>
 
-                        <option value="NEW">NEW</option>
-                        <option value="QUOTATION_SENT">QUOTATION SENT</option>
-                        <option value="NEGOTIATION">NEGOTIATION</option>
-                        <option value="POSTPONED">POSTPONED</option>
-                        <option value="WON">WON</option>
-                        <option value="LOST">LOST</option>
-
-                    </select>
+                    <button
+                        className="btn btn-primary"
+                        disabled={loading}
+                    >
+                        {loading ? "Saving..." : submitText}
+                    </button>
 
                 </div>
 
-            </div>
+            </form>
 
-            <div className="d-flex justify-content-end gap-2 mt-4">
+            <AddSalesStageModal
+                show={showStageModal}
+                onClose={() => setShowStageModal(false)}
+                onCreated={handleSalesStageCreated}
+            />
 
-                <button
-                    type="button"
-                    className="btn btn-outline-secondary"
-                    onClick={onCancel}
-                >
-                    Cancel
-                </button>
-
-                <button
-                    className="btn btn-primary"
-                    disabled={loading}
-                >
-                    {loading ? "Saving..." : submitText}
-                </button>
-
-            </div>
-
-        </form>
+        </>
 
     );
 

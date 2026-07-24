@@ -30,6 +30,7 @@ export default function EditLead() {
         leadSourceId: "",
 
         description: "",
+        finalRemarks: "",
 
         leadStatus: "NEW",
         leadValidity: "VALID",
@@ -66,6 +67,7 @@ export default function EditLead() {
                 leadSourceId: data.leadSource?.id || "",
 
                 description: data.description || "",
+                finalRemarks: data.finalRemarks || "",
 
                 leadStatus: data.leadStatus || "NEW",
                 leadValidity: data.leadValidity || "VALID",

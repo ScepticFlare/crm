@@ -30,7 +30,7 @@ import ConvertCustomer from "./pages/ConvertCustomer";
 import Employees from "./pages/Employees";
 import AddEmployee from "./pages/AddEmployee";
 import EditEmployee from "./pages/EditEmployee";
-
+import ImportLeads from "./pages/ImportLeads";
 function App() {
 
     return (
@@ -157,6 +157,10 @@ function App() {
                     <Route
                     path="/employees/edit/:id"
                     element={<EditEmployee />}
+                    />
+                    <Route
+                        path="/import-leads"
+                        element={<ImportLeads />}
                     />
                    
                     

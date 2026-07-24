@@ -6,7 +6,7 @@ import com.compact.crm.service.LeadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
-
+import org.springframework.data.domain.Page;
 import java.util.List;
 
 @RestController
@@ -22,8 +22,19 @@ public class LeadController {
     }
 
     @GetMapping
-    public List<Lead> getAllLeads() {
-        return leadService.getAllLeads();
+
+    public Page<Lead> getAllLeads(
+
+            @RequestParam(defaultValue = "0") int page,
+
+            @RequestParam(defaultValue = "50") int size,
+
+            @RequestParam(defaultValue = "") String search
+
+    ) {
+
+        return leadService.getAllLeads(page, size, search);
+
     }
 
     @GetMapping("/{id}")

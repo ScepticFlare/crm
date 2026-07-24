@@ -69,4 +69,5 @@ public class LeadRequest {
 
     @NotNull(message = "Please select an Assigned Employee.")
     private Long assignedEmployeeId;
+    private String finalRemarks;
 }

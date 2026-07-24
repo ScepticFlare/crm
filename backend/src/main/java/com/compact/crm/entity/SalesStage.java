@@ -3,44 +3,35 @@ package com.compact.crm.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "opportunities")
+@Table(name = "sales_stages")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Opportunity {
+public class SalesStage {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String title;
+    @Column(nullable = false, unique = true)
+    private String name;
 
-    private Double productValue;
-
-    private LocalDate expectedClosingDate;
-
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "sales_stage_id")
-    private SalesStage salesStage;
+    private Boolean isActive;
 
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
 
-    @ManyToOne
-    @JoinColumn(name = "lead_id")
-    private Lead lead;
-
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        isActive = true;
     }
 
     @PreUpdate

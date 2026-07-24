@@ -629,7 +629,30 @@ export default function LeadForm({
 
 </div>
 
-<div className="d-flex justify-content-end gap-2">
+<hr className="my-4" />
+
+<div className="mb-4">
+
+    <label className="form-label fw-bold">
+        Final Remarks
+    </label>
+
+    <textarea
+        className="form-control"
+        rows={3}
+        name="finalRemarks"
+        value={form.finalRemarks}
+        onChange={handleChange}
+        placeholder="Example: Closed, No Response, Casual Browser, Not Under Our Scope..."
+    />
+
+</div>
+
+<div className="d-flex justify-content-end gap-2 mt-4">
+    ...
+</div>
+
+<div className="d-flex justify-content-end gap-2 mt-5">
 
     <button
         type="button"

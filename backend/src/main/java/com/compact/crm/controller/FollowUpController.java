@@ -5,7 +5,7 @@ import com.compact.crm.entity.FollowUp;
 import com.compact.crm.service.FollowUpService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.data.domain.Page;
 import java.util.List;
 
 @RestController
@@ -21,8 +21,22 @@ public class FollowUpController {
     }
 
     @GetMapping
-    public List<FollowUp> getAllFollowUps() {
-        return followUpService.getAllFollowUps();
+    public Page<FollowUp> getAllFollowUps(
+
+            @RequestParam(defaultValue = "0") int page,
+
+            @RequestParam(defaultValue = "50") int size,
+
+            @RequestParam(defaultValue = "") String search
+
+    ) {
+
+        return followUpService.getAllFollowUps(
+                page,
+                size,
+                search
+        );
+
     }
 
     @GetMapping("/lead/{leadId}")

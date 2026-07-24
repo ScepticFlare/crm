@@ -281,6 +281,14 @@ export default function LeadDetails() {
 
                     </div>
 
+                    <h4 className="mt-4 mb-3">
+                        Final Remarks
+                    </h4>
+
+                    <div className="border rounded p-3 bg-light">
+                         {lead.finalRemarks || "No final remarks available."}
+                    </div>
+
                     <div className="d-flex gap-2">
 
                         <button

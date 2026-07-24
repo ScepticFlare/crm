@@ -5,8 +5,8 @@ import com.compact.crm.entity.Customer;
 import com.compact.crm.entity.Employee;
 import com.compact.crm.entity.Lead;
 import com.compact.crm.entity.Opportunity;
+import com.compact.crm.entity.SalesStage;
 import com.compact.crm.enums.Role;
-import com.compact.crm.enums.SalesStage;
 import com.compact.crm.exception.ResourceNotFoundException;
 import com.compact.crm.repository.CustomerRepository;
 import com.compact.crm.repository.EmployeeRepository;
@@ -15,7 +15,9 @@ import com.compact.crm.security.CurrentUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 @Service
@@ -75,7 +77,7 @@ public class CustomerService {
             throw new AccessDeniedException("You are not authorized to convert this opportunity.");
         }
 
-        if (opportunity.getSalesStage() != SalesStage.WON) {
+        if (!"WON".equalsIgnoreCase(opportunity.getSalesStage().getName())) {
             throw new ResourceNotFoundException("Only WON opportunities can be converted.");
         }
 
@@ -108,15 +110,32 @@ public class CustomerService {
         return customerRepository.save(customer);
     }
 
-    public List<Customer> getAllCustomers() {
+    public Page<Customer> getAllCustomers(int page, int size, String search) {
 
         Employee currentEmployee = currentUserService.getCurrentEmployee();
 
-        if (currentEmployee.getRole() == Role.ADMIN) {
-            return customerRepository.findAll();
+        Pageable pageable = PageRequest.of(page, size);
+
+        if (search == null) {
+            search = "";
         }
 
-        return customerRepository.findByOpportunity_Lead_AssignedEmployee(currentEmployee);
+        if (currentEmployee.getRole() == Role.ADMIN) {
+
+            return customerRepository.searchCustomers(
+                    null,
+                    search,
+                    pageable
+            );
+
+        }
+
+        return customerRepository.searchCustomers(
+                currentEmployee,
+                search,
+                pageable
+        );
+
     }
 
     public Customer getCustomerById(Long id) {

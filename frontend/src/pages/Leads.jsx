@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import PageHeader from "../components/PageHeader";
@@ -17,33 +17,49 @@ export default function Leads() {
     const [leads, setLeads] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [page, setPage] = useState(0);
+    const [pageSize, setPageSize] = useState(50);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);  
 
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedLead, setSelectedLead] = useState(null);
 
     useEffect(() => {
-        loadLeads();
-    }, []);
+    loadLeads();
+}, [page, pageSize, search]);
 
     async function loadLeads() {
 
-        try {
+    setLoading(true);
 
-            const response = await getAllLeads();
+    try {
 
-            setLeads(response);
+        const response = await getAllLeads(
+            page,
+            pageSize,
+            search
+        );
+        console.log("API Response:", response);
+        console.log("Content:", response.content);
 
-        } catch (error) {
+        setLeads(response.content);
 
-            console.error(error);
+        setTotalPages(response.totalPages);
 
-        } finally {
+        setTotalElements(response.totalElements);
 
-            setLoading(false);
+    } catch (error) {
 
-        }
+        console.error(error);
+
+    } finally {
+
+        setLoading(false);
 
     }
+
+}
 
     function openDeleteModal(lead) {
 
@@ -81,25 +97,7 @@ export default function Leads() {
 
     }
 
-    const filteredLeads = useMemo(() => {
 
-        return leads.filter((lead) => {
-
-            const text = search.toLowerCase();
-
-            return (
-
-                lead.companyName?.toLowerCase().includes(text) ||
-
-                lead.contactPerson?.toLowerCase().includes(text) ||
-
-                lead.email?.toLowerCase().includes(text)
-
-            );
-
-        });
-
-    }, [leads, search]);
 
     function statusColor(status) {
 
@@ -188,7 +186,7 @@ export default function Leads() {
 
             <PageHeader
                 title="Leads"
-                subtitle={`${filteredLeads.length} Lead(s) Found`}
+                subtitle={`${totalElements} Lead(s) Found`}
                 buttonText="Add Lead"
                 onButtonClick={() => navigate("/leads/add")}
             />
@@ -210,7 +208,13 @@ export default function Leads() {
                             className="form-control border-start-0"
                             placeholder="Search by company, contact or email..."
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => {
+
+                                setSearch(e.target.value);
+
+                                setPage(0);
+
+                            }}
                         />
 
                     </div>
@@ -221,7 +225,7 @@ export default function Leads() {
 
             <DataTable
                 columns={columns}
-                data={filteredLeads}
+                data={leads}
                 loading={loading}
                 renderActions={(row) => (
 
@@ -252,6 +256,70 @@ export default function Leads() {
 
                 )}
             />
+
+            <div className="d-flex justify-content-between align-items-center mt-3">
+
+    <div className="d-flex align-items-center gap-2">
+
+        <span>Show</span>
+
+        <select
+            className="form-select"
+            style={{ width: "90px" }}
+            value={pageSize}
+            onChange={(e) => {
+
+                setPageSize(Number(e.target.value));
+
+                setPage(0);
+
+            }}
+        >
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+        </select>
+
+        <span>entries</span>
+
+    </div>
+
+    <div className="d-flex align-items-center gap-2">
+
+        <button
+            className="btn btn-outline-secondary"
+            disabled={page === 0}
+            onClick={() => setPage(page - 1)}
+        >
+            Previous
+        </button>
+
+        <span>
+
+            Page {page + 1} of {Math.max(totalPages, 1)}
+
+        </span>
+
+        <button
+            className="btn btn-outline-secondary"
+            disabled={page >= totalPages - 1}
+            onClick={() => setPage(page + 1)}
+        >
+            Next
+        </button>
+
+    </div>
+
+</div>
+
+            
+            {!loading && leads.length === 0 && (
+                <div className="alert alert-light border text-center mt-3">
+                    <i className="bi bi-search me-2"></i>
+                        No matching leads found.
+                </div>
+            )}
+
 
             <DeleteModal
                 show={showDeleteModal}

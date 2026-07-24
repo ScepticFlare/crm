@@ -17,33 +17,44 @@ export default function Opportunities() {
     const [opportunities, setOpportunities] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
-
+    const [page, setPage] = useState(0);
+    const [pageSize, setPageSize] = useState(50);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedOpportunity, setSelectedOpportunity] = useState(null);
 
     useEffect(() => {
-        loadOpportunities();
-    }, []);
+    loadOpportunities();
+}, [page, pageSize, search]);
 
     async function loadOpportunities() {
 
-        try {
+    try {
 
-            const response = await getAllOpportunities();
+        setLoading(true);
 
-            setOpportunities(response);
+        const response = await getAllOpportunities(
+            page,
+            pageSize,
+            search
+        );
 
-        } catch (error) {
+        setOpportunities(response.content);
+        setTotalPages(response.totalPages);
+        setTotalElements(response.totalElements);
 
-            console.error(error);
+    } catch (error) {
 
-        } finally {
+        console.error(error);
 
-            setLoading(false);
+    } finally {
 
-        }
+        setLoading(false);
 
     }
+
+}
 
     function openDeleteModal(opportunity) {
 
@@ -81,21 +92,6 @@ export default function Opportunities() {
 
     }
 
-    const filteredOpportunities = useMemo(() => {
-
-        const text = search.toLowerCase();
-
-        return opportunities.filter((opportunity) =>
-
-            opportunity.title?.toLowerCase().includes(text) ||
-
-            opportunity.lead?.companyName?.toLowerCase().includes(text) ||
-
-            opportunity.lead?.contactPerson?.toLowerCase().includes(text)
-
-        );
-
-    }, [opportunities, search]);
 
     function stageColor(stage) {
 
@@ -132,8 +128,8 @@ export default function Opportunities() {
     );
 
     const wonValue = opportunities
-        .filter(o => o.salesStage === "WON")
-        .reduce((sum, o) => sum + (o.productValue || 0), 0);
+    .filter(o => (o.salesStage?.name || "") === "WON")
+    .reduce((sum, o) => sum + (o.productValue || 0), 0);
 
     const columns = [
 
@@ -173,19 +169,19 @@ export default function Opportunities() {
             key: "stage",
             label: "Stage",
 
-            render: (row) => (
+            render: (row) => {
 
-                <span
-                    className={`badge bg-${stageColor(row.salesStage)}`}
-                >
+            const stage = row.salesStage?.name || "Not Set";
 
-                    {row.salesStage.replaceAll("_", " ")}
+            return (
+            <span className={`badge bg-${stageColor(stage)}`}>
+                {stage}
+            </span>
+        );
 
-                </span>
+    }
 
-            )
-
-        }
+}
 
     ];
 
@@ -195,7 +191,7 @@ export default function Opportunities() {
 
             <PageHeader
                 title="Opportunities"
-                subtitle={`${filteredOpportunities.length} Opportunity(s) Found`}
+                subtitle={`${totalElements} Opportunity(s) Found`}
             />
 
             <div className="row mb-4">
@@ -214,7 +210,7 @@ export default function Opportunities() {
 
                             <h3>
 
-                                {opportunities.length}
+                                {totalElements}
 
                             </h3>
 
@@ -288,9 +284,15 @@ export default function Opportunities() {
 
                         <input
                             className="form-control border-start-0"
-                            placeholder="Search opportunity..."
+                            placeholder="Search by company, contact, phone, email, stage or employee..."
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => {
+
+                                setSearch(e.target.value);
+
+                                setPage(0);
+
+}}
                         />
 
                     </div>
@@ -301,7 +303,7 @@ export default function Opportunities() {
 
             <DataTable
                 columns={columns}
-                data={filteredOpportunities}
+                data={opportunities}
                 loading={loading}
                 renderActions={(row) => (
 
@@ -332,6 +334,64 @@ export default function Opportunities() {
 
                 )}
             />
+
+            <div className="d-flex justify-content-between align-items-center mt-3">
+
+    <div>
+
+        <select
+            className="form-select"
+            style={{ width: "100px" }}
+            value={pageSize}
+            onChange={(e) => {
+
+                setPageSize(Number(e.target.value));
+                setPage(0);
+
+            }}
+        >
+
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+
+        </select>
+
+    </div>
+
+    <div>
+
+        <button
+            className="btn btn-outline-primary me-2"
+            disabled={page === 0}
+            onClick={() => setPage(page - 1)}
+        >
+            Previous
+        </button>
+
+        <span className="mx-2">
+
+            Page {page + 1} of {totalPages || 1}
+
+        </span>
+
+        <button
+            className="btn btn-outline-primary"
+            disabled={page + 1 >= totalPages}
+            onClick={() => setPage(page + 1)}
+        >
+            Next
+        </button>
+
+    </div>
+
+</div>
+            {!loading && opportunities.length === 0 && (
+    <div className="alert alert-light border text-center mt-3">
+        <i className="bi bi-search me-2"></i>
+        No matching opportunities found.
+    </div>
+)}
 
             <DeleteModal
                 show={showDeleteModal}

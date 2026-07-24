@@ -23,6 +23,8 @@ public class Lead {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(columnDefinition = "TEXT")
+    private String finalRemarks;
 
     private String companyName;
 
