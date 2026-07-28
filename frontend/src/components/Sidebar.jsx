@@ -34,7 +34,12 @@ export default function Sidebar() {
             name: "Follow Ups",
             path: "/followups",
             icon: "bi-calendar-check",
-        }
+        },
+        {
+            name: "Reports",
+            path: "/reports",
+            icon: "bi-bar-chart-fill",
+        },
 
     ];
 

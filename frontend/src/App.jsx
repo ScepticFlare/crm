@@ -31,6 +31,7 @@ import Employees from "./pages/Employees";
 import AddEmployee from "./pages/AddEmployee";
 import EditEmployee from "./pages/EditEmployee";
 import ImportLeads from "./pages/ImportLeads";
+import Reports from "./pages/Reports";
 function App() {
 
     return (
@@ -161,6 +162,10 @@ function App() {
                     <Route
                         path="/import-leads"
                         element={<ImportLeads />}
+                    />
+                    <Route
+                        path="/reports"
+                        element={<Reports />}
                     />
                    
                     
