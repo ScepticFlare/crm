@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { getFollowUpById } from "../services/followUpService";
+import { getFollowUpById } from "../services/followupService";
 
 export default function FollowUpDetails() {
 

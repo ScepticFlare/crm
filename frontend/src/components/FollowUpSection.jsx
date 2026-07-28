@@ -5,7 +5,7 @@ import {
     getFollowUpsByLead,
     getFollowUpsByOpportunity,
     deleteFollowUp
-} from "../services/followUpService";
+} from "../services/followupService";
 
 export default function FollowUpSection({
     leadId,

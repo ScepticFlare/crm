@@ -8,7 +8,7 @@ import DeleteModal from "../components/DeleteModal";
 import {
     getAllFollowUps,
     deleteFollowUp
-} from "../services/followUpService";
+} from "../services/followupService";
 
 export default function FollowUps() {
 

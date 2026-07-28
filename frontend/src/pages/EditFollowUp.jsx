@@ -7,7 +7,7 @@ import FollowUpForm from "../components/FollowUpForm";
 import {
     getFollowUpById,
     updateFollowUp
-} from "../services/followUpService";
+} from "../services/followupService";
 
 import { getAllEmployees } from "../services/employeeService";
 import { getAllLeads } from "../services/leadService";

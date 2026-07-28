@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import FollowUpForm from "../components/FollowUpForm";
 
-import { createFollowUp } from "../services/followUpService";
+import { createFollowUp } from "../services/followupService";
 import { getAllEmployees } from "../services/employeeService";
 import { getAllLeads } from "../services/leadService";
 import { getAllOpportunities } from "../services/opportunityService";
