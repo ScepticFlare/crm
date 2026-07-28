@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-    baseURL: "https://crm-backend-bfwr.onrender.com"
+    baseURL: "https://crm-backend-bfwr.onrender.com/api"
 });
 
 // Automatically attach JWT token
