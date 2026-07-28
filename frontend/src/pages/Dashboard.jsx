@@ -92,6 +92,15 @@ const employeeName =
             const leads = leadRes.content || [];
             const customers = customerRes.content || [];
             const opportunities = opportunityRes.content || [];
+            console.log("Dashboard Opportunity Response:", opportunityRes);
+
+console.log(
+    "Dashboard Sales Stages:",
+    opportunities.map(o => ({
+        id: o.id,
+        salesStage: o.salesStage
+    }))
+);
             const followups = followupRes.content || [];
 
             setStats({
@@ -150,13 +159,15 @@ const employeeName =
 
             opportunities.forEach((opp) => {
 
-                if (stageCount.hasOwnProperty(opp.salesStage)) {
+    const stage = opp.salesStage?.name;
 
-                    stageCount[opp.salesStage]++;
+    if (stageCount.hasOwnProperty(stage)) {
 
-                }
+        stageCount[stage]++;
 
-            });
+    }
+
+});
 
             setPipeline(stageCount);
 
