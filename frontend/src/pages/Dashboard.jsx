@@ -59,7 +59,8 @@ const employeeName =
         NEGOTIATION: "info",
         POSTPONED: "secondary",
         WON: "success",
-        LOST: "danger"
+        LOST: "danger",
+        OTHER: "secondary"
     };
 
     useEffect(() => {
@@ -153,7 +154,8 @@ console.log(
                 NEGOTIATION: 0,
                 POSTPONED: 0,
                 WON: 0,
-                LOST: 0
+                LOST: 0,
+                OTHER: 0
 
             };
 
@@ -162,9 +164,9 @@ console.log(
     const stage = opp.salesStage?.name;
 
     if (stageCount.hasOwnProperty(stage)) {
-
         stageCount[stage]++;
-
+    } else {
+        stageCount.OTHER++;
     }
 
 });
