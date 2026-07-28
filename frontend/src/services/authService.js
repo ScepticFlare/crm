@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api/auth";
+const API_URL = "https://crm-backend-bfwr.onrender.com/api/auth";
 
 export async function login(email, password) {
 
