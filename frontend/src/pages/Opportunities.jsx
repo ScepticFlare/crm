@@ -10,7 +10,10 @@ import {
     deleteOpportunity
 } from "../services/opportunityService";
 
-export default function Opportunities() {
+export default function Opportunities({
+    title = "Opportunities",
+    fetchOpportunities = getAllOpportunities
+}) {
 
     const navigate = useNavigate();
 
@@ -34,7 +37,7 @@ export default function Opportunities() {
 
         setLoading(true);
 
-        const response = await getAllOpportunities(
+        const response = await fetchOpportunities(
             page,
             pageSize,
             search
@@ -190,10 +193,9 @@ export default function Opportunities() {
         <>
 
             <PageHeader
-                title="Opportunities"
+                title={title}
                 subtitle={`${totalElements} Opportunity(s) Found`}
             />
-
             <div className="row mb-4">
 
                 <div className="col-md-4">

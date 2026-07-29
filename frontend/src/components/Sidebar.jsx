@@ -17,13 +17,6 @@ export default function Sidebar() {
             path: "/leads",
             icon: "bi-person-lines-fill",
         },
-
-        {
-            name: "Customers",
-            path: "/customers",
-            icon: "bi-people-fill",
-        },
-
         {
             name: "Opportunities",
             path: "/opportunities",
@@ -31,15 +24,32 @@ export default function Sidebar() {
         },
 
         {
+            name: "In Progress",
+            path: "/opportunities/in-progress",
+            icon: "bi bi-hourglass-split"
+        },
+        
+        
+        {
+            name: "Postponed",
+            path: "/opportunities/postponed",
+            icon: "bi bi-pause-circle"
+        },
+
+        {
+            name: "Customers",
+            path: "/customers",
+            icon: "bi-people-fill",
+        },
+
+        
+
+        {
             name: "Follow Ups",
             path: "/followups",
             icon: "bi-calendar-check",
         },
-        {
-            name: "Reports",
-            path: "/reports",
-            icon: "bi-bar-chart-fill",
-        },
+        
 
     ];
 
@@ -57,27 +67,49 @@ export default function Sidebar() {
             icon: "bi-file-earmark-arrow-up-fill",
         });
 
+        menuItems.push({
+            
+            name: "Reports",
+            path: "/reports",
+            icon: "bi-bar-chart-fill",
+        
+        });
+
     }
 
     return (
 
-        <aside className="sidebar">
+        <aside
+    className="sidebar"
+    style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+    }}
+>
 
             <div className="logo">
                 Compact<span>CRM</span>
             </div>
 
-            <div className="mt-4">
+            <div
+            className="mt-4"
+                style={{
+                    flex: 1,
+                    overflowY: "auto",
+                }}
+            >
 
                 {menuItems.map((item) => (
 
                     <NavLink
-                        key={item.path}
-                        to={item.path}
-                        className={({ isActive }) =>
-                            isActive
-                                ? "sidebar-link active"
-                                : "sidebar-link"
+                    key={item.path}
+                    to={item.path}
+                    end={item.path === "/opportunities"}
+                    className={({ isActive }) =>
+                         isActive
+                            ? "sidebar-link active"
+                            : "sidebar-link"
                         }
                     >
                         <i className={`bi ${item.icon}`}></i>
@@ -90,15 +122,7 @@ export default function Sidebar() {
 
             </div>
 
-            <div
-                style={{
-                    position: "absolute",
-                    bottom: "30px",
-                    left: "18px",
-                    right: "18px",
-                }}
-            >
-
+            <div className="mt-auto p-3">
                 <div
                     className="card"
                     style={{

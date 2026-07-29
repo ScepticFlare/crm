@@ -50,3 +50,38 @@ export const deleteOpportunity = async (id) => {
     await api.delete(`/opportunities/${id}`);
 
 };
+export const getInProgressOpportunities = async (
+    page = 0,
+    size = 50,
+    search = ""
+) => {
+
+    const response = await api.get("/opportunities/in-progress", {
+        params: {
+            page,
+            size,
+            search
+        }
+    });
+
+    return response.data;
+
+};
+
+export const getPostponedOpportunities = async (
+    page = 0,
+    size = 50,
+    search = ""
+) => {
+
+    const response = await api.get("/opportunities/postponed", {
+        params: {
+            page,
+            size,
+            search
+        }
+    });
+
+    return response.data;
+
+};

@@ -1,9 +1,10 @@
-import { useState } from "react";
-
+import { useEffect, useState } from "react";
 import PageHeader from "../components/PageHeader";
-import StatCard from "../components/StatCard";
-
-import { getLeadReport } from "../services/reportService";
+import {
+    getLeadReport,
+    exportLeadReport,
+    getLeadSources
+} from "../services/reportService";
 
 export default function Reports() {
 
@@ -18,21 +19,31 @@ export default function Reports() {
     const [from, setFrom] = useState(firstDay);
     const [to, setTo] = useState(today);
 
+    const [leadSources, setLeadSources] = useState([]);
+    const [leadSourceId, setLeadSourceId] = useState("");
+
+    const [report, setReport] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    const [report, setReport] = useState({
+    useEffect(() => {
+        loadLeadSources();
+    }, []);
 
-        totalLeads: 0,
+    async function loadLeadSources() {
 
-        wonLeads: 0,
+        try {
 
-        lostLeads: 0,
+            const data = await getLeadSources();
 
-        leadsByEmployee: {},
+            setLeadSources(data);
 
-        leadsBySource: {}
+        } catch (err) {
 
-    });
+            console.log(err);
+
+        }
+
+    }
 
     async function generateReport() {
 
@@ -40,21 +51,21 @@ export default function Reports() {
 
             setLoading(true);
 
-            const data = await getLeadReport(from, to);
+            const data = await getLeadReport(
+                from,
+                to,
+                leadSourceId === "" ? null : Number(leadSourceId)
+            );
 
             setReport(data);
 
-        }
-
-        catch (err) {
+        } catch (err) {
 
             console.log(err);
 
             alert("Failed to generate report.");
 
-        }
-
-        finally {
+        } finally {
 
             setLoading(false);
 
@@ -62,63 +73,130 @@ export default function Reports() {
 
     }
 
+    async function downloadExcel() {
+
+    if (report.length === 0) {
+        alert("No report available to export.");
+        return;
+    }
+
+    try {
+
+        await exportLeadReport(
+            from,
+            to,
+            leadSourceId === "" ? null : Number(leadSourceId)
+        );
+
+    } catch (err) {
+
+        console.log(err);
+        alert("Export failed.");
+
+    }
+
+}
+
     return (
-    <>
+        <>
 
-        <PageHeader
-            title="Lead Reports"
-            subtitle="Generate analytics for your CRM leads."
-        />
+            <PageHeader
+                title="Lead Reports"
+                subtitle="Generate monthly lead reports."
+            />
 
-        <div className="card shadow-sm border-0 mb-4">
+            <div className="card shadow-sm border-0 mb-4">
 
-            <div className="card-body">
+                <div className="card-body">
 
-                <div className="row align-items-end">
+                    <div className="row g-3 align-items-end">
 
-                    <div className="col-md-4">
+                        <div className="col-md-3">
 
-                        <label className="form-label fw-semibold">
-                            From Date
-                        </label>
+                            <label className="form-label">
+                                From Date
+                            </label>
 
-                        <input
-                            type="date"
-                            className="form-control"
-                            value={from}
-                            onChange={(e) => setFrom(e.target.value)}
-                        />
+                            <input
+                                type="date"
+                                className="form-control"
+                                value={from}
+                                onChange={(e) => setFrom(e.target.value)}
+                            />
 
-                    </div>
+                        </div>
 
-                    <div className="col-md-4">
+                        <div className="col-md-3">
 
-                        <label className="form-label fw-semibold">
-                            To Date
-                        </label>
+                            <label className="form-label">
+                                To Date
+                            </label>
 
-                        <input
-                            type="date"
-                            className="form-control"
-                            value={to}
-                            onChange={(e) => setTo(e.target.value)}
-                        />
+                            <input
+                                type="date"
+                                className="form-control"
+                                value={to}
+                                onChange={(e) => setTo(e.target.value)}
+                            />
 
-                    </div>
+                        </div>
 
-                    <div className="col-md-4">
+                        <div className="col-md-3">
 
-                        <button
-                            className="btn btn-primary w-100"
-                            onClick={generateReport}
-                            disabled={loading}
-                        >
+                            <label className="form-label">
+                                Lead Source
+                            </label>
 
-                            {loading
-                                ? "Generating..."
-                                : "Generate Report"}
+                            <select
+                                className="form-select"
+                                value={leadSourceId}
+                                onChange={(e) =>
+                                    setLeadSourceId(e.target.value)
+                                }
+                            >
 
-                        </button>
+                                <option value="">
+                                    All
+                                </option>
+
+                                {leadSources.map((source) => (
+
+                                    <option
+                                        key={source.id}
+                                        value={source.id}
+                                    >
+                                        {source.name}
+                                    </option>
+
+                                ))}
+
+                            </select>
+
+                        </div>
+
+                        <div className="col-md-3 d-grid gap-2">
+
+                            <button
+                                className="btn btn-primary"
+                                onClick={generateReport}
+                                disabled={loading}
+                            >
+
+                                {loading
+                                    ? "Generating..."
+                                    : "Generate Report"}
+
+                            </button>
+
+                            <button
+                                className="btn btn-success"
+                                onClick={downloadExcel}
+                                disabled={report.length === 0}
+                            >
+                                Export Excel
+                            </button>
+
+                        </div>
 
                     </div>
 
@@ -126,45 +204,89 @@ export default function Reports() {
 
             </div>
 
-        </div>
+            <div className="card shadow-sm border-0">
 
-        <div className="row g-4">
+                <div className="card-body table-responsive">
 
-            <div className="col-lg-4">
+                    <table className="table table-bordered table-hover">
 
-                <StatCard
-                    title="Total Leads"
-                    value={report.totalLeads}
-                    icon="bi-person-lines-fill"
-                    color="#2563eb"
-                />
+                        <thead className="table-light">
+
+                            <tr>
+
+                                <th>Month</th>
+                                <th>Total Leads</th>
+                                <th>Invalid</th>
+                                <th>Valid</th>
+                                <th>Won</th>
+                                <th>Lost</th>
+                                <th>In Progress</th>
+                                <th>Postponed</th>
+                                <th>Dropped</th>
+                                <th>Won %</th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+                                                        {report.length === 0 ? (
+
+                                <tr>
+
+                                    <td
+                                        colSpan="10"
+                                        className="text-center"
+                                    >
+                                        No report generated.
+                                    </td>
+
+                                </tr>
+
+                            ) : (
+
+                                report.map((row, index) => (
+
+                                    <tr key={index}>
+
+                                        <td>{row.month}</td>
+
+                                        <td>{row.totalLeadsReceived}</td>
+
+                                        <td>{row.invalidLeads}</td>
+
+                                        <td>{row.validLeads}</td>
+
+                                        <td>{row.won}</td>
+
+                                        <td>{row.lost}</td>
+
+                                        <td>{row.inProgress}</td>
+
+                                        <td>{row.postponed}</td>
+
+                                        <td>{row.dropped}</td>
+
+                                        <td>
+                                            {row.wonConversionRate.toFixed(2)}%
+                                        </td>
+
+                                    </tr>
+
+                                ))
+
+                            )}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
 
             </div>
 
-            <div className="col-lg-4">
+        </>
 
-                <StatCard
-                    title="Won Leads"
-                    value={report.wonLeads}
-                    icon="bi-check-circle-fill"
-                    color="#10b981"
-                />
+    );
 
-            </div>
-
-            <div className="col-lg-4">
-
-                <StatCard
-                    title="Lost Leads"
-                    value={report.lostLeads}
-                    icon="bi-x-circle-fill"
-                    color="#ef4444"
-                />
-
-            </div>
-
-        </div>
-
-    </>
-);
 }

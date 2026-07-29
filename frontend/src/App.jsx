@@ -32,6 +32,11 @@ import AddEmployee from "./pages/AddEmployee";
 import EditEmployee from "./pages/EditEmployee";
 import ImportLeads from "./pages/ImportLeads";
 import Reports from "./pages/Reports";
+
+import InProgress from "./pages/InProgress";
+import Postponed from "./pages/Postponed";
+
+
 function App() {
 
     return (
@@ -167,6 +172,9 @@ function App() {
                         path="/reports"
                         element={<Reports />}
                     />
+                    <Route path="/opportunities/in-progress" element={<InProgress />} />
+
+                    <Route path="/opportunities/postponed" element={<Postponed />} />
                    
                     
 
