@@ -42,45 +42,57 @@ export default function EditFollowUp() {
 
     async function loadPage() {
 
-        try {
+    try {
 
-            const [followUp, emp, leadResponse, oppResponse] = await Promise.all([
-    getFollowUpById(id),
-    getAllEmployees(),
-    getAllLeads(0, 1000, ""),
-    getAllOpportunities(0, 1000, "")
-]);
+        const role = localStorage.getItem("role");
 
-setEmployees(emp);
-setLeads(leadResponse.content || []);
-setOpportunities(oppResponse.content || []);
+        const [
+            followUp,
+            leadResponse,
+            oppResponse
+        ] = await Promise.all([
+            getFollowUpById(id),
+            getAllLeads(0, 1000, ""),
+            getAllOpportunities(0, 1000, "")
+        ]);
 
-            setForm({
-                leadId: followUp.lead?.id || "",
-                opportunityId: followUp.opportunity?.id || "",
-                employeeId: followUp.employee?.id || "",
-                activityTypeId: followUp.activityType?.id || "",
-                status: followUp.status || "PENDING",
-                scheduledDate: followUp.scheduledDate
-                    ? followUp.scheduledDate.substring(0,16)
-                    : "",
-                completedDate: followUp.completedDate
-                    ? followUp.completedDate.substring(0,16)
-                    : "",
-                remarks: followUp.remarks || ""
-            });
+        setLeads(leadResponse.content || []);
+        setOpportunities(oppResponse.content || []);
 
-        } catch (err) {
+        if (role === "ADMIN") {
 
-            console.error(err);
-            alert("Unable to load Follow Up.");
-
-        } finally {
-
-            setLoading(false);
+            const emp = await getAllEmployees();
+            setEmployees(emp);
 
         }
+
+        setForm({
+            leadId: followUp.lead?.id || "",
+            opportunityId: followUp.opportunity?.id || "",
+            employeeId: followUp.employee?.id || "",
+            activityTypeId: followUp.activityType?.id || "",
+            status: followUp.status || "PENDING",
+            scheduledDate: followUp.scheduledDate
+                ? followUp.scheduledDate.substring(0, 16)
+                : "",
+            completedDate: followUp.completedDate
+                ? followUp.completedDate.substring(0, 16)
+                : "",
+            remarks: followUp.remarks || ""
+        });
+
+    } catch (err) {
+
+        console.error(err);
+        alert("Unable to load Follow Up.");
+
+    } finally {
+
+        setLoading(false);
+
     }
+
+}
 
     async function handleSubmit(e) {
 
