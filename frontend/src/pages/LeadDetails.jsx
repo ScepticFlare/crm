@@ -95,13 +95,13 @@ export default function LeadDetails() {
 
                         <div className="col-md-4 mb-3">
 
-                        <label className="fw-bold">
-                                     Industry
-                        </label>
+                            <label className="fw-bold">
+                                Industry
+                            </label>
 
-                        <div>
-                            {lead.industry?.name || "-"}
-                         </div>
+                            <div>
+                                {lead.industry?.name || "-"}
+                            </div>
 
                         </div>
 
@@ -223,7 +223,7 @@ export default function LeadDetails() {
 
                     <div className="row">
 
-                        <div className="col-md-4 mb-3">
+                        <div className="col-md-3 mb-3">
 
                             <label className="fw-bold">Status</label>
 
@@ -243,7 +243,7 @@ export default function LeadDetails() {
                                         : "danger"
                                 }`}>
 
-                        {lead.leadStatus.replaceAll("_", " ")}
+                                    {lead.leadStatus.replaceAll("_", " ")}
 
                                 </span>
 
@@ -251,7 +251,15 @@ export default function LeadDetails() {
 
                         </div>
 
-                        <div className="col-md-4 mb-3">
+                        <div className="col-md-3 mb-3">
+
+                            <label className="fw-bold">Assigned Employee</label>
+
+                            <div>{lead.assignedEmployee?.name || "-"}</div>
+
+                        </div>
+
+                        <div className="col-md-3 mb-3">
 
                             <label className="fw-bold">Source</label>
 
@@ -259,7 +267,7 @@ export default function LeadDetails() {
 
                         </div>
 
-                        <div className="col-md-4 mb-3">
+                        <div className="col-md-3 mb-3">
 
                             <label className="fw-bold">Validity</label>
 
@@ -286,7 +294,9 @@ export default function LeadDetails() {
                     </h4>
 
                     <div className="border rounded p-3 bg-light">
-                         {lead.finalRemarks || "No final remarks available."}
+
+                        {lead.finalRemarks || "No final remarks available."}
+
                     </div>
 
                     <div className="d-flex gap-2">
