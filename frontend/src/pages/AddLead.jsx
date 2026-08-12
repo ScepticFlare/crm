@@ -21,20 +21,22 @@ export default function AddLead() {
         alternatePhone: "",
         email: "",
         secondaryEmail: "",
-        website: "",
         city: "",
         state: "",
         pincode: "",
 
-        productId: "",
         industryId: "",
+        industryName: "",
         leadSourceId: "",
+        leadSourceName: "",
+
+        products: [],
+        batteries: [],
 
         description: "",
         finalRemarks: "",
 
         leadStatus: "NEW",
-        leadValidity: "VALID",
 
         assignedEmployeeId:
             role === "ADMIN"
@@ -63,7 +65,19 @@ export default function AddLead() {
 
             await createLead({
                 ...form,
-                assignedEmployeeId: Number(form.assignedEmployeeId)
+                assignedEmployeeId: Number(form.assignedEmployeeId),
+                products: (form.products || [])
+                    .filter(p => p.itemId)
+                    .map(p => ({
+                        productId: Number(p.itemId),
+                        quantity: Number(p.quantity) || 1
+                    })),
+                batteries: (form.batteries || [])
+                    .filter(b => b.itemId)
+                    .map(b => ({
+                        batteryId: Number(b.itemId),
+                        quantity: Number(b.quantity) || 1
+                    }))
             });
 
             alert("Lead Created Successfully");

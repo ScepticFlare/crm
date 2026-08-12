@@ -26,20 +26,37 @@ export default function Sidebar() {
         {
             name: "In Progress",
             path: "/opportunities/in-progress",
-            icon: "bi bi-hourglass-split"
-        },
-        
-        
-        {
-            name: "Postponed",
-            path: "/opportunities/postponed",
-            icon: "bi bi-pause-circle"
+            icon: "bi-hourglass-split"
         },
 
         {
-            name: "Customers",
+            name: "Postponed",
+            path: "/opportunities/postponed",
+            icon: "bi-pause-circle"
+        },
+
+        {
+            name: "Dropped",
+            path: "/dropped",
+            icon: "bi-x-circle"
+        },
+
+        {
+            name: "Lost",
+            path: "/lost",
+            icon: "bi-slash-circle"
+        },
+
+        {
+            name: "Unresponsive",
+            path: "/unresponsive",
+            icon: "bi-telephone-x"
+        },
+
+        {
+            name: "Won",
             path: "/customers",
-            icon: "bi-people-fill",
+            icon: "bi-trophy-fill",
         },
 
         
@@ -68,11 +85,19 @@ export default function Sidebar() {
         });
 
         menuItems.push({
-            
+
             name: "Reports",
             path: "/reports",
             icon: "bi-bar-chart-fill",
-        
+
+        });
+
+        menuItems.push({
+
+            name: "Full Report",
+            path: "/full-report",
+            icon: "bi-file-earmark-spreadsheet-fill",
+
         });
 
     }
@@ -84,7 +109,6 @@ export default function Sidebar() {
     style={{
         display: "flex",
         flexDirection: "column",
-        height: "100vh",
     }}
 >
 
@@ -138,7 +162,7 @@ export default function Sidebar() {
                             Compact Systems
                         </div>
 
-                        <small style={{ color: "#cbd5e1" }}>
+                        <small style={{ color: "var(--color-sidebar-text)" }}>
                             CRM
                         </small>
 

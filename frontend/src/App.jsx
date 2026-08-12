@@ -32,9 +32,13 @@ import AddEmployee from "./pages/AddEmployee";
 import EditEmployee from "./pages/EditEmployee";
 import ImportLeads from "./pages/ImportLeads";
 import Reports from "./pages/Reports";
+import FullReport from "./pages/FullReport";
 
 import InProgress from "./pages/InProgress";
 import Postponed from "./pages/Postponed";
+import Dropped from "./pages/Dropped";
+import Lost from "./pages/Lost";
+import Unresponsive from "./pages/Unresponsive";
 
 
 function App() {
@@ -172,9 +176,19 @@ function App() {
                         path="/reports"
                         element={<Reports />}
                     />
+                    <Route
+                        path="/full-report"
+                        element={<FullReport />}
+                    />
                     <Route path="/opportunities/in-progress" element={<InProgress />} />
 
                     <Route path="/opportunities/postponed" element={<Postponed />} />
+
+                    <Route path="/dropped" element={<Dropped />} />
+
+                    <Route path="/lost" element={<Lost />} />
+
+                    <Route path="/unresponsive" element={<Unresponsive />} />
                    
                     
 

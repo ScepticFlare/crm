@@ -1,3 +1,5 @@
+import StatusBadge from "./ui/StatusBadge";
+
 export default function PipelineWidget({ opportunities = [] }) {
 
     const stages = {};
@@ -6,15 +8,6 @@ export default function PipelineWidget({ opportunities = [] }) {
         const stage = opp.salesStage || "UNKNOWN";
         stages[stage] = (stages[stage] || 0) + 1;
     });
-
-    const colors = {
-        NEW: "primary",
-        QUOTATION_SENT: "info",
-        NEGOTIATION: "warning",
-        POSTPONED: "secondary",
-        WON: "success",
-        LOST: "danger"
-    };
 
     return (
         <div className="card dashboard-widget h-100">
@@ -34,11 +27,7 @@ export default function PipelineWidget({ opportunities = [] }) {
                             key={stage}
                             className="d-flex justify-content-between align-items-center mb-3"
                         >
-                            <span
-                                className={`badge bg-${colors[stage] || "dark"} px-3 py-2`}
-                            >
-                                {stage.replaceAll("_", " ")}
-                            </span>
+                            <StatusBadge status={stage} className="px-3 py-2" />
 
                             <strong>{count}</strong>
                         </div>

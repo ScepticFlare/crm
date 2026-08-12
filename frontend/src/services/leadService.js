@@ -1,11 +1,12 @@
-import api from "./api";
+import api, { monthParams } from "./api";
 
-export const getAllLeads = async (page = 0, size = 50, search = "") => {
+export const getAllLeads = async (page = 0, size = 50, search = "", month = "") => {
     const response = await api.get("/leads", {
         params: {
             page,
             size,
             search,
+            ...monthParams(month),
         },
     });
 
@@ -29,6 +30,30 @@ export const updateLead = async (id, lead) => {
 
 export const deleteLead = async (id) => {
     const response = await api.delete(`/leads/${id}`);
+    return response.data;
+};
+
+export const getDroppedLeads = async (page = 0, size = 50, search = "", month = "") => {
+    const response = await api.get("/leads/dropped", {
+        params: { page, size, search, ...monthParams(month) },
+    });
+
+    return response.data;
+};
+
+export const getLostLeads = async (page = 0, size = 50, search = "", month = "") => {
+    const response = await api.get("/leads/lost", {
+        params: { page, size, search, ...monthParams(month) },
+    });
+
+    return response.data;
+};
+
+export const getUnresponsiveLeads = async (page = 0, size = 50, search = "", month = "") => {
+    const response = await api.get("/leads/unresponsive", {
+        params: { page, size, search, ...monthParams(month) },
+    });
+
     return response.data;
 };
 export const importLeads = async (file) => {

@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import MasterModal from "../components/MasterModal";
+import LoadingState from "../components/ui/LoadingState";
+import EmptyState from "../components/ui/EmptyState";
+import StatusBadge from "../components/ui/StatusBadge";
 
 export default function MasterPage({
     title,
@@ -157,7 +160,7 @@ export default function MasterPage({
 
             {/* Table */}
 
-            <div className="card shadow-sm">
+            <div className="card shadow-sm border-0">
 
                 <div className="table-responsive">
 
@@ -190,44 +193,20 @@ export default function MasterPage({
                         {loading ? (
 
                             <tr>
-
-                                <td
-                                    colSpan="6"
-                                    className="text-center py-5"
-                                >
-
-                                    Loading...
-
+                                <td colSpan="6">
+                                    <LoadingState />
                                 </td>
-
                             </tr>
 
                         ) : filteredItems.length === 0 ? (
 
                             <tr>
-
-                                <td
-                                    colSpan="6"
-                                    className="text-center py-5"
-                                >
-
-                                    <i className="bi bi-inbox display-4 text-muted"></i>
-
-                                    <h5 className="mt-3">
-
-                                        No {title} Found
-
-                                    </h5>
-
-                                    <p className="text-muted">
-
-                                        Click "Add {title}" to
-                                        create your first record.
-
-                                    </p>
-
+                                <td colSpan="6">
+                                    <EmptyState
+                                        title={`No ${title} Found`}
+                                        message={`Click "Add ${title}" to create your first record.`}
+                                    />
                                 </td>
-
                             </tr>
 
                         ) : (
@@ -250,23 +229,7 @@ export default function MasterPage({
 
                                     <td>
 
-                                        {item.isActive ? (
-
-                                            <span className="badge bg-success">
-
-                                                Active
-
-                                            </span>
-
-                                        ) : (
-
-                                            <span className="badge bg-secondary">
-
-                                                Inactive
-
-                                            </span>
-
-                                        )}
+                                        <StatusBadge status={item.isActive ? "Active" : "Inactive"} />
 
                                     </td>
 
@@ -292,36 +255,34 @@ export default function MasterPage({
 
                                     <td>
 
-                                        <button
-                                            className="btn btn-warning btn-sm me-2"
-                                            onClick={() => {
-                                                setEditing(
-                                                    item
-                                                );
-                                                setShowModal(
-                                                    true
-                                                );
-                                            }}
-                                        >
-                                            <i className="bi bi-pencil me-1"></i>
+                                        <div className="btn-group">
 
-                                            Edit
+                                            <button
+                                                className="btn btn-sm btn-warning"
+                                                onClick={() => {
+                                                    setEditing(
+                                                        item
+                                                    );
+                                                    setShowModal(
+                                                        true
+                                                    );
+                                                }}
+                                            >
+                                                <i className="bi bi-pencil"></i>
+                                            </button>
 
-                                        </button>
+                                            <button
+                                                className="btn btn-sm btn-danger"
+                                                onClick={() =>
+                                                    handleDelete(
+                                                        item.id
+                                                    )
+                                                }
+                                            >
+                                                <i className="bi bi-trash"></i>
+                                            </button>
 
-                                        <button
-                                            className="btn btn-danger btn-sm"
-                                            onClick={() =>
-                                                handleDelete(
-                                                    item.id
-                                                )
-                                            }
-                                        >
-                                            <i className="bi bi-trash me-1"></i>
-
-                                            Delete
-
-                                        </button>
+                                        </div>
 
                                     </td>
 

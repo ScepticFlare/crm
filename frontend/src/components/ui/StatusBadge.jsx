@@ -1,54 +1,52 @@
-export default function StatusBadge({ status }) {
+// Single source of truth for status/stage -> badge color across the app.
+// Keep this mapping in sync if a new status/stage value is introduced.
+const STATUS_COLORS = {
+    NEW: "primary",
+    CONTACTED: "info",
+    QUOTATION_SENT: "warning",
+    NEGOTIATION: "dark",
+    POSTPONED: "secondary",
+    IN_PROGRESS: "primary",
+    WON: "success",
+    LOST: "danger",
+    DROPPED: "secondary",
+    UNRESPONSIVE: "warning",
 
-    function getColor() {
+    VALID: "success",
+    INVALID: "danger",
 
-        switch (status) {
+    ACTIVE: "success",
+    INACTIVE: "secondary",
 
-            case "NEW":
-                return "secondary";
+    PENDING: "warning",
+    COMPLETED: "success",
+    MISSED: "danger",
+    CANCELLED: "secondary",
+};
 
-            case "CONTACTED":
-                return "primary";
+// For callers that need the color only (e.g. a badge showing a count,
+// not the status text itself) rather than the full <StatusBadge/>.
+export function getStatusColor(status) {
 
-            case "QUOTATION_SENT":
-                return "info";
+    const key = typeof status === "string" ? status.toUpperCase() : status;
 
-            case "NEGOTIATION":
-                return "warning";
+    return STATUS_COLORS[key] || "primary";
 
-            case "POSTPONED":
-                return "dark";
+}
 
-            case "WON":
-                return "success";
+export default function StatusBadge({ status, className = "" }) {
 
-            case "LOST":
-                return "danger";
+    const color = getStatusColor(status);
 
-            case "VALID":
-                return "success";
-
-            case "INVALID":
-                return "danger";
-
-            case "ACTIVE":
-                return "success";
-
-            case "INACTIVE":
-                return "secondary";
-
-            default:
-                return "primary";
-
-        }
-
-    }
+    const label = typeof status === "string"
+        ? status.replaceAll("_", " ")
+        : status;
 
     return (
 
-        <span className={`badge bg-${getColor()}`}>
+        <span className={`badge bg-${color} ${className}`.trim()}>
 
-            {status}
+            {label}
 
         </span>
 

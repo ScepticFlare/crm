@@ -4,6 +4,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import DetailField from "../components/DetailField";
 import FollowUpSection from "../components/FollowUpSection";
+import StatusBadge from "../components/ui/StatusBadge";
+import LoadingState from "../components/ui/LoadingState";
 import { getOpportunityById } from "../services/opportunityService";
 
 export default function OpportunityDetails() {
@@ -38,35 +40,6 @@ export default function OpportunityDetails() {
 
     }
 
-    function stageColor(stage) {
-
-        switch (stage) {
-
-            case "NEW":
-                return "secondary";
-
-            case "QUOTATION_SENT":
-                return "info";
-
-            case "NEGOTIATION":
-                return "warning";
-
-            case "POSTPONED":
-                return "dark";
-
-            case "WON":
-                return "success";
-
-            case "LOST":
-                return "danger";
-
-            default:
-                return "primary";
-
-        }
-
-    }
-
     function formatCurrency(value) {
 
         if (!value) return "-";
@@ -95,11 +68,7 @@ export default function OpportunityDetails() {
 
         return (
 
-            <div className="text-center mt-5">
-
-                <div className="spinner-border text-primary"></div>
-
-            </div>
+            <LoadingState className="text-center mt-5" />
 
         );
 
@@ -151,11 +120,10 @@ export default function OpportunityDetails() {
 
                             </h5>
 
-                            <span className={`badge bg-${stageColor(opportunity.salesStage?.name)} px-3 py-2`}>
-
-                                {(opportunity.salesStage?.name || "Not Set").replaceAll("_", " ")}
-
-                            </span>
+                            <StatusBadge
+                                status={opportunity.salesStage?.name || "Not Set"}
+                                className="px-3 py-2"
+                            />
 
                             <span className="ms-3 text-muted">
 
@@ -250,9 +218,7 @@ title={
 
                             <h5 className="mt-2">
 
-                                <span className={`badge bg-${stageColor(opportunity.salesStage?.name)}`}>
-    {opportunity.salesStage?.name || "Not Set"}
-</span>
+                                <StatusBadge status={opportunity.salesStage?.name || "Not Set"} />
 
                             </h5>
 
@@ -361,8 +327,21 @@ title={
             />
 
             <DetailField
-                label="Website"
-                value={lead?.website}
+                label="Products"
+                value={lead?.leadProducts?.length > 0
+                    ? lead.leadProducts
+                        .map(lp => `${lp.product?.name} (${lp.quantity})`)
+                        .join(", ")
+                    : ""}
+            />
+
+            <DetailField
+                label="Battery"
+                value={lead?.leadBatteries?.length > 0
+                    ? lead.leadBatteries
+                        .map(lb => `${lb.battery?.name} (${lb.quantity})`)
+                        .join(", ")
+                    : ""}
             />
 
             <DetailField
@@ -392,18 +371,12 @@ title={
 
             <DetailField
                 label="Lead Status"
-                badge={lead?.leadStatus}
-                badgeColor="primary"
+                status={lead?.leadStatus}
             />
 
             <DetailField
-                label="Lead Validity"
-                badge={lead?.leadValidity}
-                badgeColor={
-                    lead?.leadValidity === "VALID"
-                        ? "success"
-                        : "danger"
-                }
+                label="Validity"
+                status={opportunity?.leadValidity}
             />
 
             <div className="mt-4">
@@ -457,16 +430,7 @@ title={
 
             <DetailField
                 label="Status"
-                badge={
-                    employee?.isActive
-                        ? "Active"
-                        : "Inactive"
-                }
-                badgeColor={
-                    employee?.isActive
-                        ? "success"
-                        : "danger"
-                }
+                status={employee?.isActive ? "Active" : "Inactive"}
             />
 
         </div>

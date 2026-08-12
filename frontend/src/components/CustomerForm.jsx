@@ -212,7 +212,7 @@ export default function CustomerForm({
 
             <hr className="my-4"/>
 
-            <div className="d-flex justify-content-end gap-2">
+            <div className="d-flex justify-content-end gap-2 mt-4">
 
                 <button
                     type="button"
@@ -224,7 +224,7 @@ export default function CustomerForm({
 
                 <button
                     type="submit"
-                    className="btn btn-success"
+                    className="btn btn-primary"
                     disabled={loading}
                 >
                     {loading ? "Converting..." : submitText}

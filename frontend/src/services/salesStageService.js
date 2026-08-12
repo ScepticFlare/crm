@@ -37,3 +37,17 @@ export const deleteSalesStage = async (id) => {
     await api.delete(`/sales-stages/${id}`);
 
 };
+
+export const getAllSalesStagesAdmin = async () => {
+
+    const response = await api.get("/sales-stages/all");
+
+    return response.data;
+
+};
+
+export const activateSalesStage = async (id) => {
+
+    await api.put(`/sales-stages/${id}/activate`);
+
+};

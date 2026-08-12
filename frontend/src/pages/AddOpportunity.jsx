@@ -19,7 +19,8 @@ export default function AddOpportunity() {
         title: "",
         productValue: "",
         expectedClosingDate: "",
-        salesStage: ""
+        salesStage: "",
+        leadValidity: "VALID"
     });
 
     function handleChange(e) {
@@ -52,7 +53,9 @@ export default function AddOpportunity() {
 
         expectedClosingDate: form.expectedClosingDate,
 
-        salesStage: form.salesStage
+        salesStage: form.salesStage,
+
+        leadValidity: form.leadValidity
 
     }
 );

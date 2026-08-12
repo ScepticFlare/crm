@@ -23,3 +23,12 @@ export const updateLeadSource = async (id, data) => {
 export const deleteLeadSource = async (id) => {
     await api.delete(`/lead-sources/${id}`);
 };
+
+export const getAllLeadSourcesAdmin = async () => {
+    const response = await api.get("/lead-sources/all");
+    return response.data;
+};
+
+export const activateLeadSource = async (id) => {
+    await api.put(`/lead-sources/${id}/activate`);
+};

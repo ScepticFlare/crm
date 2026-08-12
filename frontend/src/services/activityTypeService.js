@@ -23,3 +23,12 @@ export const updateActivityType = async (id, data) => {
 export const deleteActivityType = async (id) => {
     await api.delete(`/activity-types/${id}`);
 };
+
+export const getAllActivityTypesAdmin = async () => {
+    const response = await api.get("/activity-types/all");
+    return response.data;
+};
+
+export const activateActivityType = async (id) => {
+    await api.put(`/activity-types/${id}/activate`);
+};

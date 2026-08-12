@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import DataTable from "../components/DataTable";
 import DeleteModal from "../components/DeleteModal";
+import StatusBadge from "../components/ui/StatusBadge";
+import MonthFilter from "../components/MonthFilter";
 
 import {
     getAllFollowUps,
@@ -18,6 +20,7 @@ export default function FollowUps() {
     const [loading, setLoading] = useState(true);
 
     const [search, setSearch] = useState("");
+    const [month, setMonth] = useState("");
 
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(50);
@@ -29,7 +32,7 @@ export default function FollowUps() {
 
     useEffect(() => {
         loadFollowUps();
-    }, [page, pageSize, search]);
+    }, [page, pageSize, search, month]);
 
     async function loadFollowUps() {
 
@@ -40,7 +43,8 @@ export default function FollowUps() {
             const response = await getAllFollowUps(
                 page,
                 pageSize,
-                search
+                search,
+                month
             );
 
             setFollowUps(response.content);
@@ -88,29 +92,6 @@ export default function FollowUps() {
             console.error(error);
 
             alert("Unable to delete follow up.");
-
-        }
-
-    }
-
-    function statusColor(status) {
-
-        switch (status) {
-
-            case "PENDING":
-                return "warning";
-
-            case "COMPLETED":
-                return "success";
-
-            case "MISSED":
-                return "danger";
-
-            case "CANCELLED":
-                return "secondary";
-
-            default:
-                return "dark";
 
         }
 
@@ -171,11 +152,7 @@ export default function FollowUps() {
             label: "Status",
             render: row => (
 
-                <span
-                    className={`badge bg-${statusColor(row.status)}`}
-                >
-                    {row.status}
-                </span>
+                <StatusBadge status={row.status} />
 
             )
 
@@ -279,7 +256,7 @@ export default function FollowUps() {
 
                 <div className="row g-3">
 
-                    <div className="col-md-9">
+                    <div className="col-md-6">
 
                         <div className="input-group">
 
@@ -298,6 +275,18 @@ export default function FollowUps() {
                             />
 
                         </div>
+
+                    </div>
+
+                    <div className="col-md-3">
+
+                        <MonthFilter
+                            value={month}
+                            onChange={(value) => {
+                                setMonth(value);
+                                setPage(0);
+                            }}
+                        />
 
                     </div>
 

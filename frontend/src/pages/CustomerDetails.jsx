@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import PageHeader from "../components/PageHeader";
 import DetailField from "../components/DetailField";
+import StatusBadge from "../components/ui/StatusBadge";
+import LoadingState from "../components/ui/LoadingState";
 
 import {
     getCustomerById,
@@ -96,44 +98,11 @@ export default function CustomerDetails() {
 
     }
 
-    function stageColor(stage) {
-
-        switch (stage) {
-
-            case "NEW":
-                return "secondary";
-
-            case "QUOTATION_SENT":
-                return "info";
-
-            case "NEGOTIATION":
-                return "warning";
-
-            case "POSTPONED":
-                return "dark";
-
-            case "WON":
-                return "success";
-
-            case "LOST":
-                return "danger";
-
-            default:
-                return "primary";
-
-        }
-
-    }
-
     if (loading) {
 
         return (
 
-            <div className="text-center mt-5">
-
-                <div className="spinner-border text-primary"></div>
-
-            </div>
+            <LoadingState className="text-center mt-5" />
 
         );
 
@@ -471,10 +440,7 @@ export default function CustomerDetails() {
 
                             <DetailField
                                 label="Sales Stage"
-                                badge={opportunity?.salesStage?.name || "-"}
-                            badgeColor={
-                                stageColor(opportunity?.salesStage?.name)
-                            }
+                                status={opportunity?.salesStage?.name || "-"}
                             />
 
                             <DetailField
@@ -517,16 +483,7 @@ export default function CustomerDetails() {
 
                             <DetailField
                                 label="Status"
-                                badge={
-                                    employee?.isActive
-                                        ? "Active"
-                                        : "Inactive"
-                                }
-                                badgeColor={
-                                    employee?.isActive
-                                        ? "success"
-                                        : "danger"
-                                }
+                                status={employee?.isActive ? "Active" : "Inactive"}
                             />
 
                         </div>

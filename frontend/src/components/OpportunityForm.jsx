@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { getLeadById } from "../services/leadService";
-import { getAllSalesStages } from "../services/salesStageService";
-import AddSalesStageModal from "./AddSalesStageModal";
+import {
+    getAllSalesStages,
+    getAllSalesStagesAdmin,
+    createSalesStage,
+    deleteSalesStage,
+    activateSalesStage
+} from "../services/salesStageService";
+import DropdownAddManage from "./DropdownAddManage";
 
 export default function OpportunityForm({
     form,
@@ -13,9 +19,10 @@ export default function OpportunityForm({
     leadId
 }) {
 
+    const role = localStorage.getItem("role");
+
     const [lead, setLead] = useState(null);
     const [salesStages, setSalesStages] = useState([]);
-    const [showStageModal, setShowStageModal] = useState(false);
 
     useEffect(() => {
 
@@ -60,19 +67,6 @@ export default function OpportunityForm({
             alert("Unable to load sales stages.");
 
         }
-
-    }
-
-    async function handleSalesStageCreated(stage) {
-
-        await loadSalesStages();
-
-        handleChange({
-            target: {
-                name: "salesStage",
-                value: stage.name
-            }
-        });
 
     }
 
@@ -147,12 +141,18 @@ export default function OpportunityForm({
                     <div className="col-md-6 mb-3">
 
                         <label className="form-label fw-bold">
-                            Product
+                            Products
                         </label>
 
                         <input
                             className="form-control"
-                            value={lead?.product?.name || ""}
+                            value={
+                                lead?.leadProducts?.length > 0
+                                    ? lead.leadProducts
+                                        .map(lp => `${lp.product?.name} (${lp.quantity})`)
+                                        .join(", ")
+                                    : ""
+                            }
                             disabled
                         />
 
@@ -231,48 +231,54 @@ export default function OpportunityForm({
 
                     </div>
 
-                    <div className="col-md-6 mb-3">
+                    <div className="col-md-3 mb-3">
 
                         <label className="form-label">
                             Sales Stage *
                         </label>
 
-                        <div className="d-flex gap-2">
+                        <DropdownAddManage
+                            title="Sales Stage"
+                            name="salesStage"
+                            value={form.salesStage}
+                            onChange={handleChange}
+                            options={salesStages}
+                            required
+                            isAdmin={role === "ADMIN"}
+                            valueKey="name"
+                            create={createSalesStage}
+                            getAllIncludingInactive={getAllSalesStagesAdmin}
+                            deactivate={deleteSalesStage}
+                            activate={activateSalesStage}
+                            onRefresh={loadSalesStages}
+                            placeholder="Select Sales Stage"
+                        />
 
-                            <select
-                                className="form-select"
-                                name="salesStage"
-                                value={form.salesStage}
-                                onChange={handleChange}
-                                required
-                            >
+                    </div>
 
-                                <option value="">
-                                    Select Sales Stage
-                                </option>
+                    <div className="col-md-3 mb-3">
 
-                                {salesStages.map((stage) => (
+                        <label className="form-label">
+                            Validity *
+                        </label>
 
-                                    <option
-                                        key={stage.id}
-                                        value={stage.name}
-                                    >
-                                        {stage.name}
-                                    </option>
+                        <select
+                            className="form-select"
+                            name="leadValidity"
+                            value={form.leadValidity}
+                            onChange={handleChange}
+                            required
+                        >
 
-                                ))}
+                            <option value="VALID">
+                                VALID
+                            </option>
 
-                            </select>
+                            <option value="INVALID">
+                                INVALID
+                            </option>
 
-                            <button
-                                type="button"
-                                className="btn btn-outline-primary"
-                                onClick={() => setShowStageModal(true)}
-                            >
-                               AddStage
-                            </button>
-
-                        </div>
+                        </select>
 
                     </div>
 
@@ -298,12 +304,6 @@ export default function OpportunityForm({
                 </div>
 
             </form>
-
-            <AddSalesStageModal
-                show={showStageModal}
-                onClose={() => setShowStageModal(false)}
-                onCreated={handleSalesStageCreated}
-            />
 
         </>
 

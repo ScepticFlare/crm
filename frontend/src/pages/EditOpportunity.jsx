@@ -22,7 +22,8 @@ export default function EditOpportunity() {
         title: "",
         productValue: "",
         expectedClosingDate: "",
-        salesStage: "NEW"
+        salesStage: "NEW",
+        leadValidity: "VALID"
     });
 
     useEffect(() => {
@@ -45,7 +46,8 @@ export default function EditOpportunity() {
                 title: data.title || "",
                 productValue: data.productValue || "",
                 expectedClosingDate: data.expectedClosingDate || "",
-                salesStage: data.salesStage?.name || "NEW"
+                salesStage: data.salesStage?.name || "NEW",
+                leadValidity: data.leadValidity || "VALID"
             });
 
         } catch (error) {
@@ -82,13 +84,26 @@ export default function EditOpportunity() {
                         : Number(form.productValue)
             });
 
-            navigate("/opportunities");
+            if (form.salesStage === "WON") {
+
+                // Hand the employee straight to the customer completion
+                // form instead of requiring a separate manual click.
+                navigate(`/customers/convert/${id}`);
+
+            } else {
+
+                navigate("/opportunities");
+
+            }
 
         } catch (error) {
 
             console.error(error);
 
-            alert("Failed to update opportunity.");
+            alert(
+                error.response?.data?.message ||
+                "Failed to update opportunity."
+            );
 
         } finally {
 
@@ -118,6 +133,7 @@ export default function EditOpportunity() {
                         loading={loading}
                         submitText="Update Opportunity"
                         onCancel={() => navigate("/opportunities")}
+                        leadId={form.leadId}
                     />
 
                 </div>

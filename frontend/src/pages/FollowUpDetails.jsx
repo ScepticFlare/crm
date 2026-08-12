@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { getFollowUpById } from "../services/followupService";
+import DetailField from "../components/DetailField";
+import LoadingState from "../components/ui/LoadingState";
 
 export default function FollowUpDetails() {
 
@@ -36,34 +38,10 @@ export default function FollowUpDetails() {
 
     }
 
-    function badgeColor(status) {
-
-        switch (status) {
-
-            case "COMPLETED":
-                return "success";
-
-            case "PENDING":
-                return "warning";
-
-            case "MISSED":
-                return "danger";
-
-            case "CANCELLED":
-                return "secondary";
-
-            default:
-                return "primary";
-        }
-
-    }
-
     if (loading) {
 
         return (
-            <div className="text-center mt-5">
-                <div className="spinner-border"></div>
-            </div>
+            <LoadingState className="text-center mt-5" />
         );
 
     }
@@ -124,56 +102,47 @@ export default function FollowUpDetails() {
                     <div className="row g-4">
 
                         <div className="col-md-6">
-                            <strong>Lead</strong>
-                            <div>{followUp.lead?.companyName || "-"}</div>
+                            <DetailField label="Lead" value={followUp.lead?.companyName} />
                         </div>
 
                         <div className="col-md-6">
-                            <strong>Opportunity</strong>
-                            <div>{followUp.opportunity?.title || "-"}</div>
+                            <DetailField label="Opportunity" value={followUp.opportunity?.title} />
                         </div>
 
                         <div className="col-md-6">
-                            <strong>Assigned Employee</strong>
-                            <div>{followUp.employee?.name || "-"}</div>
+                            <DetailField label="Assigned Employee" value={followUp.employee?.name} />
                         </div>
 
                         <div className="col-md-6">
-                            <strong>Activity Type</strong>
-                            <div>{followUp.activityType?.name || "-"}</div>
+                            <DetailField label="Activity Type" value={followUp.activityType?.name} />
                         </div>
 
                         <div className="col-md-6">
-                            <strong>Status</strong>
-                            <div>
-                                <span className={`badge bg-${badgeColor(followUp.status)}`}>
-                                    {followUp.status?.replaceAll("_", " ")}
-                                </span>
-                            </div>
+                            <DetailField label="Status" status={followUp.status} />
                         </div>
 
                         <div className="col-md-6">
-                            <strong>Scheduled Date</strong>
-                            <div>
-                                {followUp.scheduledDate
+                            <DetailField
+                                label="Scheduled Date"
+                                value={followUp.scheduledDate
                                     ? new Date(followUp.scheduledDate).toLocaleString()
-                                    : "-"}
-                            </div>
+                                    : ""}
+                            />
                         </div>
 
                         <div className="col-md-6">
-                            <strong>Completed Date</strong>
-                            <div>
-                                {followUp.completedDate
+                            <DetailField
+                                label="Completed Date"
+                                value={followUp.completedDate
                                     ? new Date(followUp.completedDate).toLocaleString()
-                                    : "-"}
-                            </div>
+                                    : ""}
+                            />
                         </div>
 
                         <div className="col-12">
-                            <strong>Remarks</strong>
+                            <label className="text-muted small mb-1">Remarks</label>
 
-                            <div className="border rounded p-3 bg-light mt-2">
+                            <div className="border rounded p-3 bg-light">
                                 {followUp.remarks || "No remarks available."}
                             </div>
 

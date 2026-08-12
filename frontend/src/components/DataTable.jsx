@@ -1,3 +1,6 @@
+import LoadingState from "./ui/LoadingState";
+import EmptyState from "./ui/EmptyState";
+
 export default function DataTable({
     columns,
     data,
@@ -6,38 +9,13 @@ export default function DataTable({
 }) {
 
     if (loading) {
-        return (
-            <div className="text-center py-5">
-                <div
-                    className="spinner-border text-primary"
-                    role="status"
-                >
-                    <span className="visually-hidden">Loading...</span>
-                </div>
-            </div>
-        );
+        return <LoadingState />;
     }
 
     if (!data || data.length === 0) {
         return (
             <div className="card shadow-sm border-0">
-
-                <div className="card-body text-center py-5">
-
-                    <i
-                        className="bi bi-folder2-open display-3 text-secondary"
-                    ></i>
-
-                    <h4 className="mt-3">
-                        No Records Found
-                    </h4>
-
-                    <p className="text-muted mb-0">
-                        There is nothing to display.
-                    </p>
-
-                </div>
-
+                <EmptyState icon="bi-folder2-open" title="No Records Found" />
             </div>
         );
     }

@@ -2,20 +2,38 @@ import React, { useEffect, useState } from "react";
 import { getAllEmployees } from "../services/employeeService";
 import {
     getAllProducts,
-    createProduct
+    getAllProductsAdmin,
+    createProduct,
+    deleteProduct,
+    activateProduct
 } from "../services/productService";
 
 import {
     getAllIndustries,
-    createIndustry
+    getAllIndustriesAdmin,
+    createIndustry,
+    deleteIndustry,
+    activateIndustry
 } from "../services/industryService";
 
 import {
     getAllLeadSources,
-    createLeadSource
+    getAllLeadSourcesAdmin,
+    createLeadSource,
+    deleteLeadSource,
+    activateLeadSource
 } from "../services/leadSourceService";
 
-import MasterDropdownModal from "./MasterDropdownModal";
+import {
+    getAllBatteries,
+    getAllBatteriesAdmin,
+    createBattery,
+    deleteBattery,
+    activateBattery
+} from "../services/batteryService";
+
+import DropdownAddManage from "./DropdownAddManage";
+import MultiItemQuantitySelector from "./MultiItemQuantitySelector";
 
 export default function LeadForm({
 
@@ -31,18 +49,17 @@ export default function LeadForm({
     const [products, setProducts] = useState([]);
     const [industries, setIndustries] = useState([]);
     const [leadSources, setLeadSources] = useState([]);
+    const [batteries, setBatteries] = useState([]);
     const role = localStorage.getItem("role");
 
     const [employees, setEmployees] = useState([]);
-    const [showProductModal, setShowProductModal] = useState(false);
-    const [showIndustryModal, setShowIndustryModal] = useState(false);
-    const [showLeadSourceModal, setShowLeadSourceModal] = useState(false);
 
     useEffect(() => {
 
     loadProducts();
     loadIndustries();
     loadLeadSources();
+    loadBatteries();
 
     if (role === "ADMIN") {
         loadEmployees();
@@ -94,6 +111,22 @@ export default function LeadForm({
         }
 
     }
+
+    async function loadBatteries() {
+
+        try {
+
+            const data = await getAllBatteries();
+            setBatteries(data);
+
+        } catch (err) {
+
+            console.error(err);
+
+        }
+
+    }
+
     async function loadEmployees() {
 
     try {
@@ -108,84 +141,6 @@ export default function LeadForm({
     }
 
 }
-
-    async function handleProductCreated(product) {
-
-        await loadProducts();
-
-        handleChange({
-            target: {
-                name: "productId",
-                value: product.id
-            }
-        });
-
-    }
-
-    async function handleIndustryCreated(industry) {
-
-        await loadIndustries();
-
-        handleChange({
-            target: {
-                name: "industryId",
-                value: industry.id
-            }
-        });
-
-    }
-
-    async function handleLeadSourceCreated(source) {
-
-        await loadLeadSources();
-
-        handleChange({
-            target: {
-                name: "leadSourceId",
-                value: source.id
-            }
-        });
-
-    }
-
-    function onProductChange(e) {
-
-        if (e.target.value === "__ADD_NEW__") {
-
-            setShowProductModal(true);
-            return;
-
-        }
-
-        handleChange(e);
-
-    }
-
-    function onIndustryChange(e) {
-
-        if (e.target.value === "__ADD_NEW__") {
-
-            setShowIndustryModal(true);
-            return;
-
-        }
-
-        handleChange(e);
-
-    }
-
-    function onLeadSourceChange(e) {
-
-        if (e.target.value === "__ADD_NEW__") {
-
-            setShowLeadSourceModal(true);
-            return;
-
-        }
-
-        handleChange(e);
-
-    }
 
     return (
 
@@ -216,100 +171,75 @@ export default function LeadForm({
     <div className="col-md-6 mb-3">
 
         <label className="form-label">
-            Product *
+            Industry *
         </label>
 
-        <select
-            className="form-select"
-            name="productId"
-            value={form.productId}
-            onChange={onProductChange}
-            required
-        >
-
-            <option value="">
-                Select Product
-            </option>
-
-            {products.map(product => (
-
-                <option
-                    key={product.id}
-                    value={product.id}
-                >
-                    {product.name}
-                </option>
-
-            ))}
-
-            <option disabled>
-                ─────────────────
-            </option>
-
-            <option value="__ADD_NEW__">
-                ➕ Add New Product...
-            </option>
-
-        </select>
-
-    </div>
-
-    <div className="col-md-6 mb-3">
-
-        <label className="form-label">
-            Website
-        </label>
-
-        <input
-            type="text"
-            className="form-control"
-            name="website"
-            value={form.website}
+        <DropdownAddManage
+            title="Industry"
+            name="industryId"
+            value={form.industryId}
             onChange={handleChange}
+            options={industries}
+            required
+            isAdmin={role === "ADMIN"}
+            create={createIndustry}
+            getAllIncludingInactive={getAllIndustriesAdmin}
+            deactivate={deleteIndustry}
+            activate={activateIndustry}
+            onRefresh={loadIndustries}
+            currentLabel={form.industryName}
+            placeholder="Select Industry"
         />
 
     </div>
 
-    <div className="col-md-6 mb-3">
+</div>
 
-        <label className="form-label">
-            Industry *
-        </label>
+<div className="mb-3">
 
-        <select
-            className="form-select"
-            name="industryId"
-            value={form.industryId}
-            onChange={onIndustryChange}
-            required
-        >
+    <label className="form-label">
+        Products
+    </label>
 
-            <option value="">
-                Select Industry
-            </option>
+    <MultiItemQuantitySelector
+        label="Product"
+        items={form.products || []}
+        onItemsChange={(items) =>
+            handleChange({ target: { name: "products", value: items } })
+        }
+        options={products}
+        isAdmin={role === "ADMIN"}
+        create={createProduct}
+        getAllIncludingInactive={getAllProductsAdmin}
+        deactivate={deleteProduct}
+        activate={activateProduct}
+        onRefresh={loadProducts}
+        placeholder="Select Product"
+    />
 
-            {industries.map(industry => (
+</div>
 
-                <option
-                    key={industry.id}
-                    value={industry.id}
-                >
-                    {industry.name}
-                </option>
+<div className="mb-3">
 
-            ))}
+    <label className="form-label">
+        Battery
+    </label>
 
-            <option disabled>
-                ─────────────────
-            </option>
-
-            <option value="__ADD_NEW__">
-                ➕ Add New Industry...
-            </option>
-
-        </select>
-
-    </div>
+    <MultiItemQuantitySelector
+        label="Battery"
+        items={form.batteries || []}
+        onItemsChange={(items) =>
+            handleChange({ target: { name: "batteries", value: items } })
+        }
+        options={batteries}
+        isAdmin={role === "ADMIN"}
+        create={createBattery}
+        getAllIncludingInactive={getAllBatteriesAdmin}
+        deactivate={deleteBattery}
+        activate={activateBattery}
+        onRefresh={loadBatteries}
+        placeholder="Select Battery"
+    />
 
 </div>
 
@@ -341,7 +271,7 @@ export default function LeadForm({
     <div className="col-md-6 mb-3">
 
         <label className="form-label">
-            Designation *
+            Designation
         </label>
 
         <input
@@ -393,7 +323,7 @@ export default function LeadForm({
     <div className="col-md-6 mb-3">
 
         <label className="form-label">
-            Email *
+            Email
         </label>
 
         <input
@@ -402,7 +332,6 @@ export default function LeadForm({
             name="email"
             value={form.email}
             onChange={handleChange}
-            required
         />
 
     </div>
@@ -426,7 +355,7 @@ export default function LeadForm({
     <div className="col-md-6 mb-3">
 
         <label className="form-label">
-            City *
+            City
         </label>
 
         <input
@@ -442,7 +371,7 @@ export default function LeadForm({
     <div className="col-md-6 mb-3">
 
         <label className="form-label">
-            State *
+            State
         </label>
 
         <input
@@ -467,6 +396,9 @@ export default function LeadForm({
             name="pincode"
             value={form.pincode}
             onChange={handleChange}
+            maxLength={6}
+            pattern="[0-9]{6}"
+            title="Pincode must be exactly 6 digits"
         />
 
     </div>
@@ -481,7 +413,7 @@ export default function LeadForm({
 
 {role === "ADMIN" && (
 
-    <div className="mb-4">
+    <div className="mb-3">
 
         <label className="form-label">
             Assigned Employee *
@@ -538,6 +470,8 @@ export default function LeadForm({
             <option value="NEGOTIATION">NEGOTIATION</option>
             <option value="WON">WON</option>
             <option value="LOST">LOST</option>
+            <option value="DROPPED">DROPPED</option>
+            <option value="UNRESPONSIVE">UNRESPONSIVE</option>
 
         </select>
 
@@ -549,63 +483,22 @@ export default function LeadForm({
             Lead Source *
         </label>
 
-        <select
-            className="form-select"
+        <DropdownAddManage
+            title="Lead Source"
             name="leadSourceId"
             value={form.leadSourceId}
-            onChange={onLeadSourceChange}
-            required
-        >
-
-            <option value="">
-                Select Lead Source
-            </option>
-
-            {leadSources.map(source => (
-
-                <option
-                    key={source.id}
-                    value={source.id}
-                >
-                    {source.name}
-                </option>
-
-            ))}
-
-            <option disabled>
-                ─────────────────
-            </option>
-
-            <option value="__ADD_NEW__">
-                ➕ Add New Lead Source...
-            </option>
-
-        </select>
-
-    </div>
-
-    <div className="col-md-4 mb-3">
-
-        <label className="form-label">
-            Lead Validity
-        </label>
-
-        <select
-            className="form-select"
-            name="leadValidity"
-            value={form.leadValidity}
             onChange={handleChange}
-        >
-
-            <option value="VALID">
-                VALID
-            </option>
-
-            <option value="INVALID">
-                INVALID
-            </option>
-
-        </select>
+            options={leadSources}
+            required
+            isAdmin={role === "ADMIN"}
+            create={createLeadSource}
+            getAllIncludingInactive={getAllLeadSourcesAdmin}
+            deactivate={deleteLeadSource}
+            activate={activateLeadSource}
+            onRefresh={loadLeadSources}
+            currentLabel={form.leadSourceName}
+            placeholder="Select Lead Source"
+        />
 
     </div>
 
@@ -613,7 +506,7 @@ export default function LeadForm({
 
 <hr className="my-4" />
 
-<div className="mb-4">
+<div className="mb-3">
 
     <label className="form-label">
         Description
@@ -631,7 +524,7 @@ export default function LeadForm({
 
 <hr className="my-4" />
 
-<div className="mb-4">
+<div className="mb-3">
 
     <label className="form-label fw-bold">
         Final Remarks
@@ -649,10 +542,6 @@ export default function LeadForm({
 </div>
 
 <div className="d-flex justify-content-end gap-2 mt-4">
-    ...
-</div>
-
-<div className="d-flex justify-content-end gap-2 mt-5">
 
     <button
         type="button"
@@ -675,30 +564,6 @@ export default function LeadForm({
     </button>
 
 </div>
-
-<MasterDropdownModal
-    show={showProductModal}
-    onClose={() => setShowProductModal(false)}
-    onCreated={handleProductCreated}
-    title="Product"
-    create={createProduct}
-/>
-
-<MasterDropdownModal
-    show={showIndustryModal}
-    onClose={() => setShowIndustryModal(false)}
-    onCreated={handleIndustryCreated}
-    title="Industry"
-    create={createIndustry}
-/>
-
-<MasterDropdownModal
-    show={showLeadSourceModal}
-    onClose={() => setShowLeadSourceModal(false)}
-    onCreated={handleLeadSourceCreated}
-    title="Lead Source"
-    create={createLeadSource}
-/>
 
 
 </form>

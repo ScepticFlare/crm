@@ -23,3 +23,12 @@ export const updateIndustry = async (id, data) => {
 export const deleteIndustry = async (id) => {
     await api.delete(`/industries/${id}`);
 };
+
+export const getAllIndustriesAdmin = async () => {
+    const response = await api.get("/industries/all");
+    return response.data;
+};
+
+export const activateIndustry = async (id) => {
+    await api.put(`/industries/${id}/activate`);
+};

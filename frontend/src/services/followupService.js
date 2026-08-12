@@ -1,16 +1,18 @@
-import api from "./api";
+import api, { monthParams } from "./api";
 
 export const getAllFollowUps = async (
     page = 0,
     size = 50,
-    search = ""
+    search = "",
+    month = ""
 ) => {
 
     const response = await api.get("/followups", {
         params: {
             page,
             size,
-            search
+            search,
+            ...monthParams(month)
         }
     });
 

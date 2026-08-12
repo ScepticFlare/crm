@@ -23,3 +23,12 @@ export const updateProduct = async (id, data) => {
 export const deleteProduct = async (id) => {
     await api.delete(`/products/${id}`);
 };
+
+export const getAllProductsAdmin = async () => {
+    const response = await api.get("/products/all");
+    return response.data;
+};
+
+export const activateProduct = async (id) => {
+    await api.put(`/products/${id}/activate`);
+};

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import EmployeeForm from "../components/EmployeeForm";
 import PageHeader from "../components/PageHeader";
+import LoadingState from "../components/ui/LoadingState";
 import {
     getEmployeeById,
     updateEmployee,
@@ -81,16 +82,7 @@ export default function EditEmployee() {
 
     if (loading) {
         return (
-            <div className="text-center py-5">
-                <div
-                    className="spinner-border text-primary"
-                    role="status"
-                >
-                    <span className="visually-hidden">
-                        Loading...
-                    </span>
-                </div>
-            </div>
+            <LoadingState />
         );
     }
 

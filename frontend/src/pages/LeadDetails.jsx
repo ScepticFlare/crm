@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import FollowUpSection from "../components/FollowUpSection";
 import PageHeader from "../components/PageHeader";
+import DetailField from "../components/DetailField";
+import LoadingState from "../components/ui/LoadingState";
 import { getLeadById } from "../services/leadService";
 
 export default function LeadDetails() {
@@ -42,11 +44,7 @@ export default function LeadDetails() {
 
         return (
 
-            <div className="text-center mt-5">
-
-                <div className="spinner-border text-primary"></div>
-
-            </div>
+            <LoadingState className="text-center mt-5" />
 
         );
 
@@ -85,45 +83,45 @@ export default function LeadDetails() {
 
                     <div className="row">
 
-                        <div className="col-md-4 mb-3">
-
-                            <label className="fw-bold">Product</label>
-
-                            <div>{lead.product?.name || "-"}</div>
-
+                        <div className="col-md-4">
+                            <DetailField
+                                label="Products"
+                                value={lead.leadProducts?.length > 0
+                                    ? lead.leadProducts
+                                        .map(lp => `${lp.product?.name} (${lp.quantity})`)
+                                        .join(", ")
+                                    : ""}
+                            />
                         </div>
 
-                        <div className="col-md-4 mb-3">
-
-                            <label className="fw-bold">
-                                Industry
-                            </label>
-
-                            <div>
-                                {lead.industry?.name || "-"}
-                            </div>
-
+                        <div className="col-md-4">
+                            <DetailField
+                                label="Industry"
+                                value={lead.industry?.name}
+                            />
                         </div>
 
-                        <div className="col-md-4 mb-3">
-
-                            <label className="fw-bold">Website</label>
-
-                            <div>{lead.website || "-"}</div>
-
+                        <div className="col-md-4">
+                            <DetailField
+                                label="Battery"
+                                value={lead.leadBatteries?.length > 0
+                                    ? lead.leadBatteries
+                                        .map(lb => `${lb.battery?.name} (${lb.quantity})`)
+                                        .join(", ")
+                                    : ""}
+                            />
                         </div>
 
-                        <div className="col-md-4 mb-3">
-
-                            <label className="fw-bold">Interested Product</label>
-
-                            <div>{lead.interestedProduct || "-"}</div>
-
+                        <div className="col-md-4">
+                            <DetailField
+                                label="Interested Product"
+                                value={lead.interestedProduct}
+                            />
                         </div>
 
                     </div>
 
-                    <hr />
+                    <hr className="my-4" />
 
                     <h5 className="mb-4">
                         Contact Information
@@ -131,57 +129,33 @@ export default function LeadDetails() {
 
                     <div className="row">
 
-                        <div className="col-md-4 mb-3">
-
-                            <label className="fw-bold">Contact Person</label>
-
-                            <div>{lead.contactPerson || "-"}</div>
-
+                        <div className="col-md-4">
+                            <DetailField label="Contact Person" value={lead.contactPerson} />
                         </div>
 
-                        <div className="col-md-4 mb-3">
-
-                            <label className="fw-bold">Designation</label>
-
-                            <div>{lead.designation || "-"}</div>
-
+                        <div className="col-md-4">
+                            <DetailField label="Designation" value={lead.designation} />
                         </div>
 
-                        <div className="col-md-4 mb-3">
-
-                            <label className="fw-bold">Phone</label>
-
-                            <div>{lead.phone || "-"}</div>
-
+                        <div className="col-md-4">
+                            <DetailField label="Phone" value={lead.phone} />
                         </div>
 
-                        <div className="col-md-4 mb-3">
-
-                            <label className="fw-bold">Alternate Phone</label>
-
-                            <div>{lead.alternatePhone || "-"}</div>
-
+                        <div className="col-md-4">
+                            <DetailField label="Alternate Phone" value={lead.alternatePhone} />
                         </div>
 
-                        <div className="col-md-4 mb-3">
-
-                            <label className="fw-bold">Email</label>
-
-                            <div>{lead.email || "-"}</div>
-
+                        <div className="col-md-4">
+                            <DetailField label="Email" value={lead.email} />
                         </div>
 
-                        <div className="col-md-4 mb-3">
-
-                            <label className="fw-bold">Secondary Email</label>
-
-                            <div>{lead.secondaryEmail || "-"}</div>
-
+                        <div className="col-md-4">
+                            <DetailField label="Secondary Email" value={lead.secondaryEmail} />
                         </div>
 
                     </div>
 
-                    <hr />
+                    <hr className="my-4" />
 
                     <h5 className="mb-4">
                         Address
@@ -189,33 +163,21 @@ export default function LeadDetails() {
 
                     <div className="row">
 
-                        <div className="col-md-4 mb-3">
-
-                            <label className="fw-bold">City</label>
-
-                            <div>{lead.city || "-"}</div>
-
+                        <div className="col-md-4">
+                            <DetailField label="City" value={lead.city} />
                         </div>
 
-                        <div className="col-md-4 mb-3">
-
-                            <label className="fw-bold">State</label>
-
-                            <div>{lead.state || "-"}</div>
-
+                        <div className="col-md-4">
+                            <DetailField label="State" value={lead.state} />
                         </div>
 
-                        <div className="col-md-4 mb-3">
-
-                            <label className="fw-bold">Pincode</label>
-
-                            <div>{lead.pincode || "-"}</div>
-
+                        <div className="col-md-4">
+                            <DetailField label="Pincode" value={lead.pincode} />
                         </div>
 
                     </div>
 
-                    <hr />
+                    <hr className="my-4" />
 
                     <h5 className="mb-4">
                         Lead Information
@@ -223,61 +185,21 @@ export default function LeadDetails() {
 
                     <div className="row">
 
-                        <div className="col-md-3 mb-3">
-
-                            <label className="fw-bold">Status</label>
-
-                            <div>
-
-                                <span className={`badge bg-${
-                                    lead.leadStatus === "NEW"
-                                        ? "primary"
-                                        : lead.leadStatus === "CONTACTED"
-                                        ? "info"
-                                        : lead.leadStatus === "QUOTATION_SENT"
-                                        ? "warning"
-                                        : lead.leadStatus === "NEGOTIATION"
-                                        ? "secondary"
-                                        : lead.leadStatus === "WON"
-                                        ? "success"
-                                        : "danger"
-                                }`}>
-
-                                    {lead.leadStatus.replaceAll("_", " ")}
-
-                                </span>
-
-                            </div>
-
+                        <div className="col-md-3">
+                            <DetailField label="Status" status={lead.leadStatus} />
                         </div>
 
-                        <div className="col-md-3 mb-3">
-
-                            <label className="fw-bold">Assigned Employee</label>
-
-                            <div>{lead.assignedEmployee?.name || "-"}</div>
-
+                        <div className="col-md-3">
+                            <DetailField label="Assigned Employee" value={lead.assignedEmployee?.name} />
                         </div>
 
-                        <div className="col-md-3 mb-3">
-
-                            <label className="fw-bold">Source</label>
-
-                            <div>{lead.leadSource?.name || "-"}</div>
-
-                        </div>
-
-                        <div className="col-md-3 mb-3">
-
-                            <label className="fw-bold">Validity</label>
-
-                            <div>{lead.leadValidity || "-"}</div>
-
+                        <div className="col-md-3">
+                            <DetailField label="Source" value={lead.leadSource?.name} />
                         </div>
 
                     </div>
 
-                    <hr />
+                    <hr className="my-4" />
 
                     <h5 className="mb-3">
                         Description
@@ -289,9 +211,9 @@ export default function LeadDetails() {
 
                     </div>
 
-                    <h4 className="mt-4 mb-3">
+                    <h5 className="mt-4 mb-3">
                         Final Remarks
-                    </h4>
+                    </h5>
 
                     <div className="border rounded p-3 bg-light">
 

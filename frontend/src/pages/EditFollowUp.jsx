@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import FollowUpForm from "../components/FollowUpForm";
+import LoadingState from "../components/ui/LoadingState";
 
 import {
     getFollowUpById,
@@ -71,6 +72,7 @@ export default function EditFollowUp() {
             opportunityId: followUp.opportunity?.id || "",
             employeeId: followUp.employee?.id || "",
             activityTypeId: followUp.activityType?.id || "",
+            activityTypeName: followUp.activityType?.name || "",
             status: followUp.status || "PENDING",
             scheduledDate: followUp.scheduledDate
                 ? followUp.scheduledDate.substring(0, 16)
@@ -123,9 +125,7 @@ export default function EditFollowUp() {
     if(loading){
 
         return (
-            <div className="text-center mt-5">
-                <div className="spinner-border"></div>
-            </div>
+            <LoadingState className="text-center mt-5" />
         );
 
     }

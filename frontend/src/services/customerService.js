@@ -1,16 +1,18 @@
-import api from "./api";
+import api, { monthParams } from "./api";
 
 export const getAllCustomers = async (
     page = 0,
     size = 50,
-    search = ""
+    search = "",
+    month = ""
 ) => {
 
     const response = await api.get("/customers", {
         params: {
             page,
             size,
-            search
+            search,
+            ...monthParams(month)
         }
     });
 
@@ -80,6 +82,14 @@ export const convertCustomer = async (opportunityId, customer) => {
 export const getCustomerOpportunity = async (id) => {
 
     const response = await api.get(`/opportunities/${id}`);
+
+    return response.data;
+
+};
+
+export const getCustomerByOpportunity = async (opportunityId) => {
+
+    const response = await api.get(`/customers/by-opportunity/${opportunityId}`);
 
     return response.data;
 

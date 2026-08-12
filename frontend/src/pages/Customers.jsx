@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import DataTable from "../components/DataTable";
 import DeleteModal from "../components/DeleteModal";
+import MonthFilter from "../components/MonthFilter";
 
 import {
     getAllCustomers,
@@ -18,6 +19,7 @@ export default function Customers() {
     const [loading, setLoading] = useState(true);
 
     const [search, setSearch] = useState("");
+    const [month, setMonth] = useState("");
 
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(50);
@@ -29,7 +31,7 @@ export default function Customers() {
 
     useEffect(() => {
         loadCustomers();
-    }, [page, pageSize, search]);
+    }, [page, pageSize, search, month]);
 
     async function loadCustomers() {
 
@@ -40,7 +42,8 @@ export default function Customers() {
             const response = await getAllCustomers(
                 page,
                 pageSize,
-                search
+                search,
+                month
             );
 
             setCustomers(response.content);
@@ -137,8 +140,8 @@ export default function Customers() {
         <>
 
             <PageHeader
-                title="Customers"
-                subtitle={`${totalElements} Customer(s) Found`}
+                title="Won"
+                subtitle={`${totalElements} Won Customer(s) Found`}
             />
 
             <div className="row mb-4">
@@ -227,25 +230,45 @@ export default function Customers() {
 
                 <div className="card-body">
 
-                    <div className="input-group">
+                    <div className="row g-2">
 
-                        <span className="input-group-text bg-white">
+                        <div className="col">
 
-                            <i className="bi bi-search"></i>
+                            <div className="input-group">
 
-                        </span>
+                                <span className="input-group-text bg-white">
 
-                        <input
-                            className="form-control border-start-0"
-                            placeholder="Search by company, contact, phone, email, city, GST or employee..."
-                            value={search}
-                            onChange={(e) => {
+                                    <i className="bi bi-search"></i>
 
-                                setSearch(e.target.value);
-                                setPage(0);
+                                </span>
 
-                            }}
-                        />
+                                <input
+                                    className="form-control border-start-0"
+                                    placeholder="Search by company, contact, phone, email, city, GST or employee..."
+                                    value={search}
+                                    onChange={(e) => {
+
+                                        setSearch(e.target.value);
+                                        setPage(0);
+
+                                    }}
+                                />
+
+                            </div>
+
+                        </div>
+
+                        <div className="col-md-3">
+
+                            <MonthFilter
+                                value={month}
+                                onChange={(value) => {
+                                    setMonth(value);
+                                    setPage(0);
+                                }}
+                            />
+
+                        </div>
 
                     </div>
 

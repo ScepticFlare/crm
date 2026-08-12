@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import DataTable from "../components/DataTable";
 import DeleteModal from "../components/DeleteModal";
+import StatusBadge from "../components/ui/StatusBadge";
+import MonthFilter from "../components/MonthFilter";
 
 import {
     getAllOpportunities,
@@ -20,6 +22,7 @@ export default function Opportunities({
     const [opportunities, setOpportunities] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [month, setMonth] = useState("");
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(50);
     const [totalPages, setTotalPages] = useState(0);
@@ -29,7 +32,7 @@ export default function Opportunities({
 
     useEffect(() => {
     loadOpportunities();
-}, [page, pageSize, search]);
+}, [page, pageSize, search, month]);
 
     async function loadOpportunities() {
 
@@ -40,7 +43,8 @@ export default function Opportunities({
         const response = await fetchOpportunities(
             page,
             pageSize,
-            search
+            search,
+            month
         );
 
         setOpportunities(response.content);
@@ -89,41 +93,15 @@ export default function Opportunities({
 
             console.error(error);
 
-            alert("Unable to delete opportunity.");
+            alert(
+                error.response?.data?.message ||
+                "Unable to delete opportunity."
+            );
 
         }
 
     }
 
-
-    function stageColor(stage) {
-
-        switch (stage) {
-
-            case "NEW":
-                return "primary";
-
-            case "QUOTATION_SENT":
-                return "warning";
-
-            case "NEGOTIATION":
-                return "info";
-
-            case "POSTPONED":
-                return "secondary";
-
-            case "WON":
-                return "success";
-
-            case "LOST":
-                return "danger";
-
-            default:
-                return "dark";
-
-        }
-
-    }
 
     const totalValue = opportunities.reduce(
         (sum, opportunity) => sum + (opportunity.productValue || 0),
@@ -172,19 +150,13 @@ export default function Opportunities({
             key: "stage",
             label: "Stage",
 
-            render: (row) => {
+            render: (row) => (
 
-            const stage = row.salesStage?.name || "Not Set";
+                <StatusBadge status={row.salesStage?.name || "Not Set"} />
 
-            return (
-            <span className={`badge bg-${stageColor(stage)}`}>
-                {stage}
-            </span>
-        );
+            )
 
-    }
-
-}
+        }
 
     ];
 
@@ -276,26 +248,46 @@ export default function Opportunities({
 
                 <div className="card-body">
 
-                    <div className="input-group">
+                    <div className="row g-2">
 
-                        <span className="input-group-text bg-white">
+                        <div className="col">
 
-                            <i className="bi bi-search"></i>
+                            <div className="input-group">
 
-                        </span>
+                                <span className="input-group-text bg-white">
 
-                        <input
-                            className="form-control border-start-0"
-                            placeholder="Search by company, contact, phone, email, stage or employee..."
-                            value={search}
-                            onChange={(e) => {
+                                    <i className="bi bi-search"></i>
 
-                                setSearch(e.target.value);
+                                </span>
 
-                                setPage(0);
+                                <input
+                                    className="form-control border-start-0"
+                                    placeholder="Search by company, contact, phone, email, stage or employee..."
+                                    value={search}
+                                    onChange={(e) => {
+
+                                        setSearch(e.target.value);
+
+                                        setPage(0);
 
 }}
-                        />
+                                />
+
+                            </div>
+
+                        </div>
+
+                        <div className="col-md-3">
+
+                            <MonthFilter
+                                value={month}
+                                onChange={(value) => {
+                                    setMonth(value);
+                                    setPage(0);
+                                }}
+                            />
+
+                        </div>
 
                     </div>
 

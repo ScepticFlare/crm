@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import LeadForm from "../components/LeadForm";
+import LoadingState from "../components/ui/LoadingState";
 import { getLeadById, updateLead } from "../services/leadService";
 
 export default function EditLead() {
@@ -20,20 +21,22 @@ export default function EditLead() {
         alternatePhone: "",
         email: "",
         secondaryEmail: "",
-        website: "",
         city: "",
         state: "",
         pincode: "",
 
-        productId: "",
         industryId: "",
+        industryName: "",
         leadSourceId: "",
+        leadSourceName: "",
+
+        products: [],
+        batteries: [],
 
         description: "",
         finalRemarks: "",
 
         leadStatus: "NEW",
-        leadValidity: "VALID",
 
         assignedEmployeeId: 2
     });
@@ -57,20 +60,31 @@ export default function EditLead() {
                 alternatePhone: data.alternatePhone || "",
                 email: data.email || "",
                 secondaryEmail: data.secondaryEmail || "",
-                website: data.website || "",
                 city: data.city || "",
                 state: data.state || "",
                 pincode: data.pincode || "",
 
-                productId: data.product?.id || "",
                 industryId: data.industry?.id || "",
+                industryName: data.industry?.name || "",
                 leadSourceId: data.leadSource?.id || "",
+                leadSourceName: data.leadSource?.name || "",
+
+                products: (data.leadProducts || []).map(lp => ({
+                    itemId: lp.product?.id || "",
+                    itemName: lp.product?.name || "",
+                    quantity: lp.quantity || 1
+                })),
+
+                batteries: (data.leadBatteries || []).map(lb => ({
+                    itemId: lb.battery?.id || "",
+                    itemName: lb.battery?.name || "",
+                    quantity: lb.quantity || 1
+                })),
 
                 description: data.description || "",
                 finalRemarks: data.finalRemarks || "",
 
                 leadStatus: data.leadStatus || "NEW",
-                leadValidity: data.leadValidity || "VALID",
 
                 assignedEmployeeId:
                     data.assignedEmployee?.id ||
@@ -109,7 +123,21 @@ export default function EditLead() {
 
             setSaving(true);
 
-            await updateLead(id, form);
+            await updateLead(id, {
+                ...form,
+                products: (form.products || [])
+                    .filter(p => p.itemId)
+                    .map(p => ({
+                        productId: Number(p.itemId),
+                        quantity: Number(p.quantity) || 1
+                    })),
+                batteries: (form.batteries || [])
+                    .filter(b => b.itemId)
+                    .map(b => ({
+                        batteryId: Number(b.itemId),
+                        quantity: Number(b.quantity) || 1
+                    }))
+            });
 
             alert("Lead Updated Successfully");
 
@@ -136,11 +164,7 @@ export default function EditLead() {
 
         return (
 
-            <div className="text-center mt-5">
-
-                <div className="spinner-border text-primary"></div>
-
-            </div>
+            <LoadingState className="text-center mt-5" />
 
         );
 

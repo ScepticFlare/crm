@@ -6,6 +6,9 @@ import {
     getFollowUpsByOpportunity,
     deleteFollowUp
 } from "../services/followupService";
+import StatusBadge from "./ui/StatusBadge";
+import LoadingState from "./ui/LoadingState";
+import EmptyState from "./ui/EmptyState";
 
 export default function FollowUpSection({
     leadId,
@@ -83,29 +86,6 @@ export default function FollowUpSection({
 
     }
 
-    function badgeColor(status) {
-
-        switch (status) {
-
-            case "PENDING":
-                return "warning";
-
-            case "COMPLETED":
-                return "success";
-
-            case "MISSED":
-                return "danger";
-
-            case "CANCELLED":
-                return "secondary";
-
-            default:
-                return "primary";
-
-        }
-
-    }
-
     function formatDate(date) {
 
         if (!date) return "-";
@@ -127,11 +107,7 @@ export default function FollowUpSection({
 
             <div className="card shadow-sm border-0 mt-4">
 
-                <div className="card-body text-center">
-
-                    <div className="spinner-border text-primary"></div>
-
-                </div>
+                <LoadingState className="card-body text-center" />
 
             </div>
 
@@ -187,28 +163,12 @@ export default function FollowUpSection({
 
                         (
 
-                            <div className="text-center text-muted py-4">
-
-                                <i
-                                    className="bi bi-calendar-x"
-                                    style={{
-                                        fontSize: "3rem"
-                                    }}
-                                ></i>
-
-                                <h6 className="mt-3">
-
-                                    No Follow Ups Found
-
-                                </h6>
-
-                                <p className="mb-0">
-
-                                    Create your first follow up.
-
-                                </p>
-
-                            </div>
+                            <EmptyState
+                                icon="bi-calendar-x"
+                                title="No Follow Ups Found"
+                                message="Create your first follow up."
+                                className="text-center text-muted py-4"
+                            />
 
                         )
 
@@ -268,15 +228,7 @@ export default function FollowUpSection({
 
                                                     <td>
 
-                                                        <span
-                                                            className={`badge bg-${badgeColor(
-                                                                followUp.status
-                                                            )}`}
-                                                        >
-
-                                                            {followUp.status}
-
-                                                        </span>
+                                                        <StatusBadge status={followUp.status} />
 
                                                     </td>
 
@@ -297,7 +249,7 @@ export default function FollowUpSection({
                                                         <div className="btn-group">
 
                                                             <button
-                                                                className="btn btn-outline-primary btn-sm"
+                                                                className="btn btn-sm btn-primary"
                                                                 onClick={() =>
                                                                     navigate(
                                                                         `/followups/${followUp.id}`
@@ -310,7 +262,7 @@ export default function FollowUpSection({
                                                             </button>
 
                                                             <button
-                                                                className="btn btn-outline-warning btn-sm"
+                                                                className="btn btn-sm btn-warning"
                                                                 onClick={() =>
                                                                     navigate(
                                                                         `/followups/edit/${followUp.id}`
@@ -323,7 +275,7 @@ export default function FollowUpSection({
                                                             </button>
 
                                                             <button
-                                                                className="btn btn-outline-danger btn-sm"
+                                                                className="btn btn-sm btn-danger"
                                                                 onClick={() =>
                                                                     handleDelete(
                                                                         followUp.id

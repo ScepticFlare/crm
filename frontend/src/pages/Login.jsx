@@ -34,11 +34,13 @@ function Login() {
 
             navigate("/dashboard");
 
-        } catch (err) {
+        }  catch (err) {
 
-            setError("Invalid email or password");
+    console.error("LOGIN ERROR:", err);
 
-        } finally {
+    setError("Invalid email or password");
+
+} finally {
 
             setLoading(false);
 

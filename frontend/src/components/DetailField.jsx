@@ -1,9 +1,12 @@
+import StatusBadge from "./ui/StatusBadge";
+
 export default function DetailField({
     icon,
     label,
     value,
     badge = null,
-    badgeColor = "primary"
+    badgeColor = "primary",
+    status = null
 }) {
 
     const displayValue =
@@ -34,7 +37,11 @@ export default function DetailField({
 
             </div>
 
-            {badge !== null ? (
+            {status !== null ? (
+
+                <StatusBadge status={status} />
+
+            ) : badge !== null ? (
 
                 <span className={`badge bg-${badgeColor}`}>
                     {badgeValue}

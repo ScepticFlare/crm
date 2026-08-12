@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import {
     getLeadReport,
@@ -105,13 +106,22 @@ export default function Reports() {
                 subtitle="Generate monthly lead reports."
             />
 
+            <div className="d-flex justify-content-end mb-3">
+
+                <Link to="/full-report" className="btn btn-outline-primary btn-sm">
+                    Go to Full Report
+                    <i className="bi bi-arrow-right ms-2"></i>
+                </Link>
+
+            </div>
+
             <div className="card shadow-sm border-0 mb-4">
 
                 <div className="card-body">
 
                     <div className="row g-3 align-items-end">
 
-                        <div className="col-md-3">
+                        <div className="col-md-4">
 
                             <label className="form-label">
                                 From Date
@@ -126,7 +136,7 @@ export default function Reports() {
 
                         </div>
 
-                        <div className="col-md-3">
+                        <div className="col-md-4">
 
                             <label className="form-label">
                                 To Date
@@ -141,7 +151,7 @@ export default function Reports() {
 
                         </div>
 
-                        <div className="col-md-3">
+                        <div className="col-md-4">
 
                             <label className="form-label">
                                 Lead Source
@@ -174,29 +184,29 @@ export default function Reports() {
 
                         </div>
 
-                        <div className="col-md-3 d-grid gap-2">
+                    </div>
 
-                            <button
-                                className="btn btn-primary"
-                                onClick={generateReport}
-                                disabled={loading}
-                            >
+                    <div className="d-flex justify-content-end gap-2 mt-3">
 
-                                {loading
-                                    ? "Generating..."
-                                    : "Generate Report"}
+                        <button
+                            className="btn btn-primary"
+                            onClick={generateReport}
+                            disabled={loading}
+                        >
 
-                            </button>
+                            {loading
+                                ? "Generating..."
+                                : "Generate Report"}
 
-                            <button
-                                className="btn btn-success"
-                                onClick={downloadExcel}
-                                disabled={report.length === 0}
-                            >
-                                Export Excel
-                            </button>
+                        </button>
 
-                        </div>
+                        <button
+                            className="btn btn-success"
+                            onClick={downloadExcel}
+                            disabled={report.length === 0}
+                        >
+                            Export Excel
+                        </button>
 
                     </div>
 
@@ -208,7 +218,7 @@ export default function Reports() {
 
                 <div className="card-body table-responsive">
 
-                    <table className="table table-bordered table-hover">
+                    <table className="table table-bordered table-hover align-middle">
 
                         <thead className="table-light">
 
@@ -223,6 +233,7 @@ export default function Reports() {
                                 <th>In Progress</th>
                                 <th>Postponed</th>
                                 <th>Dropped</th>
+                                <th>Unresponsive</th>
                                 <th>Won %</th>
 
                             </tr>
@@ -235,7 +246,7 @@ export default function Reports() {
                                 <tr>
 
                                     <td
-                                        colSpan="10"
+                                        colSpan="11"
                                         className="text-center"
                                     >
                                         No report generated.
@@ -266,6 +277,8 @@ export default function Reports() {
                                         <td>{row.postponed}</td>
 
                                         <td>{row.dropped}</td>
+
+                                        <td>{row.unresponsive}</td>
 
                                         <td>
                                             {row.wonConversionRate.toFixed(2)}%

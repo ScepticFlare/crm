@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 
-import { getAllActivityTypes } from "../services/activityTypeService";
-import ActivityTypeModal from "./ActivityTypeModal";
+import {
+    getAllActivityTypes,
+    getAllActivityTypesAdmin,
+    createActivityType,
+    deleteActivityType,
+    activateActivityType
+} from "../services/activityTypeService";
+import DropdownAddManage from "./DropdownAddManage";
 
 export default function FollowUpForm({
     form,
@@ -16,7 +22,6 @@ export default function FollowUpForm({
 }) {
 
     const [activityTypes, setActivityTypes] = useState([]);
-    const [showActivityModal, setShowActivityModal] = useState(false);
 
     const role = localStorage.getItem("role");
 
@@ -36,24 +41,9 @@ export default function FollowUpForm({
     function handleChange(e) {
         const { name, value } = e.target;
 
-        if (name === "activityTypeId" && value === "__NEW__") {
-            setShowActivityModal(true);
-            return;
-        }
-
         setForm(prev => ({
             ...prev,
             [name]: value
-        }));
-    }
-
-    async function handleActivityCreated(activity) {
-
-        await loadActivityTypes();
-
-        setForm(prev => ({
-            ...prev,
-            activityTypeId: activity.id.toString()
         }));
     }
 
@@ -190,34 +180,22 @@ export default function FollowUpForm({
                                     Activity Type *
                                 </label>
 
-                                <select
-                                    className="form-select"
+                                <DropdownAddManage
+                                    title="Activity Type"
                                     name="activityTypeId"
                                     value={form.activityTypeId}
                                     onChange={handleChange}
+                                    options={activityTypes}
                                     required
-                                >
-
-                                    <option value="">
-                                        Select Activity
-                                    </option>
-
-                                    {activityTypes.map(activity => (
-
-                                        <option
-                                            key={activity.id}
-                                            value={activity.id}
-                                        >
-                                            {activity.name}
-                                        </option>
-
-                                    ))}
-
-                                    <option value="__NEW__">
-                                        ➕ Add New Activity...
-                                    </option>
-
-                                </select>
+                                    isAdmin={role === "ADMIN"}
+                                    create={createActivityType}
+                                    getAllIncludingInactive={getAllActivityTypesAdmin}
+                                    deactivate={deleteActivityType}
+                                    activate={activateActivityType}
+                                    onRefresh={loadActivityTypes}
+                                    currentLabel={form.activityTypeName}
+                                    placeholder="Select Activity"
+                                />
 
                             </div>
 
@@ -319,12 +297,6 @@ export default function FollowUpForm({
                 </div>
 
             </div>
-
-            <ActivityTypeModal
-                show={showActivityModal}
-                onClose={() => setShowActivityModal(false)}
-                onCreated={handleActivityCreated}
-            />
 
         </>
     );

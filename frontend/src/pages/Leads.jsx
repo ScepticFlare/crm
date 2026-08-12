@@ -4,19 +4,25 @@ import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import DataTable from "../components/DataTable";
 import DeleteModal from "../components/DeleteModal";
+import StatusBadge from "../components/ui/StatusBadge";
+import MonthFilter from "../components/MonthFilter";
 
 import {
     getAllLeads,
     deleteLead
 } from "../services/leadService";
 
-export default function Leads() {
+export default function Leads({
+    title = "Leads",
+    fetchLeads = getAllLeads
+}) {
 
     const navigate = useNavigate();
 
     const [leads, setLeads] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [month, setMonth] = useState("");
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(50);
     const [totalPages, setTotalPages] = useState(0);
@@ -27,7 +33,7 @@ export default function Leads() {
 
     useEffect(() => {
     loadLeads();
-}, [page, pageSize, search]);
+}, [page, pageSize, search, month]);
 
     async function loadLeads() {
 
@@ -35,10 +41,11 @@ export default function Leads() {
 
     try {
 
-        const response = await getAllLeads(
+        const response = await fetchLeads(
             page,
             pageSize,
-            search
+            search,
+            month
         );
         console.log("API Response:", response);
         console.log("Content:", response.content);
@@ -99,35 +106,6 @@ export default function Leads() {
 
 
 
-    function statusColor(status) {
-
-        switch (status) {
-
-            case "NEW":
-                return "primary";
-
-            case "CONTACTED":
-                return "info";
-
-            case "QUOTATION_SENT":
-                return "warning";
-
-            case "NEGOTIATION":
-                return "secondary";
-
-            case "WON":
-                return "success";
-
-            case "LOST":
-                return "danger";
-
-            default:
-                return "dark";
-
-        }
-
-    }
-
     const columns = [
 
         {
@@ -161,11 +139,7 @@ export default function Leads() {
 
             render: (row) => (
 
-                <span className={`badge bg-${statusColor(row.leadStatus)}`}>
-
-                    {row.leadStatus.replaceAll("_", " ")}
-
-                </span>
+                <StatusBadge status={row.leadStatus} />
 
             )
 
@@ -185,7 +159,7 @@ export default function Leads() {
         <>
 
             <PageHeader
-                title="Leads"
+                title={title}
                 subtitle={`${totalElements} Lead(s) Found`}
                 buttonText="Add Lead"
                 onButtonClick={() => navigate("/leads/add")}
@@ -195,27 +169,47 @@ export default function Leads() {
 
                 <div className="card-body">
 
-                    <div className="input-group">
+                    <div className="row g-2">
 
-                        <span className="input-group-text bg-white">
+                        <div className="col">
 
-                            <i className="bi bi-search"></i>
+                            <div className="input-group">
 
-                        </span>
+                                <span className="input-group-text bg-white">
 
-                        <input
-                            type="text"
-                            className="form-control border-start-0"
-                            placeholder="Search by company, contact or email..."
-                            value={search}
-                            onChange={(e) => {
+                                    <i className="bi bi-search"></i>
 
-                                setSearch(e.target.value);
+                                </span>
 
-                                setPage(0);
+                                <input
+                                    type="text"
+                                    className="form-control border-start-0"
+                                    placeholder="Search by company, contact or email..."
+                                    value={search}
+                                    onChange={(e) => {
 
-                            }}
-                        />
+                                        setSearch(e.target.value);
+
+                                        setPage(0);
+
+                                    }}
+                                />
+
+                            </div>
+
+                        </div>
+
+                        <div className="col-md-3">
+
+                            <MonthFilter
+                                value={month}
+                                onChange={(value) => {
+                                    setMonth(value);
+                                    setPage(0);
+                                }}
+                            />
+
+                        </div>
 
                     </div>
 

@@ -3,10 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import PageHeader from "../components/PageHeader";
 import CustomerForm from "../components/CustomerForm";
+import LoadingState from "../components/ui/LoadingState";
 
 import {
     convertCustomer,
-    getCustomerOpportunity
+    getCustomerOpportunity,
+    getCustomerByOpportunity
 } from "../services/customerService";
 
 export default function ConvertCustomer() {
@@ -37,6 +39,28 @@ export default function ConvertCustomer() {
     async function loadOpportunity() {
 
         try {
+
+            // Idempotency: if this Opportunity was already converted, don't
+            // show a blank create form again - go straight to the existing
+            // Customer instead.
+            let existingCustomer = null;
+
+            try {
+
+                existingCustomer = await getCustomerByOpportunity(id);
+
+            } catch (lookupErr) {
+
+                existingCustomer = null;
+
+            }
+
+            if (existingCustomer) {
+
+                navigate(`/customers/${existingCustomer.id}`, { replace: true });
+                return;
+
+            }
 
             const data = await getCustomerOpportunity(id);
 
@@ -85,7 +109,6 @@ export default function ConvertCustomer() {
                 alternatePhone: lead.alternatePhone,
                 email: lead.email,
                 secondaryEmail: lead.secondaryEmail,
-                website: lead.website,
                 city: lead.city,
                 state: lead.state,
                 pincode: lead.pincode,
@@ -122,11 +145,7 @@ export default function ConvertCustomer() {
 
         return (
 
-            <div className="text-center mt-5">
-
-                <div className="spinner-border text-primary"></div>
-
-            </div>
+            <LoadingState className="text-center mt-5" />
 
         );
 

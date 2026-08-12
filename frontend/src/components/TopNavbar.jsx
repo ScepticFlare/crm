@@ -54,12 +54,7 @@ export default function TopNavbar() {
             <div className="d-flex align-items-center">
 
                 <button
-                    className="btn btn-light rounded-circle me-3"
-                    style={{
-                        width: "42px",
-                        height: "42px",
-                        border: "1px solid #e5e7eb"
-                    }}
+                    className="btn btn-light rounded-circle topbar-icon-btn me-3"
                 >
 
                     <i className="bi bi-bell"></i>
@@ -71,20 +66,7 @@ export default function TopNavbar() {
                     style={{ cursor: "pointer" }}
                 >
 
-                    <div
-                        style={{
-                            width: "42px",
-                            height: "42px",
-                            borderRadius: "50%",
-                            background: "#2563eb",
-                            color: "white",
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            fontWeight: "bold",
-                            marginRight: "10px"
-                        }}
-                    >
+                    <div className="topbar-avatar">
 
                         {initial}
 
@@ -92,12 +74,7 @@ export default function TopNavbar() {
 
                     <div>
 
-                        <div
-                            style={{
-                                fontWeight: 600,
-                                fontSize: "15px"
-                            }}
-                        >
+                        <div className="fw-semibold" style={{ fontSize: "15px" }}>
 
                             {displayName}
 

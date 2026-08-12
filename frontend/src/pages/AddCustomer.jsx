@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import PageHeader from "../components/PageHeader";
 import CustomerForm from "../components/CustomerForm";
+import LoadingState from "../components/ui/LoadingState";
 
 import { getOpportunityById } from "../services/opportunityService";
 import { createCustomer } from "../services/customerService";
@@ -94,9 +95,7 @@ export default function AddCustomer() {
     if (pageLoading) {
 
         return (
-            <div className="text-center mt-5">
-                <div className="spinner-border text-primary" />
-            </div>
+            <LoadingState className="text-center mt-5" />
         );
 
     }

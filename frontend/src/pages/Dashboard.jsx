@@ -4,6 +4,9 @@ import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import QuickActionCard from "../components/QuickActionCard";
 import StatCard from "../components/StatCard";
+import { getStatusColor } from "../components/ui/StatusBadge";
+import LoadingState from "../components/ui/LoadingState";
+import EmptyState from "../components/ui/EmptyState";
 
 import { getAllLeads } from "../services/leadService";
 import { getAllCustomers } from "../services/customerService";
@@ -52,16 +55,6 @@ const employeeName =
     role === "ADMIN"
         ? "Administrator"
         : localStorage.getItem("employeeName") || "Employee";
-
-    const pipelineColors = {
-        NEW: "primary",
-        QUOTATION_SENT: "warning",
-        NEGOTIATION: "info",
-        POSTPONED: "secondary",
-        WON: "success",
-        LOST: "danger",
-        OTHER: "secondary"
-    };
 
     useEffect(() => {
 
@@ -211,23 +204,11 @@ console.log(
 
         return (
 
-            <div className="text-center mt-5">
-
-                <div
-                    className="spinner-border text-primary"
-                    style={{
-                        width: "3rem",
-                        height: "3rem"
-                    }}
-                ></div>
-
-                <p className="mt-3 text-muted">
-
-                    Loading Dashboard...
-
-                </p>
-
-            </div>
+            <LoadingState
+                className="text-center mt-5"
+                message="Loading Dashboard..."
+                size="3rem"
+            />
 
         );
 
@@ -238,7 +219,7 @@ console.log(
     <>
 
         <PageHeader
-            title={`${greeting}, ${employeeName} 👋`}
+            title={`${greeting}, ${employeeName}`}
             subtitle="Here's a quick overview of your CRM."
         />
 
@@ -293,19 +274,19 @@ console.log(
 
 <div className="card shadow-sm border-0 mt-4">
 
+    <div className="card-header bg-white d-flex justify-content-between align-items-center">
+
+        <h5 className="fw-bold mb-0">
+            Quick Actions
+        </h5>
+
+        <span className="text-muted small">
+            Frequently Used
+        </span>
+
+    </div>
+
     <div className="card-body">
-
-        <div className="d-flex justify-content-between align-items-center mb-4">
-
-            <h5 className="fw-bold mb-0">
-                Quick Actions
-            </h5>
-
-            <span className="text-muted small">
-                Frequently Used
-            </span>
-
-        </div>
 
         <div className="row g-3">
 
@@ -357,26 +338,26 @@ console.log(
 
                 <div className="card shadow-sm border-0 h-100">
 
+                    <div className="card-header bg-white d-flex justify-content-between align-items-center">
+
+                        <h5 className="fw-bold mb-0">
+
+                            Recent Leads
+
+                        </h5>
+
+                        <button
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => navigate("/leads")}
+                        >
+
+                            View All
+
+                        </button>
+
+                    </div>
+
                     <div className="card-body">
-
-                        <div className="d-flex justify-content-between align-items-center mb-4">
-
-                            <h5 className="fw-bold mb-0">
-
-                                🧾 Recent Leads
-
-                            </h5>
-
-                            <button
-                                className="btn btn-sm btn-outline-primary"
-                                onClick={() => navigate("/leads")}
-                            >
-
-                                View All
-
-                            </button>
-
-                        </div>
 
                         <table className="table table-hover align-middle">
 
@@ -402,35 +383,21 @@ console.log(
 
                                     <tr>
 
-                                        <td
-                                            colSpan="3"
-                                            className="text-center py-5"
-                                        >
+                                        <td colSpan="3">
 
-                                            <i
-                                                className="bi bi-inbox display-6 text-secondary"
-                                            ></i>
-
-                                            <h6 className="mt-3">
-
-                                                No Recent Leads
-
-                                            </h6>
-
-                                            <p className="text-muted">
-
-                                                Start by creating your first lead.
-
-                                            </p>
-
-                                            <button
-                                                className="btn btn-primary"
-                                                onClick={() => navigate("/leads/add")}
-                                            >
-
-                                                Add Lead
-
-                                            </button>
+                                            <EmptyState
+                                                icon="bi-inbox"
+                                                title="No Recent Leads"
+                                                message="Start by creating your first lead."
+                                                action={
+                                                    <button
+                                                        className="btn btn-primary"
+                                                        onClick={() => navigate("/leads/add")}
+                                                    >
+                                                        Add Lead
+                                                    </button>
+                                                }
+                                            />
 
                                         </td>
 
@@ -492,50 +459,36 @@ console.log(
 
                 <div className="card shadow-sm border-0 h-100">
 
+                    <div className="card-header bg-white d-flex justify-content-between align-items-center">
+
+                        <h5 className="fw-bold mb-0">
+
+                            Upcoming Follow Ups
+
+                        </h5>
+
+                        <button
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => navigate("/followups")}
+                        >
+
+                            View All
+
+                        </button>
+
+                    </div>
+
                     <div className="card-body">
-
-                        <div className="d-flex justify-content-between align-items-center mb-4">
-
-                            <h5 className="fw-bold mb-0">
-
-                                📅 Upcoming Follow Ups
-
-                            </h5>
-
-                            <button
-                                className="btn btn-sm btn-outline-primary"
-                                onClick={() => navigate("/followups")}
-                            >
-
-                                View All
-
-                            </button>
-
-                        </div>
 
                         {
 
                             upcomingFollowUps.length === 0 ?
 
-                                <div className="text-center py-5">
-
-                                    <i
-                                        className="bi bi-calendar-x display-6 text-secondary"
-                                    ></i>
-
-                                    <h6 className="mt-3">
-
-                                        No Upcoming Follow Ups
-
-                                    </h6>
-
-                                    <p className="text-muted">
-
-                                        Everything is up to date.
-
-                                    </p>
-
-                                </div>
+                                <EmptyState
+                                    icon="bi-calendar-x"
+                                    title="No Upcoming Follow Ups"
+                                    message="Everything is up to date."
+                                />
 
                                 :
 
@@ -604,23 +557,23 @@ console.log(
 
         <div className="card shadow-sm border-0 mt-4">
 
+            <div className="card-header bg-white d-flex justify-content-between align-items-center">
+
+                <h5 className="fw-bold mb-0">
+
+                    Opportunity Pipeline
+
+                </h5>
+
+                <span className="text-muted small">
+
+                    Current Sales Stages
+
+                </span>
+
+            </div>
+
             <div className="card-body">
-
-                <div className="d-flex justify-content-between align-items-center mb-4">
-
-                    <h5 className="fw-bold mb-0">
-
-                        📈 Opportunity Pipeline
-
-                    </h5>
-
-                    <span className="text-muted small">
-
-                        Current Sales Stages
-
-                    </span>
-
-                </div>
 
                 <div className="row g-3">
 
@@ -662,9 +615,7 @@ console.log(
 
                                         </div>
 
-                                        <span
-                                            className={`badge bg-${pipelineColors[stage]} fs-6 px-3 py-2`}
-                                        >
+                                        <span className={`badge bg-${getStatusColor(stage)} fs-6 px-3 py-2`}>
 
                                             {count}
 
