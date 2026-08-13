@@ -39,6 +39,7 @@ import Postponed from "./pages/Postponed";
 import Dropped from "./pages/Dropped";
 import Lost from "./pages/Lost";
 import Unresponsive from "./pages/Unresponsive";
+import Invalid from "./pages/Invalid";
 
 
 function App() {
@@ -189,8 +190,10 @@ function App() {
                     <Route path="/lost" element={<Lost />} />
 
                     <Route path="/unresponsive" element={<Unresponsive />} />
-                   
-                    
+
+                    <Route path="/invalid" element={<Invalid />} />
+
+
 
 
                 </Route>

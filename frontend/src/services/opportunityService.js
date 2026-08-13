@@ -151,3 +151,23 @@ export const getUnresponsiveOpportunities = async (
     return response.data;
 
 };
+
+export const getInvalidOpportunities = async (
+    page = 0,
+    size = 50,
+    search = "",
+    month = ""
+) => {
+
+    const response = await api.get("/opportunities/invalid", {
+        params: {
+            page,
+            size,
+            search,
+            ...monthParams(month)
+        }
+    });
+
+    return response.data;
+
+};

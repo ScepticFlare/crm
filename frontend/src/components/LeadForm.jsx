@@ -472,6 +472,7 @@ export default function LeadForm({
             <option value="LOST">LOST</option>
             <option value="DROPPED">DROPPED</option>
             <option value="UNRESPONSIVE">UNRESPONSIVE</option>
+            <option value="INVALID">INVALID</option>
 
         </select>
 

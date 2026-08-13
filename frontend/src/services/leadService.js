@@ -56,6 +56,14 @@ export const getUnresponsiveLeads = async (page = 0, size = 50, search = "", mon
 
     return response.data;
 };
+
+export const getInvalidLeads = async (page = 0, size = 50, search = "", month = "") => {
+    const response = await api.get("/leads/invalid", {
+        params: { page, size, search, ...monthParams(month) },
+    });
+
+    return response.data;
+};
 export const importLeads = async (file) => {
 
     const formData = new FormData();

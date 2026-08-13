@@ -54,6 +54,12 @@ export default function Sidebar() {
         },
 
         {
+            name: "Invalid",
+            path: "/invalid",
+            icon: "bi-exclamation-octagon"
+        },
+
+        {
             name: "Won",
             path: "/customers",
             icon: "bi-trophy-fill",
