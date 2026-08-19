@@ -108,6 +108,21 @@ export default function Sidebar() {
 
     }
 
+    // Employee Activity is visible to Admin and Manager (Manager sees
+    // their own + direct reports' activity, Admin sees everyone's - the
+    // backend enforces this via AccessControlService regardless of this
+    // check, see ManagerOrAdminRoute). Not exposed to a plain Employee in
+    // this iteration.
+    if (role === "ADMIN" || role === "MANAGER") {
+
+        menuItems.push({
+            name: "Employee Activity",
+            path: "/activity",
+            icon: "bi-clock-history",
+        });
+
+    }
+
     return (
 
         <aside

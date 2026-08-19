@@ -1,158 +1,251 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 import PageHeader from "../components/PageHeader";
 import DataTable from "../components/DataTable";
-import DeleteModal from "../components/DeleteModal";
 import StatusBadge from "../components/ui/StatusBadge";
-import MonthFilter from "../components/MonthFilter";
+import FilterPanel from "../components/list/FilterPanel";
+import ManageColumnsMenu from "../components/list/ManageColumnsMenu";
+import BulkActionBar from "../components/list/BulkActionBar";
+import ListPagination from "../components/list/ListPagination";
+
+import useServerList from "../hooks/useServerList";
+import usePersistedColumns from "../hooks/usePersistedColumns";
+import { downloadBlob } from "../utils/downloadFile";
 
 import {
     getAllLeads,
-    deleteLead
+    bulkDeleteLeads,
+    exportLeads
 } from "../services/leadService";
+import { getAllIndustries } from "../services/industryService";
+import { getAllLeadSources } from "../services/leadSourceService";
+import { getAllProducts } from "../services/productService";
+import { getAllBatteries } from "../services/batteryService";
+import { getAllEmployees } from "../services/employeeService";
+
+const LEAD_STATUS_OPTIONS = [
+    { value: "NEW", label: "New" },
+    { value: "CONTACTED", label: "Contacted" },
+    { value: "QUOTATION_SENT", label: "Quotation Sent" },
+    { value: "NEGOTIATION", label: "Negotiation" },
+    { value: "WON", label: "Won" },
+    { value: "LOST", label: "Lost" },
+    { value: "DROPPED", label: "Dropped" },
+    { value: "UNRESPONSIVE", label: "Unresponsive" },
+    { value: "INVALID", label: "Invalid" },
+];
+
+const LEAD_VALIDITY_OPTIONS = [
+    { value: "VALID", label: "Valid" },
+    { value: "INVALID", label: "Invalid" },
+];
+
+const ALL_LEAD_COLUMNS = [
+    {
+        key: "companyName", label: "Company", sortable: true, sortKey: "company",
+        render: (row) => (
+            <Link to={`/leads/${row.id}`} className="record-link">
+                {row.companyName}
+            </Link>
+        )
+    },
+    { key: "contactPerson", label: "Contact Person", sortable: true },
+    { key: "phone", label: "Phone" },
+    { key: "email", label: "Email" },
+    {
+        key: "leadStatus",
+        label: "Lead Status",
+        sortable: true,
+        sortKey: "status",
+        render: (row) => <StatusBadge status={row.leadStatus} />
+    },
+    { key: "leadSource", label: "Lead Source", render: (row) => row.leadSource?.name || "-" },
+    { key: "industry", label: "Industry", render: (row) => row.industry?.name || "-" },
+    {
+        key: "products",
+        label: "Product",
+        render: (row) =>
+            (row.leadProducts || []).map((lp) => lp.product?.name).filter(Boolean).join(", ") || "-"
+    },
+    {
+        key: "batteries",
+        label: "Battery",
+        render: (row) =>
+            (row.leadBatteries || []).map((lb) => lb.battery?.name).filter(Boolean).join(", ") || "-"
+    },
+    {
+        key: "assignedEmployee",
+        label: "Assigned Employee",
+        sortable: true,
+        render: (row) => row.assignedEmployee?.name || "-"
+    },
+    { key: "city", label: "City" },
+    {
+        key: "createdAt",
+        label: "Created Date",
+        sortable: true,
+        sortKey: "createdDate",
+        render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "-"
+    },
+];
+
+// Product/Battery are core business fields on Lead, so they stay visible
+// by default alongside contact/status/ownership info. The rest (email,
+// lead source, industry, city) stay one click away via Manage Columns
+// instead of crowding the table on first load.
+const DEFAULT_VISIBLE_LEAD_COLUMNS = [
+    "companyName", "contactPerson", "phone", "leadStatus", "products", "batteries", "assignedEmployee", "createdAt"
+];
 
 export default function Leads({
     title = "Leads",
-    fetchLeads = getAllLeads
+    fetchLeads = getAllLeads,
+    addLeadPath = "/leads/add"
 }) {
 
     const navigate = useNavigate();
 
-    const [leads, setLeads] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState("");
-    const [month, setMonth] = useState("");
-    const [page, setPage] = useState(0);
-    const [pageSize, setPageSize] = useState(50);
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalElements, setTotalElements] = useState(0);  
+    // Backend is the source of truth (LEAD_DELETE/LEAD_EXPORT are
+    // ADMIN-only permissions - see LeadService) - this only controls
+    // whether the checkbox/bulk-delete/export affordances are shown at all,
+    // same "UX/defense-in-depth guard" rationale as AdminRoute.
+    const isAdmin = localStorage.getItem("role") === "ADMIN";
 
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [selectedLead, setSelectedLead] = useState(null);
+    const list = useServerList({
+        fetchFn: fetchLeads,
+        initialSort: { field: "createdDate", dir: "desc" }
+    });
+
+    const columns = usePersistedColumns("crm.columns.leads", ALL_LEAD_COLUMNS, DEFAULT_VISIBLE_LEAD_COLUMNS);
+
+    const [industries, setIndustries] = useState([]);
+    const [leadSources, setLeadSources] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [batteries, setBatteries] = useState([]);
+    const [employees, setEmployees] = useState([]);
 
     useEffect(() => {
-    loadLeads();
-}, [page, pageSize, search, month]);
 
-    async function loadLeads() {
+        getAllIndustries().then(setIndustries).catch(() => {});
+        getAllLeadSources().then(setLeadSources).catch(() => {});
+        getAllProducts().then(setProducts).catch(() => {});
+        getAllBatteries().then(setBatteries).catch(() => {});
 
-    setLoading(true);
+        // A plain Employee has no grant to list the roster (403) - that's
+        // expected, not an error; the Assigned Employee filter just won't
+        // offer options for them (their own scope is OWN anyway).
+        getAllEmployees().then(setEmployees).catch(() => {});
 
-    try {
+    }, []);
 
-        const response = await fetchLeads(
-            page,
-            pageSize,
-            search,
-            month
+    const filterDefs = useMemo(() => {
+
+        const defs = [
+            { key: "status", label: "Lead Status", type: "select", options: LEAD_STATUS_OPTIONS },
+            {
+                key: "leadSourceId", label: "Lead Source", type: "select",
+                options: leadSources.map((s) => ({ value: s.id, label: s.name }))
+            },
+            {
+                key: "industryId", label: "Industry", type: "select",
+                options: industries.map((i) => ({ value: i.id, label: i.name }))
+            },
+            {
+                key: "productId", label: "Product", type: "select",
+                options: products.map((p) => ({ value: p.id, label: p.name }))
+            },
+            {
+                key: "batteryId", label: "Battery", type: "select",
+                options: batteries.map((b) => ({ value: b.id, label: b.name }))
+            },
+        ];
+
+        if (employees.length > 0) {
+            defs.push({
+                key: "assignedEmployeeId", label: "Assigned Employee", type: "select",
+                options: employees.map((e) => ({ value: e.id, label: e.name }))
+            });
+        }
+
+        defs.push(
+            { key: "city", label: "City", type: "text" },
+            { key: "state", label: "State", type: "text" },
+            { key: "leadValidity", label: "Lead Validity", type: "select", options: LEAD_VALIDITY_OPTIONS },
+            { key: "created", label: "Created Date", type: "daterange", fromKey: "createdFrom", toKey: "createdTo" }
         );
-        console.log("API Response:", response);
-        console.log("Content:", response.content);
 
-        setLeads(response.content);
+        return defs;
 
-        setTotalPages(response.totalPages);
+    }, [industries, leadSources, products, batteries, employees]);
 
-        setTotalElements(response.totalElements);
+    const [bulkDeleting, setBulkDeleting] = useState(false);
+    const [exporting, setExporting] = useState(false);
 
-    } catch (error) {
+    async function handleBulkDelete() {
 
-        console.error(error);
+        if (!window.confirm(
+            `Delete ${list.selectedIds.length} selected lead(s)? ` +
+            "Any Opportunity, Won Customer record and Follow-Ups belonging to them will also be deleted."
+        )) {
+            return;
+        }
 
-    } finally {
-
-        setLoading(false);
-
-    }
-
-}
-
-    function openDeleteModal(lead) {
-
-        setSelectedLead(lead);
-
-        setShowDeleteModal(true);
-
-    }
-
-    function closeDeleteModal() {
-
-        setShowDeleteModal(false);
-
-        setSelectedLead(null);
-
-    }
-
-    async function confirmDelete() {
+        setBulkDeleting(true);
 
         try {
 
-            await deleteLead(selectedLead.id);
+            const result = await bulkDeleteLeads(list.selectedIds);
 
-            closeDeleteModal();
+            if (result.skippedIds && result.skippedIds.length > 0) {
+                alert(
+                    `Deleted ${result.succeededIds.length} lead(s). ` +
+                    `Skipped ${result.skippedIds.length} you're not authorized to delete or that no longer exist.`
+                );
+            }
 
-            await loadLeads();
+            list.clearSelection();
+            await list.reload();
 
         } catch (error) {
 
             console.error(error);
+            alert("Unable to delete the selected leads.");
 
-            alert("Unable to delete lead.");
+        } finally {
+
+            setBulkDeleting(false);
 
         }
 
     }
 
+    async function handleExport(selectedOnly) {
 
+        setExporting(true);
 
-    const columns = [
+        try {
 
-        {
-            key: "companyName",
-            label: "Company"
-        },
+            const blob = await exportLeads({
+                sort: list.sort,
+                filters: { search: list.search || undefined, ...list.filters },
+                selection: selectedOnly ? list.selectedIds : null,
+            });
 
-        {
-            key: "contactPerson",
-            label: "Contact"
-        },
+            downloadBlob(blob, "leads.csv");
 
-        {
-            key: "phone",
-            label: "Phone"
-        },
+        } catch (error) {
 
-        {
-            key: "email",
-            label: "Email"
-        },
+            console.error(error);
+            alert("Unable to export leads.");
 
-        {
-            key: "city",
-            label: "City"
-        },
+        } finally {
 
-        {
-            key: "leadStatus",
-            label: "Status",
+            setExporting(false);
 
-            render: (row) => (
+        }
 
-                <StatusBadge status={row.leadStatus} />
-
-            )
-
-        },
-
-        {
-            key: "leadSource",
-            label: "Source",
-
-            render: (row) => row.leadSource?.name || "-"
-}
-
-    ];
+    }
 
     return (
 
@@ -160,56 +253,83 @@ export default function Leads({
 
             <PageHeader
                 title={title}
-                subtitle={`${totalElements} Lead(s) Found`}
+                subtitle={`${list.totalElements} Lead(s) Found`}
                 buttonText="Add Lead"
-                onButtonClick={() => navigate("/leads/add")}
+                onButtonClick={() => navigate(addLeadPath)}
             />
 
-            <div className="card shadow-sm border-0 mb-4">
+            <div className="card shadow-sm border-0 mb-3">
 
                 <div className="card-body">
 
-                    <div className="row g-2">
+                    <div className="d-flex flex-wrap gap-2 align-items-center">
 
-                        <div className="col">
+                        <div className="flex-grow-1" style={{ minWidth: "240px" }}>
 
                             <div className="input-group">
 
                                 <span className="input-group-text bg-white">
-
                                     <i className="bi bi-search"></i>
-
                                 </span>
 
                                 <input
                                     type="text"
                                     className="form-control border-start-0"
-                                    placeholder="Search by company, contact or email..."
-                                    value={search}
-                                    onChange={(e) => {
-
-                                        setSearch(e.target.value);
-
-                                        setPage(0);
-
-                                    }}
+                                    placeholder="Search by company, contact, phone or email..."
+                                    value={list.search}
+                                    onChange={(e) => list.setSearch(e.target.value)}
                                 />
 
                             </div>
 
                         </div>
 
-                        <div className="col-md-3">
+                        <FilterPanel
+                            filterDefs={filterDefs}
+                            filters={list.filters}
+                            onChange={list.setFilters}
+                            onClear={list.clearFilters}
+                        />
 
-                            <MonthFilter
-                                value={month}
-                                onChange={(value) => {
-                                    setMonth(value);
-                                    setPage(0);
-                                }}
-                            />
+                        <ManageColumnsMenu
+                            allColumns={columns.allColumns}
+                            visibleKeys={columns.visibleKeys}
+                            onToggle={columns.toggleColumn}
+                            onReset={columns.resetColumns}
+                        />
 
-                        </div>
+                        {isAdmin && (
+                            <div className="dropdown">
+
+                                <button
+                                    className="btn btn-outline-secondary dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    disabled={exporting}
+                                >
+                                    <i className="bi bi-download me-2"></i>
+                                    Export
+                                </button>
+
+                                <ul className="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <button className="dropdown-item" onClick={() => handleExport(false)}>
+                                            Export all matching
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button
+                                            className="dropdown-item"
+                                            disabled={list.selectedIds.length === 0}
+                                            onClick={() => handleExport(true)}
+                                        >
+                                            Export selected ({list.selectedIds.length})
+                                        </button>
+                                    </li>
+                                </ul>
+
+                            </div>
+                        )}
 
                     </div>
 
@@ -217,115 +337,58 @@ export default function Leads({
 
             </div>
 
+            {isAdmin && (
+                <BulkActionBar
+                    count={list.selectedIds.length}
+                    onClear={list.clearSelection}
+                    actions={[
+                        {
+                            key: "export", label: "Export Selected", icon: "bi-download",
+                            variant: "btn-outline-secondary", onClick: () => handleExport(true), disabled: exporting
+                        },
+                        {
+                            key: "delete", label: "Delete", icon: "bi-trash",
+                            variant: "btn-outline-danger", onClick: handleBulkDelete, disabled: bulkDeleting
+                        },
+                    ]}
+                />
+            )}
+
             <DataTable
-                columns={columns}
-                data={leads}
-                loading={loading}
-                renderActions={(row) => (
-
-                    <div className="btn-group">
-
-                        <button
-                            className="btn btn-sm btn-primary"
-                            onClick={() => navigate(`/leads/${row.id}`)}
-                        >
-                            <i className="bi bi-eye"></i>
-                        </button>
-
-                        <button
-                            className="btn btn-sm btn-warning"
-                            onClick={() => navigate(`/leads/edit/${row.id}`)}
-                        >
-                            <i className="bi bi-pencil"></i>
-                        </button>
-
-                        <button
-                            className="btn btn-sm btn-danger"
-                            onClick={() => openDeleteModal(row)}
-                        >
-                            <i className="bi bi-trash"></i>
-                        </button>
-
-                    </div>
-
-                )}
+                columns={columns.visibleColumns}
+                data={list.data}
+                loading={list.loading}
+                selectable={isAdmin}
+                selectedIds={list.selectedIds}
+                onToggleSelect={list.toggleSelect}
+                onToggleSelectAll={list.toggleSelectAll}
+                sort={list.sort}
+                onSortChange={list.toggleSort}
+                onRowClick={(row) => navigate(`/leads/${row.id}`)}
             />
 
-            <div className="d-flex justify-content-between align-items-center mt-3">
+            <ListPagination
+                page={list.page}
+                pageSize={list.pageSize}
+                totalPages={list.totalPages}
+                totalElements={list.totalElements}
+                onPageChange={list.setPage}
+                onPageSizeChange={list.setPageSize}
+            />
 
-    <div className="d-flex align-items-center gap-2">
-
-        <span>Show</span>
-
-        <select
-            className="form-select"
-            style={{ width: "90px" }}
-            value={pageSize}
-            onChange={(e) => {
-
-                setPageSize(Number(e.target.value));
-
-                setPage(0);
-
-            }}
-        >
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-        </select>
-
-        <span>entries</span>
-
-    </div>
-
-    <div className="d-flex align-items-center gap-2">
-
-        <button
-            className="btn btn-outline-secondary"
-            disabled={page === 0}
-            onClick={() => setPage(page - 1)}
-        >
-            Previous
-        </button>
-
-        <span>
-
-            Page {page + 1} of {Math.max(totalPages, 1)}
-
-        </span>
-
-        <button
-            className="btn btn-outline-secondary"
-            disabled={page >= totalPages - 1}
-            onClick={() => setPage(page + 1)}
-        >
-            Next
-        </button>
-
-    </div>
-
-</div>
-
-            
-            {!loading && leads.length === 0 && (
+            {!list.loading && list.data.length === 0 && (
                 <div className="alert alert-light border text-center mt-3">
                     <i className="bi bi-search me-2"></i>
                         No matching leads found.
                 </div>
             )}
 
-
-            <DeleteModal
-                show={showDeleteModal}
-                title="Delete Lead"
-                message={
-                    selectedLead
-                        ? `Are you sure you want to delete "${selectedLead.companyName}"?`
-                        : ""
-                }
-                onClose={closeDeleteModal}
-                onConfirm={confirmDelete}
-            />
+            {list.error && !list.loading && (
+                <div className="alert alert-danger text-center mt-3">
+                    <i className="bi bi-exclamation-triangle me-2"></i>
+                    Unable to load leads. Please try again.
+                </div>
+            )}
 
         </>
 

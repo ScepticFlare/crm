@@ -25,6 +25,8 @@ import FollowUpDetails from "./pages/FollowUpDetails";
 
 import MainLayout from "./layouts/MainLayout";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import AdminRoute from "./routes/AdminRoute";
+import ManagerOrAdminRoute from "./routes/ManagerOrAdminRoute";
 import ConvertCustomer from "./pages/ConvertCustomer";
 
 import Employees from "./pages/Employees";
@@ -33,6 +35,7 @@ import EditEmployee from "./pages/EditEmployee";
 import ImportLeads from "./pages/ImportLeads";
 import Reports from "./pages/Reports";
 import FullReport from "./pages/FullReport";
+import EmployeeActivity from "./pages/EmployeeActivity";
 
 import InProgress from "./pages/InProgress";
 import Postponed from "./pages/Postponed";
@@ -159,27 +162,31 @@ function App() {
                     
                     <Route
                     path="/employees"
-                    element={<Employees />}
+                    element={<AdminRoute><Employees /></AdminRoute>}
                     />
                     <Route
                     path="/employees/add"
-                    element={<AddEmployee />}
+                    element={<AdminRoute><AddEmployee /></AdminRoute>}
                     />
                     <Route
                     path="/employees/edit/:id"
-                    element={<EditEmployee />}
+                    element={<AdminRoute><EditEmployee /></AdminRoute>}
                     />
                     <Route
                         path="/import-leads"
-                        element={<ImportLeads />}
+                        element={<AdminRoute><ImportLeads /></AdminRoute>}
                     />
                     <Route
                         path="/reports"
-                        element={<Reports />}
+                        element={<AdminRoute><Reports /></AdminRoute>}
                     />
                     <Route
                         path="/full-report"
-                        element={<FullReport />}
+                        element={<AdminRoute><FullReport /></AdminRoute>}
+                    />
+                    <Route
+                        path="/activity"
+                        element={<ManagerOrAdminRoute><EmployeeActivity /></ManagerOrAdminRoute>}
                     />
                     <Route path="/opportunities/in-progress" element={<InProgress />} />
 

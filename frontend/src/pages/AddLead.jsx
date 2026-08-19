@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import LeadForm from "../components/LeadForm";
 import { createLead } from "../services/leadService";
@@ -7,9 +7,15 @@ import { createLead } from "../services/leadService";
 export default function AddLead() {
 
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
     const role = localStorage.getItem("role");
     const loggedInEmployeeId = localStorage.getItem("employeeId");
+
+    // Only the Invalid page currently links here with a preset status;
+    // every other entry point omits it and keeps defaulting to NEW.
+    const presetStatus = searchParams.get("status");
+    const defaultStatus = presetStatus === "INVALID" ? "INVALID" : "NEW";
 
     const [loading, setLoading] = useState(false);
 
@@ -36,7 +42,7 @@ export default function AddLead() {
         description: "",
         finalRemarks: "",
 
-        leadStatus: "NEW",
+        leadStatus: defaultStatus,
 
         assignedEmployeeId:
             role === "ADMIN"
@@ -82,7 +88,7 @@ export default function AddLead() {
 
             alert("Lead Created Successfully");
 
-            navigate("/leads");
+            navigate(defaultStatus === "INVALID" ? "/invalid" : "/leads");
 
         } catch (err) {
 

@@ -17,6 +17,11 @@ export default function FollowUpSection({
 
     const navigate = useNavigate();
 
+    // Backend is the source of truth (FOLLOWUP_DELETE is ADMIN-only - see
+    // FollowUpService.deleteFollowUp) - this only controls whether the
+    // delete button is offered at all.
+    const isAdmin = localStorage.getItem("role") === "ADMIN";
+
     const [followUps, setFollowUps] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -274,18 +279,20 @@ export default function FollowUpSection({
 
                                                             </button>
 
-                                                            <button
-                                                                className="btn btn-sm btn-danger"
-                                                                onClick={() =>
-                                                                    handleDelete(
-                                                                        followUp.id
-                                                                    )
-                                                                }
-                                                            >
+                                                            {isAdmin && (
+                                                                <button
+                                                                    className="btn btn-sm btn-danger"
+                                                                    onClick={() =>
+                                                                        handleDelete(
+                                                                            followUp.id
+                                                                        )
+                                                                    }
+                                                                >
 
-                                                                <i className="bi bi-trash"></i>
+                                                                    <i className="bi bi-trash"></i>
 
-                                                            </button>
+                                                                </button>
+                                                            )}
 
                                                         </div>
 

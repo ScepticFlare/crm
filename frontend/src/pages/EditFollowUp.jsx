@@ -53,8 +53,8 @@ export default function EditFollowUp() {
             oppResponse
         ] = await Promise.all([
             getFollowUpById(id),
-            getAllLeads(0, 1000, ""),
-            getAllOpportunities(0, 1000, "")
+            getAllLeads({ page: 0, size: 1000, search: "" }),
+            getAllOpportunities({ page: 0, size: 1000, search: "" })
         ]);
 
         setLeads(leadResponse.content || []);

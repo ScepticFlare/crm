@@ -1,12 +1,43 @@
 import LoadingState from "./ui/LoadingState";
 import EmptyState from "./ui/EmptyState";
 
+// selectable/sort/onRowClick props are optional and default to today's
+// plain-table behavior, so existing callers (Employees, MasterPage, etc.)
+// are unaffected - only list pages that opt in pass them.
 export default function DataTable({
     columns,
     data,
     loading,
     renderActions,
+    selectable = false,
+    selectedIds = [],
+    onToggleSelect,
+    onToggleSelectAll,
+    sort = null,
+    onSortChange,
+    onRowClick,
 }) {
+
+    // Lets the whole row open a record's details (per-page callers pass
+    // onRowClick) without hunting for one specific clickable column, while
+    // never hijacking a click that was actually meant for something
+    // interactive inside the row - a checkbox, an action button/icon, a
+    // dropdown, or a column that renders its own <a> (e.g. the company-name
+    // link some list pages still render). Checking event.target.closest
+    // here means individual pages don't need to remember to stopPropagation
+    // on every such element themselves.
+    function handleRowClick(event, row) {
+
+        if (!onRowClick) {
+            return;
+        }
+
+        if (event.target.closest("a, button, input, select, .dropdown-menu")) {
+            return;
+        }
+
+        onRowClick(row);
+    }
 
     if (loading) {
         return <LoadingState />;
@@ -20,6 +51,10 @@ export default function DataTable({
         );
     }
 
+    const pageIds = data.map((row) => row.id);
+    const allSelected = selectable && pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+    const someSelected = selectable && !allSelected && pageIds.some((id) => selectedIds.includes(id));
+
     return (
 
         <div className="card shadow-sm border-0">
@@ -32,23 +67,57 @@ export default function DataTable({
 
                         <tr>
 
-                            {columns.map((column) => (
-
-                                <th
-                                    key={column.key}
-                                    className="fw-semibold"
-                                >
-                                    {column.label}
+                            {selectable && (
+                                <th style={{ width: "40px" }}>
+                                    <input
+                                        type="checkbox"
+                                        className="form-check-input"
+                                        checked={allSelected}
+                                        ref={(el) => {
+                                            if (el) el.indeterminate = someSelected;
+                                        }}
+                                        onChange={onToggleSelectAll}
+                                    />
                                 </th>
+                            )}
 
-                            ))}
+                            {columns.map((column) => {
 
-                            <th
-                                className="text-center"
-                                style={{ width: "170px" }}
-                            >
-                                Actions
-                            </th>
+                                const sortKey = column.sortKey || column.key;
+                                const isSorted = column.sortable && sort?.field === sortKey;
+
+                                return (
+
+                                    <th
+                                        key={column.key}
+                                        className="fw-semibold"
+                                        style={column.sortable ? { cursor: "pointer", userSelect: "none" } : undefined}
+                                        onClick={
+                                            column.sortable && onSortChange
+                                                ? () => onSortChange(sortKey)
+                                                : undefined
+                                        }
+                                    >
+                                        {column.label}
+                                        {isSorted && (
+                                            <i
+                                                className={`bi ms-1 ${sort.dir === "asc" ? "bi-caret-up-fill" : "bi-caret-down-fill"}`}
+                                            ></i>
+                                        )}
+                                    </th>
+
+                                );
+
+                            })}
+
+                            {renderActions && (
+                                <th
+                                    className="text-center"
+                                    style={{ width: "170px" }}
+                                >
+                                    Actions
+                                </th>
+                            )}
 
                         </tr>
 
@@ -58,7 +127,22 @@ export default function DataTable({
 
                         {data.map((row) => (
 
-                            <tr key={row.id}>
+                            <tr
+                                key={row.id}
+                                onClick={onRowClick ? (event) => handleRowClick(event, row) : undefined}
+                                style={onRowClick ? { cursor: "pointer" } : undefined}
+                            >
+
+                                {selectable && (
+                                    <td>
+                                        <input
+                                            type="checkbox"
+                                            className="form-check-input"
+                                            checked={selectedIds.includes(row.id)}
+                                            onChange={() => onToggleSelect(row.id)}
+                                        />
+                                    </td>
+                                )}
 
                                 {columns.map((column) => (
 
@@ -92,11 +176,13 @@ export default function DataTable({
 
                                 ))}
 
-                                <td className="text-center">
+                                {renderActions && (
+                                    <td className="text-center">
 
-                                    {renderActions(row)}
+                                        {renderActions(row)}
 
-                                </td>
+                                    </td>
+                                )}
 
                             </tr>
 

@@ -1,4 +1,4 @@
-import api, { monthParams } from "./api";
+import api, { toListParams } from "./api";
 
 export const createOpportunity = async (leadId, data) => {
 
@@ -11,24 +11,9 @@ export const createOpportunity = async (leadId, data) => {
 
 };
 
-export const getAllOpportunities = async (
-    page = 0,
-    size = 50,
-    search = "",
-    month = ""
-) => {
-
-    const response = await api.get("/opportunities", {
-        params: {
-            page,
-            size,
-            search,
-            ...monthParams(month)
-        }
-    });
-
+export const getAllOpportunities = async (listArgs) => {
+    const response = await api.get("/opportunities", { params: toListParams(listArgs) });
     return response.data;
-
 };
 
 export const getOpportunityById = async (id) => {
@@ -52,120 +37,62 @@ export const deleteOpportunity = async (id) => {
     await api.delete(`/opportunities/${id}`);
 
 };
-export const getInProgressOpportunities = async (
-    page = 0,
-    size = 50,
-    search = "",
-    month = ""
-) => {
 
-    const response = await api.get("/opportunities/in-progress", {
-        params: {
-            page,
-            size,
-            search,
-            ...monthParams(month)
-        }
-    });
+// Preview of what deleting this Opportunity will also remove (Won Customer,
+// Follow-Ups) - see utils/deleteImpact.js.
+export const getOpportunityDeleteImpact = async (id) => {
+
+    const response = await api.get(`/opportunities/${id}/delete-impact`);
 
     return response.data;
 
 };
 
-export const getPostponedOpportunities = async (
-    page = 0,
-    size = 50,
-    search = "",
-    month = ""
-) => {
-
-    const response = await api.get("/opportunities/postponed", {
-        params: {
-            page,
-            size,
-            search,
-            ...monthParams(month)
-        }
-    });
-
+export const getInProgressOpportunities = async (listArgs) => {
+    const response = await api.get("/opportunities/in-progress", { params: toListParams(listArgs) });
     return response.data;
-
 };
 
-export const getDroppedOpportunities = async (
-    page = 0,
-    size = 50,
-    search = "",
-    month = ""
-) => {
-
-    const response = await api.get("/opportunities/dropped", {
-        params: {
-            page,
-            size,
-            search,
-            ...monthParams(month)
-        }
-    });
-
+export const getPostponedOpportunities = async (listArgs) => {
+    const response = await api.get("/opportunities/postponed", { params: toListParams(listArgs) });
     return response.data;
-
 };
 
-export const getLostOpportunities = async (
-    page = 0,
-    size = 50,
-    search = "",
-    month = ""
-) => {
-
-    const response = await api.get("/opportunities/lost", {
-        params: {
-            page,
-            size,
-            search,
-            ...monthParams(month)
-        }
-    });
-
+export const getDroppedOpportunities = async (listArgs) => {
+    const response = await api.get("/opportunities/dropped", { params: toListParams(listArgs) });
     return response.data;
-
 };
 
-export const getUnresponsiveOpportunities = async (
-    page = 0,
-    size = 50,
-    search = "",
-    month = ""
-) => {
-
-    const response = await api.get("/opportunities/unresponsive", {
-        params: {
-            page,
-            size,
-            search,
-            ...monthParams(month)
-        }
-    });
-
+export const getLostOpportunities = async (listArgs) => {
+    const response = await api.get("/opportunities/lost", { params: toListParams(listArgs) });
     return response.data;
-
 };
 
-export const getInvalidOpportunities = async (
-    page = 0,
-    size = 50,
-    search = "",
-    month = ""
-) => {
+export const getUnresponsiveOpportunities = async (listArgs) => {
+    const response = await api.get("/opportunities/unresponsive", { params: toListParams(listArgs) });
+    return response.data;
+};
 
-    const response = await api.get("/opportunities/invalid", {
+export const getInvalidOpportunities = async (listArgs) => {
+    const response = await api.get("/opportunities/invalid", { params: toListParams(listArgs) });
+    return response.data;
+};
+
+export const bulkDeleteOpportunities = async (ids) => {
+    const response = await api.post("/opportunities/bulk-delete", { ids });
+    return response.data;
+};
+
+export const exportOpportunities = async ({ sort = null, filters = {}, selection = null } = {}) => {
+
+    const response = await api.get("/opportunities/export", {
         params: {
-            page,
-            size,
-            search,
-            ...monthParams(month)
-        }
+            sortBy: sort?.field || undefined,
+            sortDir: sort?.dir || undefined,
+            ...filters,
+            ids: selection && selection.length > 0 ? selection.join(",") : undefined,
+        },
+        responseType: "blob",
     });
 
     return response.data;

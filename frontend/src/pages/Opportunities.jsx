@@ -1,16 +1,62 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import PageHeader from "../components/PageHeader";
 import DataTable from "../components/DataTable";
-import DeleteModal from "../components/DeleteModal";
 import StatusBadge from "../components/ui/StatusBadge";
-import MonthFilter from "../components/MonthFilter";
+import FilterPanel from "../components/list/FilterPanel";
+import ManageColumnsMenu from "../components/list/ManageColumnsMenu";
+import BulkActionBar from "../components/list/BulkActionBar";
+import ListPagination from "../components/list/ListPagination";
+
+import useServerList from "../hooks/useServerList";
+import usePersistedColumns from "../hooks/usePersistedColumns";
+import { downloadBlob } from "../utils/downloadFile";
 
 import {
     getAllOpportunities,
-    deleteOpportunity
+    bulkDeleteOpportunities,
+    exportOpportunities
 } from "../services/opportunityService";
+import { getAllSalesStages } from "../services/salesStageService";
+import { getAllProducts } from "../services/productService";
+import { getAllIndustries } from "../services/industryService";
+import { getAllEmployees } from "../services/employeeService";
+
+const ALL_OPPORTUNITY_COLUMNS = [
+    { key: "company", label: "Lead", render: (row) => row.lead?.companyName || "-" },
+    {
+        key: "title", label: "Opportunity", sortable: true,
+        render: (row) => (
+            <Link to={`/opportunities/${row.id}`} className="record-link">
+                {row.title}
+            </Link>
+        )
+    },
+    {
+        key: "value", label: "Value", sortable: true, sortKey: "value",
+        render: (row) => `₹${Number(row.productValue || 0).toLocaleString("en-IN")}`
+    },
+    {
+        key: "date", label: "Closing Date", sortable: true, sortKey: "closingDate",
+        render: (row) => row.expectedClosingDate || "-"
+    },
+    {
+        key: "stage", label: "Stage", sortable: true,
+        render: (row) => <StatusBadge status={row.salesStage?.name || "Not Set"} />
+    },
+    {
+        key: "assignedEmployee", label: "Assigned Employee", sortable: true,
+        render: (row) => row.lead?.assignedEmployee?.name || "-"
+    },
+    {
+        key: "createdAt", label: "Created Date", sortable: true, sortKey: "createdDate",
+        render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "-"
+    },
+];
+
+// Compact default: createdAt stays available via Manage Columns.
+const DEFAULT_VISIBLE_OPPORTUNITY_COLUMNS = ["company", "title", "value", "date", "stage", "assignedEmployee"];
 
 export default function Opportunities({
     title = "Opportunities",
@@ -19,146 +65,146 @@ export default function Opportunities({
 
     const navigate = useNavigate();
 
-    const [opportunities, setOpportunities] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState("");
-    const [month, setMonth] = useState("");
-    const [page, setPage] = useState(0);
-    const [pageSize, setPageSize] = useState(50);
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalElements, setTotalElements] = useState(0);
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [selectedOpportunity, setSelectedOpportunity] = useState(null);
+    // Backend is the source of truth (OPPORTUNITY_DELETE/OPPORTUNITY_EXPORT
+    // are ADMIN-only permissions - see OpportunityService) - this only
+    // controls whether the checkbox/bulk-delete/export affordances are
+    // shown at all, same "UX/defense-in-depth guard" rationale as AdminRoute.
+    const isAdmin = localStorage.getItem("role") === "ADMIN";
+
+    const list = useServerList({
+        fetchFn: fetchOpportunities,
+        initialSort: { field: "createdDate", dir: "desc" }
+    });
+
+    const columns = usePersistedColumns(
+        "crm.columns.opportunities", ALL_OPPORTUNITY_COLUMNS, DEFAULT_VISIBLE_OPPORTUNITY_COLUMNS
+    );
+
+    const [salesStages, setSalesStages] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [industries, setIndustries] = useState([]);
+    const [employees, setEmployees] = useState([]);
 
     useEffect(() => {
-    loadOpportunities();
-}, [page, pageSize, search, month]);
 
-    async function loadOpportunities() {
+        getAllSalesStages().then(setSalesStages).catch(() => {});
+        getAllProducts().then(setProducts).catch(() => {});
+        getAllIndustries().then(setIndustries).catch(() => {});
+        getAllEmployees().then(setEmployees).catch(() => {});
 
-    try {
+    }, []);
 
-        setLoading(true);
+    const filterDefs = useMemo(() => {
 
-        const response = await fetchOpportunities(
-            page,
-            pageSize,
-            search,
-            month
+        const defs = [
+            {
+                key: "salesStageId", label: "Stage", type: "select",
+                options: salesStages.map((s) => ({ value: s.id, label: s.name }))
+            },
+            {
+                key: "productId", label: "Product", type: "select",
+                options: products.map((p) => ({ value: p.id, label: p.name }))
+            },
+            {
+                key: "industryId", label: "Industry", type: "select",
+                options: industries.map((i) => ({ value: i.id, label: i.name }))
+            },
+        ];
+
+        if (employees.length > 0) {
+            defs.push({
+                key: "assignedEmployeeId", label: "Assigned Employee", type: "select",
+                options: employees.map((e) => ({ value: e.id, label: e.name }))
+            });
+        }
+
+        defs.push(
+            { key: "created", label: "Created Date", type: "daterange", fromKey: "createdFrom", toKey: "createdTo" },
+            {
+                key: "closing", label: "Expected Closing Date", type: "daterange",
+                fromKey: "expectedClosingFrom", toKey: "expectedClosingTo"
+            },
+            { key: "minValue", label: "Min Value", type: "text" },
+            { key: "maxValue", label: "Max Value", type: "text" }
         );
 
-        setOpportunities(response.content);
-        setTotalPages(response.totalPages);
-        setTotalElements(response.totalElements);
+        return defs;
 
-    } catch (error) {
+    }, [salesStages, products, industries, employees]);
 
-        console.error(error);
+    const [bulkDeleting, setBulkDeleting] = useState(false);
+    const [exporting, setExporting] = useState(false);
 
-    } finally {
+    async function handleBulkDelete() {
 
-        setLoading(false);
+        if (!window.confirm(
+            `Delete ${list.selectedIds.length} selected opportunity(s)? ` +
+            "Any Won Customer record and Follow-Ups belonging to them will also be deleted."
+        )) {
+            return;
+        }
 
-    }
-
-}
-
-    function openDeleteModal(opportunity) {
-
-        setSelectedOpportunity(opportunity);
-
-        setShowDeleteModal(true);
-
-    }
-
-    function closeDeleteModal() {
-
-        setSelectedOpportunity(null);
-
-        setShowDeleteModal(false);
-
-    }
-
-    async function confirmDelete() {
+        setBulkDeleting(true);
 
         try {
 
-            await deleteOpportunity(selectedOpportunity.id);
+            const result = await bulkDeleteOpportunities(list.selectedIds);
 
-            closeDeleteModal();
+            if (result.skippedIds && result.skippedIds.length > 0) {
+                alert(
+                    `Deleted ${result.succeededIds.length}. Skipped ${result.skippedIds.length} ` +
+                    "(not authorized or no longer exist)."
+                );
+            }
 
-            await loadOpportunities();
+            list.clearSelection();
+            await list.reload();
 
         } catch (error) {
 
             console.error(error);
+            alert("Unable to delete the selected opportunities.");
 
-            alert(
-                error.response?.data?.message ||
-                "Unable to delete opportunity."
-            );
+        } finally {
+
+            setBulkDeleting(false);
 
         }
 
     }
 
+    async function handleExport(selectedOnly) {
 
-    const totalValue = opportunities.reduce(
-        (sum, opportunity) => sum + (opportunity.productValue || 0),
-        0
-    );
+        setExporting(true);
 
-    const wonValue = opportunities
-    .filter(o => (o.salesStage?.name || "") === "WON")
-    .reduce((sum, o) => sum + (o.productValue || 0), 0);
+        try {
 
-    const columns = [
+            const blob = await exportOpportunities({
+                sort: list.sort,
+                filters: { search: list.search || undefined, ...list.filters },
+                selection: selectedOnly ? list.selectedIds : null,
+            });
 
-        {
-            key: "company",
-            label: "Lead",
+            downloadBlob(blob, "opportunities.csv");
 
-            render: (row) => row.lead?.companyName
-        },
+        } catch (error) {
 
-        {
-            key: "title",
-            label: "Opportunity"
-        },
+            console.error(error);
+            alert("Unable to export opportunities.");
 
-        {
-            key: "value",
-            label: "Value",
+        } finally {
 
-            render: (row) =>
-
-                `₹${Number(row.productValue || 0).toLocaleString("en-IN")}`
-
-        },
-
-        {
-            key: "date",
-            label: "Closing Date",
-
-            render: (row) =>
-
-                row.expectedClosingDate
-
-        },
-
-        {
-            key: "stage",
-            label: "Stage",
-
-            render: (row) => (
-
-                <StatusBadge status={row.salesStage?.name || "Not Set"} />
-
-            )
+            setExporting(false);
 
         }
 
-    ];
+    }
+
+    const totalValue = list.data.reduce((sum, o) => sum + (o.productValue || 0), 0);
+
+    const wonValue = list.data
+        .filter((o) => (o.salesStage?.name || "") === "WON")
+        .reduce((sum, o) => sum + (o.productValue || 0), 0);
 
     return (
 
@@ -166,128 +212,111 @@ export default function Opportunities({
 
             <PageHeader
                 title={title}
-                subtitle={`${totalElements} Opportunity(s) Found`}
+                subtitle={`${list.totalElements} Opportunity(s) Found`}
             />
+
             <div className="row mb-4">
 
                 <div className="col-md-4">
-
                     <div className="card shadow-sm border-0">
-
                         <div className="card-body">
-
-                            <small className="text-muted">
-
-                                Total Opportunities
-
-                            </small>
-
-                            <h3>
-
-                                {totalElements}
-
-                            </h3>
-
+                            <small className="text-muted">Total Opportunities</small>
+                            <h3>{list.totalElements}</h3>
                         </div>
-
                     </div>
-
                 </div>
 
                 <div className="col-md-4">
-
                     <div className="card shadow-sm border-0">
-
                         <div className="card-body">
-
-                            <small className="text-muted">
-
-                                Pipeline Value
-
-                            </small>
-
-                            <h3>
-
-                                ₹{totalValue.toLocaleString("en-IN")}
-
-                            </h3>
-
+                            <small className="text-muted">Pipeline Value (this page)</small>
+                            <h3>₹{totalValue.toLocaleString("en-IN")}</h3>
                         </div>
-
                     </div>
-
                 </div>
 
                 <div className="col-md-4">
-
                     <div className="card shadow-sm border-0">
-
                         <div className="card-body">
-
-                            <small className="text-muted">
-
-                                Won Deals
-
-                            </small>
-
-                            <h3 className="text-success">
-
-                                ₹{wonValue.toLocaleString("en-IN")}
-
-                            </h3>
-
+                            <small className="text-muted">Won Deals (this page)</small>
+                            <h3 className="text-success">₹{wonValue.toLocaleString("en-IN")}</h3>
                         </div>
-
                     </div>
-
                 </div>
 
             </div>
 
-            <div className="card shadow-sm border-0 mb-4">
+            <div className="card shadow-sm border-0 mb-3">
 
                 <div className="card-body">
 
-                    <div className="row g-2">
+                    <div className="d-flex flex-wrap gap-2 align-items-center">
 
-                        <div className="col">
+                        <div className="flex-grow-1" style={{ minWidth: "240px" }}>
 
                             <div className="input-group">
 
                                 <span className="input-group-text bg-white">
-
                                     <i className="bi bi-search"></i>
-
                                 </span>
 
                                 <input
                                     className="form-control border-start-0"
-                                    placeholder="Search by company, contact, phone, email, stage or employee..."
-                                    value={search}
-                                    onChange={(e) => {
-
-                                        setSearch(e.target.value);
-
-                                        setPage(0);
-
-}}
+                                    placeholder="Search by company, contact, phone, email or stage..."
+                                    value={list.search}
+                                    onChange={(e) => list.setSearch(e.target.value)}
                                 />
 
                             </div>
 
                         </div>
 
-                        <div className="col-md-3">
+                        <FilterPanel
+                            filterDefs={filterDefs}
+                            filters={list.filters}
+                            onChange={list.setFilters}
+                            onClear={list.clearFilters}
+                        />
 
-                            <MonthFilter
-                                value={month}
-                                onChange={(value) => {
-                                    setMonth(value);
-                                    setPage(0);
-                                }}
-                            />
+                        <ManageColumnsMenu
+                            allColumns={columns.allColumns}
+                            visibleKeys={columns.visibleKeys}
+                            onToggle={columns.toggleColumn}
+                            onReset={columns.resetColumns}
+                        />
 
-                        </div>
+                        {isAdmin && (
+                            <div className="dropdown">
+
+                                <button
+                                    className="btn btn-outline-secondary dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    disabled={exporting}
+                                >
+                                    <i className="bi bi-download me-2"></i>
+                                    Export
+                                </button>
+
+                                <ul className="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <button className="dropdown-item" onClick={() => handleExport(false)}>
+                                            Export all matching
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button
+                                            className="dropdown-item"
+                                            disabled={list.selectedIds.length === 0}
+                                            onClick={() => handleExport(true)}
+                                        >
+                                            Export selected ({list.selectedIds.length})
+                                        </button>
+                                    </li>
+                                </ul>
+
+                            </div>
+                        )}
 
                     </div>
 
@@ -295,109 +324,51 @@ export default function Opportunities({
 
             </div>
 
+            {isAdmin && (
+                <BulkActionBar
+                    count={list.selectedIds.length}
+                    onClear={list.clearSelection}
+                    actions={[
+                        {
+                            key: "export", label: "Export Selected", icon: "bi-download",
+                            variant: "btn-outline-secondary", onClick: () => handleExport(true), disabled: exporting
+                        },
+                        {
+                            key: "delete", label: "Delete", icon: "bi-trash",
+                            variant: "btn-outline-danger", onClick: handleBulkDelete, disabled: bulkDeleting
+                        },
+                    ]}
+                />
+            )}
+
             <DataTable
-                columns={columns}
-                data={opportunities}
-                loading={loading}
-                renderActions={(row) => (
-
-                    <div className="btn-group">
-
-                        <button
-                            className="btn btn-sm btn-primary"
-                            onClick={() => navigate(`/opportunities/${row.id}`)}
-                        >
-                            <i className="bi bi-eye"></i>
-                        </button>
-
-                        <button
-                            className="btn btn-sm btn-warning"
-                            onClick={() => navigate(`/opportunities/edit/${row.id}`)}
-                        >
-                            <i className="bi bi-pencil"></i>
-                        </button>
-
-                        <button
-                            className="btn btn-sm btn-danger"
-                            onClick={() => openDeleteModal(row)}
-                        >
-                            <i className="bi bi-trash"></i>
-                        </button>
-
-                    </div>
-
-                )}
+                columns={columns.visibleColumns}
+                data={list.data}
+                loading={list.loading}
+                selectable={isAdmin}
+                selectedIds={list.selectedIds}
+                onToggleSelect={list.toggleSelect}
+                onToggleSelectAll={list.toggleSelectAll}
+                sort={list.sort}
+                onSortChange={list.toggleSort}
+                onRowClick={(row) => navigate(`/opportunities/${row.id}`)}
             />
 
-            <div className="d-flex justify-content-between align-items-center mt-3">
-
-    <div>
-
-        <select
-            className="form-select"
-            style={{ width: "100px" }}
-            value={pageSize}
-            onChange={(e) => {
-
-                setPageSize(Number(e.target.value));
-                setPage(0);
-
-            }}
-        >
-
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-
-        </select>
-
-    </div>
-
-    <div>
-
-        <button
-            className="btn btn-outline-primary me-2"
-            disabled={page === 0}
-            onClick={() => setPage(page - 1)}
-        >
-            Previous
-        </button>
-
-        <span className="mx-2">
-
-            Page {page + 1} of {totalPages || 1}
-
-        </span>
-
-        <button
-            className="btn btn-outline-primary"
-            disabled={page + 1 >= totalPages}
-            onClick={() => setPage(page + 1)}
-        >
-            Next
-        </button>
-
-    </div>
-
-</div>
-            {!loading && opportunities.length === 0 && (
-    <div className="alert alert-light border text-center mt-3">
-        <i className="bi bi-search me-2"></i>
-        No matching opportunities found.
-    </div>
-)}
-
-            <DeleteModal
-                show={showDeleteModal}
-                title="Delete Opportunity"
-                message={
-                    selectedOpportunity
-                        ? `Delete "${selectedOpportunity.title}"?`
-                        : ""
-                }
-                onClose={closeDeleteModal}
-                onConfirm={confirmDelete}
+            <ListPagination
+                page={list.page}
+                pageSize={list.pageSize}
+                totalPages={list.totalPages}
+                totalElements={list.totalElements}
+                onPageChange={list.setPage}
+                onPageSizeChange={list.setPageSize}
             />
+
+            {!list.loading && list.data.length === 0 && (
+                <div className="alert alert-light border text-center mt-3">
+                    <i className="bi bi-search me-2"></i>
+                    No matching opportunities found.
+                </div>
+            )}
 
         </>
 

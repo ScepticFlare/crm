@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { logout as logoutRequest } from "../services/activityService";
 
 export default function TopNavbar() {
 
@@ -17,7 +18,16 @@ export default function TopNavbar() {
         ? employeeName.charAt(0).toUpperCase()
         : "U";
 
-    const logout = () => {
+    const logout = async () => {
+
+        // Best-effort: records the LOGOUT activity entry, but logging out
+        // locally must never be blocked by a network hiccup or the token
+        // already being invalid.
+        try {
+            await logoutRequest();
+        } catch (err) {
+            console.error(err);
+        }
 
         localStorage.removeItem("token");
         localStorage.removeItem("role");

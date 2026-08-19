@@ -53,8 +53,8 @@ export default function AddFollowUp() {
             }
 
             const [leadResponse, oppResponse] = await Promise.all([
-    getAllLeads(0, 1000, ""),
-    getAllOpportunities(0, 1000, "")
+    getAllLeads({ page: 0, size: 1000, search: "" }),
+    getAllOpportunities({ page: 0, size: 1000, search: "" })
 ]);
 
 const lead = leadResponse.content || [];

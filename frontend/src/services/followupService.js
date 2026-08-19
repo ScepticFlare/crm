@@ -1,23 +1,8 @@
-import api, { monthParams } from "./api";
+import api, { toListParams } from "./api";
 
-export const getAllFollowUps = async (
-    page = 0,
-    size = 50,
-    search = "",
-    month = ""
-) => {
-
-    const response = await api.get("/followups", {
-        params: {
-            page,
-            size,
-            search,
-            ...monthParams(month)
-        }
-    });
-
+export const getAllFollowUps = async (listArgs) => {
+    const response = await api.get("/followups", { params: toListParams(listArgs) });
     return response.data;
-
 };
 
 export const getFollowUpById = async (id) => {
@@ -25,7 +10,6 @@ export const getFollowUpById = async (id) => {
     return response.data;
 };
 
-// ADD THESE TWO FUNCTIONS 👇
 export const getFollowUpsByLead = async (leadId) => {
     const response = await api.get(`/followups/lead/${leadId}`);
     return response.data;
@@ -48,4 +32,25 @@ export const updateFollowUp = async (id, followUp) => {
 
 export const deleteFollowUp = async (id) => {
     await api.delete(`/followups/${id}`);
+};
+
+export const bulkDeleteFollowUps = async (ids) => {
+    const response = await api.post("/followups/bulk-delete", { ids });
+    return response.data;
+};
+
+export const exportFollowUps = async ({ sort = null, filters = {}, selection = null } = {}) => {
+
+    const response = await api.get("/followups/export", {
+        params: {
+            sortBy: sort?.field || undefined,
+            sortDir: sort?.dir || undefined,
+            ...filters,
+            ids: selection && selection.length > 0 ? selection.join(",") : undefined,
+        },
+        responseType: "blob",
+    });
+
+    return response.data;
+
 };

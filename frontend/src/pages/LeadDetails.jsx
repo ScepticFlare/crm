@@ -1,18 +1,31 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+
 import FollowUpSection from "../components/FollowUpSection";
-import PageHeader from "../components/PageHeader";
 import DetailField from "../components/DetailField";
+import SectionCard from "../components/ui/SectionCard";
 import LoadingState from "../components/ui/LoadingState";
-import { getLeadById } from "../services/leadService";
+import DetailHeader from "../components/detail/DetailHeader";
+import ActivityPlaceholder from "../components/detail/ActivityPlaceholder";
+import DeleteModal from "../components/DeleteModal";
+
+import { getLeadById, deleteLead, getLeadDeleteImpact } from "../services/leadService";
+import { describeDeleteImpact } from "../utils/deleteImpact";
 
 export default function LeadDetails() {
 
     const { id } = useParams();
     const navigate = useNavigate();
 
+    // Backend is the source of truth (LEAD_DELETE is ADMIN-only - see
+    // LeadService.deleteLead) - this only controls whether the Delete menu
+    // item is offered at all.
+    const isAdmin = localStorage.getItem("role") === "ADMIN";
+
     const [lead, setLead] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteImpact, setDeleteImpact] = useState(null);
 
     useEffect(() => {
         loadLead();
@@ -37,6 +50,61 @@ export default function LeadDetails() {
             setLoading(false);
 
         }
+
+    }
+
+    // Fetches the delete-impact preview before opening the confirmation
+    // modal, so the dialog always reflects real dependent-record counts
+    // (see utils/deleteImpact.js) rather than a generic message. Falls back
+    // to a plain confirmation if the preview call itself fails - the delete
+    // is still safe either way since the backend re-derives and cascades
+    // the same dependents regardless of what the preview showed.
+    async function openDeleteModal() {
+
+        try {
+
+            const impact = await getLeadDeleteImpact(lead.id);
+            setDeleteImpact(impact);
+
+        } catch (error) {
+
+            console.error(error);
+            setDeleteImpact(null);
+
+        }
+
+        setShowDeleteModal(true);
+
+    }
+
+    async function confirmDelete() {
+
+        try {
+
+            await deleteLead(lead.id);
+            navigate("/leads");
+
+        } catch (error) {
+
+            console.error(error);
+            alert(error.response?.data?.message || "Unable to delete lead.");
+            setShowDeleteModal(false);
+
+        }
+
+    }
+
+    function formatDateTime(value) {
+
+        if (!value) return "-";
+
+        return new Date(value).toLocaleString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+        });
 
     }
 
@@ -68,186 +136,166 @@ export default function LeadDetails() {
 
         <>
 
-            <PageHeader
+            <DetailHeader
+                backTo="/leads"
                 title={lead.companyName}
-                subtitle="Lead Details"
+                subtitle={lead.contactPerson}
+                status={lead.leadStatus}
+                meta={`Lead #${lead.id}`}
+                primaryAction={{
+                    label: "Convert to Opportunity",
+                    icon: "bi-arrow-repeat",
+                    onClick: () => navigate(`/opportunities/add?leadId=${lead.id}`),
+                }}
+                onEdit={() => navigate(`/leads/edit/${lead.id}`)}
+                menuItems={isAdmin ? [
+                    {
+                        label: "Delete Lead",
+                        icon: "bi-trash",
+                        danger: true,
+                        onClick: openDeleteModal,
+                    },
+                ] : []}
             />
 
-            <div className="card shadow-sm border-0">
+            <div className="row g-3">
 
-                <div className="card-body">
+                <div className="col-lg-8">
 
-                    <h5 className="mb-4">
-                        Company Information
-                    </h5>
+                    <SectionCard title="Company Information">
 
-                    <div className="row">
+                        <div className="row">
 
-                        <div className="col-md-4">
-                            <DetailField
-                                label="Products"
-                                value={lead.leadProducts?.length > 0
-                                    ? lead.leadProducts
-                                        .map(lp => `${lp.product?.name} (${lp.quantity})`)
-                                        .join(", ")
-                                    : ""}
-                            />
+                            <div className="col-md-6">
+                                <DetailField label="Industry" value={lead.industry?.name} />
+                            </div>
+
+                            <div className="col-md-6">
+                                <DetailField label="Interested Product" value={lead.interestedProduct} />
+                            </div>
+
+                            <div className="col-md-6">
+                                <DetailField
+                                    label="Products"
+                                    value={lead.leadProducts?.length > 0
+                                        ? lead.leadProducts
+                                            .map(lp => `${lp.product?.name} (${lp.quantity})`)
+                                            .join(", ")
+                                        : ""}
+                                />
+                            </div>
+
+                            <div className="col-md-6">
+                                <DetailField
+                                    label="Battery"
+                                    value={lead.leadBatteries?.length > 0
+                                        ? lead.leadBatteries
+                                            .map(lb => `${lb.battery?.name} (${lb.quantity})`)
+                                            .join(", ")
+                                        : ""}
+                                />
+                            </div>
+
                         </div>
 
-                        <div className="col-md-4">
-                            <DetailField
-                                label="Industry"
-                                value={lead.industry?.name}
-                            />
+                    </SectionCard>
+
+                    <SectionCard title="Contact Information">
+
+                        <div className="row">
+
+                            <div className="col-md-6">
+                                <DetailField label="Contact Person" value={lead.contactPerson} />
+                            </div>
+
+                            <div className="col-md-6">
+                                <DetailField label="Designation" value={lead.designation} />
+                            </div>
+
+                            <div className="col-md-6">
+                                <DetailField label="Phone" value={lead.phone} />
+                            </div>
+
+                            <div className="col-md-6">
+                                <DetailField label="Alternate Phone" value={lead.alternatePhone} />
+                            </div>
+
+                            <div className="col-md-6">
+                                <DetailField label="Email" value={lead.email} />
+                            </div>
+
+                            <div className="col-md-6">
+                                <DetailField label="Secondary Email" value={lead.secondaryEmail} />
+                            </div>
+
                         </div>
 
-                        <div className="col-md-4">
-                            <DetailField
-                                label="Battery"
-                                value={lead.leadBatteries?.length > 0
-                                    ? lead.leadBatteries
-                                        .map(lb => `${lb.battery?.name} (${lb.quantity})`)
-                                        .join(", ")
-                                    : ""}
-                            />
+                    </SectionCard>
+
+                    <SectionCard title="Address">
+
+                        <div className="row">
+
+                            <div className="col-md-4">
+                                <DetailField label="City" value={lead.city} />
+                            </div>
+
+                            <div className="col-md-4">
+                                <DetailField label="State" value={lead.state} />
+                            </div>
+
+                            <div className="col-md-4">
+                                <DetailField label="Pincode" value={lead.pincode} />
+                            </div>
+
                         </div>
 
-                        <div className="col-md-4">
-                            <DetailField
-                                label="Interested Product"
-                                value={lead.interestedProduct}
-                            />
+                    </SectionCard>
+
+                    <SectionCard title="Description & Remarks">
+
+                        <label className="fw-semibold mb-2 d-block">Description</label>
+
+                        <div className="border rounded p-3 bg-light mb-4">
+                            {lead.description || "No description available."}
                         </div>
 
-                    </div>
+                        <label className="fw-semibold mb-2 d-block">Final Remarks</label>
 
-                    <hr className="my-4" />
-
-                    <h5 className="mb-4">
-                        Contact Information
-                    </h5>
-
-                    <div className="row">
-
-                        <div className="col-md-4">
-                            <DetailField label="Contact Person" value={lead.contactPerson} />
+                        <div className="border rounded p-3 bg-light">
+                            {lead.finalRemarks || "No final remarks available."}
                         </div>
 
-                        <div className="col-md-4">
-                            <DetailField label="Designation" value={lead.designation} />
-                        </div>
+                    </SectionCard>
 
-                        <div className="col-md-4">
-                            <DetailField label="Phone" value={lead.phone} />
-                        </div>
+                    <ActivityPlaceholder />
 
-                        <div className="col-md-4">
-                            <DetailField label="Alternate Phone" value={lead.alternatePhone} />
-                        </div>
+                </div>
 
-                        <div className="col-md-4">
-                            <DetailField label="Email" value={lead.email} />
-                        </div>
+                <div className="col-lg-4">
 
-                        <div className="col-md-4">
-                            <DetailField label="Secondary Email" value={lead.secondaryEmail} />
-                        </div>
+                    <SectionCard title="Lead Information">
 
-                    </div>
+                        <DetailField label="Status" status={lead.leadStatus} />
+                        <DetailField label="Validity" status={lead.leadValidity} />
+                        <DetailField label="Source" value={lead.leadSource?.name} />
 
-                    <hr className="my-4" />
+                    </SectionCard>
 
-                    <h5 className="mb-4">
-                        Address
-                    </h5>
+                    <SectionCard title="Assigned Employee">
 
-                    <div className="row">
+                        <DetailField label="Name" value={lead.assignedEmployee?.name} />
+                        <DetailField label="Email" value={lead.assignedEmployee?.email} />
+                        <DetailField label="Phone" value={lead.assignedEmployee?.phone} />
 
-                        <div className="col-md-4">
-                            <DetailField label="City" value={lead.city} />
-                        </div>
+                    </SectionCard>
 
-                        <div className="col-md-4">
-                            <DetailField label="State" value={lead.state} />
-                        </div>
+                    <SectionCard title="Record Info">
 
-                        <div className="col-md-4">
-                            <DetailField label="Pincode" value={lead.pincode} />
-                        </div>
+                        <DetailField label="Created" value={formatDateTime(lead.createdAt)} />
+                        <DetailField label="Last Updated" value={formatDateTime(lead.updatedAt)} />
 
-                    </div>
-
-                    <hr className="my-4" />
-
-                    <h5 className="mb-4">
-                        Lead Information
-                    </h5>
-
-                    <div className="row">
-
-                        <div className="col-md-3">
-                            <DetailField label="Status" status={lead.leadStatus} />
-                        </div>
-
-                        <div className="col-md-3">
-                            <DetailField label="Assigned Employee" value={lead.assignedEmployee?.name} />
-                        </div>
-
-                        <div className="col-md-3">
-                            <DetailField label="Source" value={lead.leadSource?.name} />
-                        </div>
-
-                    </div>
-
-                    <hr className="my-4" />
-
-                    <h5 className="mb-3">
-                        Description
-                    </h5>
-
-                    <div className="border rounded p-3 bg-light mb-4">
-
-                        {lead.description || "No description available."}
-
-                    </div>
-
-                    <h5 className="mt-4 mb-3">
-                        Final Remarks
-                    </h5>
-
-                    <div className="border rounded p-3 bg-light">
-
-                        {lead.finalRemarks || "No final remarks available."}
-
-                    </div>
-
-                    <div className="d-flex gap-2">
-
-                        <button
-                            className="btn btn-secondary"
-                            onClick={() => navigate("/leads")}
-                        >
-                            <i className="bi bi-arrow-left me-2"></i>
-                            Back
-                        </button>
-
-                        <button
-                            className="btn btn-warning"
-                            onClick={() => navigate(`/leads/edit/${lead.id}`)}
-                        >
-                            <i className="bi bi-pencil-square me-2"></i>
-                            Edit Lead
-                        </button>
-
-                        <button
-                            className="btn btn-success"
-                            onClick={() => navigate(`/opportunities/add?leadId=${lead.id}`)}
-                        >
-                            <i className="bi bi-arrow-repeat me-2"></i>
-                            Convert to Opportunity
-                        </button>
-
-                    </div>
+                    </SectionCard>
 
                 </div>
 
@@ -255,6 +303,15 @@ export default function LeadDetails() {
 
             <FollowUpSection
                 leadId={lead.id}
+            />
+
+            <DeleteModal
+                show={showDeleteModal}
+                title="Delete Lead"
+                message={`Are you sure you want to delete "${lead.companyName}"?`}
+                {...describeDeleteImpact(deleteImpact, "Lead")}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={confirmDelete}
             />
 
         </>

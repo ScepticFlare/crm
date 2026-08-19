@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
+import SectionCard from "../components/ui/SectionCard";
 import {
     getLeadReport,
     exportLeadReport,
@@ -102,22 +103,20 @@ export default function Reports() {
         <>
 
             <PageHeader
-                title="Lead Reports"
-                subtitle="Generate monthly lead reports."
+                title="Reports"
+                subtitle="Month-by-month lead performance. For a custom multi-record analysis, use Full Report."
             />
 
             <div className="d-flex justify-content-end mb-3">
 
                 <Link to="/full-report" className="btn btn-outline-primary btn-sm">
+                    <i className="bi bi-sliders me-2"></i>
                     Go to Full Report
-                    <i className="bi bi-arrow-right ms-2"></i>
                 </Link>
 
             </div>
 
-            <div className="card shadow-sm border-0 mb-4">
-
-                <div className="card-body">
+            <SectionCard title="Monthly Lead Report">
 
                     <div className="row g-3 align-items-end">
 
@@ -210,13 +209,11 @@ export default function Reports() {
 
                     </div>
 
-                </div>
+            </SectionCard>
 
-            </div>
+            <SectionCard title="Monthly Breakdown">
 
-            <div className="card shadow-sm border-0">
-
-                <div className="card-body table-responsive">
+                <div className="table-responsive">
 
                     <table className="table table-bordered table-hover align-middle">
 
@@ -296,7 +293,7 @@ export default function Reports() {
 
                 </div>
 
-            </div>
+            </SectionCard>
 
         </>
 

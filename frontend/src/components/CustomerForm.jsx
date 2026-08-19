@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import { getAllEmployees } from "../services/employeeService";
+
 export default function CustomerForm({
     opportunity,
     form,
@@ -9,6 +12,47 @@ export default function CustomerForm({
 }) {
 
     const lead = opportunity?.lead;
+
+    const [employees, setEmployees] = useState([]);
+
+    // Same permission-driven pattern as LeadForm's Assigned Employee
+    // control: try the real roster fetch (scoped by the backend to
+    // ADMIN=everyone / MANAGER=own team / EMPLOYEE=403) and let success or
+    // failure decide whether the control is shown, rather than checking a
+    // hardcoded role string.
+    const [canAssignEmployee, setCanAssignEmployee] = useState(false);
+
+    useEffect(() => {
+
+        loadEmployees();
+
+    }, []);
+
+    async function loadEmployees() {
+
+        try {
+
+            const data = await getAllEmployees();
+            setEmployees(data);
+            setCanAssignEmployee(true);
+
+        } catch (err) {
+
+            if (err.response?.status !== 403) {
+                console.error(err);
+            }
+
+            setCanAssignEmployee(false);
+
+        }
+
+    }
+
+    // Only the edit flow (EditCustomer) tracks assignedEmployeeId in its
+    // form state - the conversion flow (ConvertCustomer) sets it directly
+    // from the Lead's owner on submit and never exposes it as a field, so
+    // the control has nothing meaningful to bind to there.
+    const showAssignedEmployee = canAssignEmployee && form.assignedEmployeeId !== undefined;
 
     return (
 
@@ -172,7 +216,45 @@ export default function CustomerForm({
 
                 </div>
 
-                <div className="col-md-6 mb-3"></div>
+                <div className="col-md-6 mb-3">
+
+                    {showAssignedEmployee && (
+
+                        <>
+
+                            <label className="form-label">
+                                Assigned Employee
+                            </label>
+
+                            <select
+                                className="form-select"
+                                name="assignedEmployeeId"
+                                value={form.assignedEmployeeId}
+                                onChange={handleChange}
+                            >
+
+                                <option value="">
+                                    Select Employee
+                                </option>
+
+                                {employees.map(emp => (
+
+                                    <option
+                                        key={emp.id}
+                                        value={emp.id}
+                                    >
+                                        {emp.name}
+                                    </option>
+
+                                ))}
+
+                            </select>
+
+                        </>
+
+                    )}
+
+                </div>
 
                 <div className="col-md-6 mb-3">
 

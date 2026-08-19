@@ -30,110 +30,6 @@ const SECTION_OPTIONS = [
     { key: "EMPLOYEE_INFO", label: "Employee Information" },
 ];
 
-const LEAD_COLUMNS = [
-    { key: "leadId", label: "ID" },
-    { key: "companyName", label: "Company" },
-    { key: "contactPerson", label: "Contact" },
-    { key: "phone", label: "Phone" },
-    { key: "email", label: "Email" },
-    { key: "city", label: "City" },
-    { key: "industry", label: "Industry" },
-    { key: "leadSource", label: "Lead Source" },
-    { key: "leadStatus", label: "Status" },
-    { key: "leadValidity", label: "Validity" },
-    { key: "assignedEmployeeName", label: "Employee" },
-    { key: "products", label: "Products" },
-    { key: "batteries", label: "Batteries" },
-    { key: "createdAt", label: "Created At" },
-];
-
-const OPPORTUNITY_COLUMNS = [
-    { key: "opportunityId", label: "ID" },
-    { key: "title", label: "Title" },
-    { key: "salesStage", label: "Sales Stage" },
-    { key: "companyName", label: "Company" },
-    { key: "contactPerson", label: "Contact" },
-    { key: "productValue", label: "Value" },
-    { key: "expectedClosingDate", label: "Expected Closing" },
-    { key: "leadValidity", label: "Validity" },
-    { key: "industry", label: "Industry" },
-    { key: "leadSource", label: "Lead Source" },
-    { key: "assignedEmployeeName", label: "Employee" },
-    { key: "products", label: "Products" },
-    { key: "batteries", label: "Batteries" },
-    { key: "createdAt", label: "Created At" },
-];
-
-const CUSTOMER_COLUMNS = [
-    { key: "customerId", label: "ID" },
-    { key: "customerCode", label: "Code" },
-    { key: "companyName", label: "Company" },
-    { key: "contactPerson", label: "Contact" },
-    { key: "phone", label: "Phone" },
-    { key: "email", label: "Email" },
-    { key: "city", label: "City" },
-    { key: "gstNumber", label: "GST" },
-    { key: "assignedEmployeeName", label: "Employee" },
-    { key: "opportunityTitle", label: "Opportunity" },
-    { key: "salesStage", label: "Sales Stage" },
-    { key: "productValue", label: "Value" },
-    { key: "industry", label: "Industry" },
-    { key: "leadSource", label: "Lead Source" },
-    { key: "products", label: "Products" },
-    { key: "batteries", label: "Batteries" },
-    { key: "createdAt", label: "Created At" },
-];
-
-function PreviewTable({ columns, rows }) {
-
-    if (!rows || rows.length === 0) {
-        return (
-            <p className="text-muted mb-0">
-                No records match the selected filters.
-            </p>
-        );
-    }
-
-    return (
-        <div className="table-responsive">
-
-            <table className="table table-bordered table-hover table-sm align-middle">
-
-                <thead className="table-light">
-
-                    <tr>
-                        {columns.map((col) => (
-                            <th key={col.key}>{col.label}</th>
-                        ))}
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-                    {rows.map((row, index) => (
-
-                        <tr key={index}>
-
-                            {columns.map((col) => (
-                                <td key={col.key}>
-                                    {row[col.key] === null || row[col.key] === undefined
-                                        ? ""
-                                        : String(row[col.key])}
-                                </td>
-                            ))}
-
-                        </tr>
-
-                    ))}
-
-                </tbody>
-
-            </table>
-
-        </div>
-    );
-}
 
 export default function FullReport() {
 
@@ -571,7 +467,7 @@ export default function FullReport() {
                     onClick={generatePreview}
                     disabled={generating || loadingOptions}
                 >
-                    {generating ? "Generating..." : "Generate Preview"}
+                    {generating ? "Generating..." : "Generate Summary"}
                 </button>
 
                 <button
@@ -696,23 +592,13 @@ export default function FullReport() {
 
                     </SectionCard>
 
-                    {recordTypes.LEAD && (
-                        <SectionCard title={`Leads (${report.leads.length})`}>
-                            <PreviewTable columns={LEAD_COLUMNS} rows={report.leads} />
-                        </SectionCard>
-                    )}
-
-                    {recordTypes.OPPORTUNITY && (
-                        <SectionCard title={`Opportunities (${report.opportunities.length})`}>
-                            <PreviewTable columns={OPPORTUNITY_COLUMNS} rows={report.opportunities} />
-                        </SectionCard>
-                    )}
-
-                    {recordTypes.CUSTOMER && (
-                        <SectionCard title={`Customers (${report.customers.length})`}>
-                            <PreviewTable columns={CUSTOMER_COLUMNS} rows={report.customers} />
-                        </SectionCard>
-                    )}
+                    <p className="text-muted small">
+                        <i className="bi bi-info-circle me-1"></i>
+                        Showing aggregate totals for {report.leads.length + report.opportunities.length + report.customers.length} matching
+                        record(s). To browse or export the underlying records themselves, use the Leads, Opportunities or
+                        Customers pages — Export Excel below includes full record detail for whichever record types and
+                        columns are selected above.
+                    </p>
 
                 </>
 

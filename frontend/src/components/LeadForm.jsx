@@ -54,16 +54,21 @@ export default function LeadForm({
 
     const [employees, setEmployees] = useState([]);
 
+    // Whether this user can reassign the lead's Assigned Employee is
+    // determined by whether the employee roster actually loads, not by a
+    // hardcoded role check: the backend already scopes GET /api/employees
+    // to ADMIN (everyone) / MANAGER (their own team) / EMPLOYEE (403), so
+    // trying the fetch and reacting to success/failure automatically
+    // matches the caller's real permissions and team.
+    const [canAssignEmployee, setCanAssignEmployee] = useState(false);
+
     useEffect(() => {
 
     loadProducts();
     loadIndustries();
     loadLeadSources();
     loadBatteries();
-
-    if (role === "ADMIN") {
-        loadEmployees();
-    }
+    loadEmployees();
 
 }, []);
 
@@ -133,10 +138,18 @@ export default function LeadForm({
 
         const data = await getAllEmployees();
         setEmployees(data);
+        setCanAssignEmployee(true);
 
     } catch (err) {
 
-        console.error(err);
+        // A 403 here just means this user has no reassignment permission
+        // (a plain Employee) - expected, not an error worth logging. Any
+        // other failure (network, 5xx) is still surfaced.
+        if (err.response?.status !== 403) {
+            console.error(err);
+        }
+
+        setCanAssignEmployee(false);
 
     }
 
@@ -271,7 +284,7 @@ export default function LeadForm({
     <div className="col-md-6 mb-3">
 
         <label className="form-label">
-            Designation
+            Designation *
         </label>
 
         <input
@@ -280,6 +293,7 @@ export default function LeadForm({
             name="designation"
             value={form.designation}
             onChange={handleChange}
+            required
         />
 
     </div>
@@ -355,7 +369,7 @@ export default function LeadForm({
     <div className="col-md-6 mb-3">
 
         <label className="form-label">
-            City
+            City *
         </label>
 
         <input
@@ -364,6 +378,7 @@ export default function LeadForm({
             name="city"
             value={form.city}
             onChange={handleChange}
+            required
         />
 
     </div>
@@ -371,7 +386,7 @@ export default function LeadForm({
     <div className="col-md-6 mb-3">
 
         <label className="form-label">
-            State
+            State *
         </label>
 
         <input
@@ -380,6 +395,7 @@ export default function LeadForm({
             name="state"
             value={form.state}
             onChange={handleChange}
+            required
         />
 
     </div>
@@ -411,7 +427,7 @@ export default function LeadForm({
     Lead Details
 </h5>
 
-{role === "ADMIN" && (
+{canAssignEmployee && (
 
     <div className="mb-3">
 

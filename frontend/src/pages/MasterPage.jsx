@@ -11,6 +11,12 @@ export default function MasterPage({
     update,
     remove,
 }) {
+    // Backend is the source of truth (every master-data delete endpoint is
+    // ADMIN-only - see ProductController/IndustryController/etc.) - this
+    // only controls whether the delete button is offered at all. Add/edit
+    // stay available to any authenticated user, unchanged.
+    const isAdmin = localStorage.getItem("role") === "ADMIN";
+
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -271,16 +277,18 @@ export default function MasterPage({
                                                 <i className="bi bi-pencil"></i>
                                             </button>
 
-                                            <button
-                                                className="btn btn-sm btn-danger"
-                                                onClick={() =>
-                                                    handleDelete(
-                                                        item.id
-                                                    )
-                                                }
-                                            >
-                                                <i className="bi bi-trash"></i>
-                                            </button>
+                                            {isAdmin && (
+                                                <button
+                                                    className="btn btn-sm btn-danger"
+                                                    onClick={() =>
+                                                        handleDelete(
+                                                            item.id
+                                                        )
+                                                    }
+                                                >
+                                                    <i className="bi bi-trash"></i>
+                                                </button>
+                                            )}
 
                                         </div>
 

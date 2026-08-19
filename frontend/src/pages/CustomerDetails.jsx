@@ -1,25 +1,34 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import PageHeader from "../components/PageHeader";
 import DetailField from "../components/DetailField";
-import StatusBadge from "../components/ui/StatusBadge";
+import SectionCard from "../components/ui/SectionCard";
 import LoadingState from "../components/ui/LoadingState";
+import DetailHeader from "../components/detail/DetailHeader";
+import ActivityPlaceholder from "../components/detail/ActivityPlaceholder";
+import DeleteModal from "../components/DeleteModal";
 
 import {
     getCustomerById,
-    deleteCustomer
+    deleteCustomer,
+    getCustomerDeleteImpact
 } from "../services/customerService";
+import { describeDeleteImpact } from "../utils/deleteImpact";
 
 export default function CustomerDetails() {
 
     const { id } = useParams();
-
     const navigate = useNavigate();
 
-    const [customer, setCustomer] = useState(null);
+    // Backend is the source of truth (CUSTOMER_DELETE is ADMIN-only - see
+    // CustomerService.deleteCustomer) - this only controls whether the
+    // Delete menu item is offered at all.
+    const isAdmin = localStorage.getItem("role") === "ADMIN";
 
+    const [customer, setCustomer] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteImpact, setDeleteImpact] = useState(null);
 
     useEffect(() => {
         loadCustomer();
@@ -30,13 +39,11 @@ export default function CustomerDetails() {
         try {
 
             const data = await getCustomerById(id);
-
             setCustomer(data);
 
         } catch (err) {
 
             console.error(err);
-
             alert("Failed to load customer.");
 
         } finally {
@@ -47,24 +54,36 @@ export default function CustomerDetails() {
 
     }
 
-    async function handleDelete() {
-
-        if (!window.confirm("Delete this customer?"))
-            return;
+    async function openDeleteModal() {
 
         try {
 
-            await deleteCustomer(id);
+            const impact = await getCustomerDeleteImpact(customer.id);
+            setDeleteImpact(impact);
 
-            alert("Customer deleted successfully.");
+        } catch (err) {
 
+            console.error(err);
+            setDeleteImpact(null);
+
+        }
+
+        setShowDeleteModal(true);
+
+    }
+
+    async function confirmDelete() {
+
+        try {
+
+            await deleteCustomer(customer.id);
             navigate("/customers");
 
         } catch (err) {
 
             console.error(err);
-
             alert("Unable to delete customer.");
+            setShowDeleteModal(false);
 
         }
 
@@ -75,11 +94,9 @@ export default function CustomerDetails() {
         if (!value) return "-";
 
         return Number(value).toLocaleString("en-IN", {
-
             style: "currency",
             currency: "INR",
             maximumFractionDigits: 0
-
         });
 
     }
@@ -89,11 +106,23 @@ export default function CustomerDetails() {
         if (!date) return "-";
 
         return new Date(date).toLocaleDateString("en-IN", {
-
             day: "2-digit",
             month: "short",
             year: "numeric"
+        });
 
+    }
+
+    function formatDateTime(value) {
+
+        if (!value) return "-";
+
+        return new Date(value).toLocaleString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
         });
 
     }
@@ -123,378 +152,192 @@ export default function CustomerDetails() {
     }
 
     const employee = customer.assignedEmployee;
-
     const opportunity = customer.opportunity;
-        return (
 
-        <div className="container-fluid">
+    return (
 
-            <PageHeader
-                title="Customer Details"
-                subtitle="View complete customer information"
+        <>
+
+            <DetailHeader
+                backTo="/customers"
+                title={customer.companyName}
+                subtitle={customer.contactPerson}
+                status="WON"
+                meta={customer.customerCode || `Customer #${customer.id}`}
+                onEdit={() => navigate(`/customers/edit/${customer.id}`)}
+                menuItems={isAdmin ? [
+                    {
+                        label: "Delete Customer",
+                        icon: "bi-trash",
+                        danger: true,
+                        onClick: openDeleteModal,
+                    },
+                ] : []}
             />
 
-            <div className="card border-0 shadow-sm mb-4">
+            <div className="row g-3 mb-3">
 
-                <div className="card-body">
-
-                    <div className="row align-items-center">
-
-                        <div className="col-lg-8">
-
-                            <h2 className="fw-bold mb-1">
-
-                                {customer.companyName}
-
-                            </h2>
-
-                            <h5 className="text-muted mb-3">
-
-                                {customer.contactPerson}
-
-                            </h5>
-
-                            <span className="badge bg-success px-3 py-2">
-
-                                Customer
-
-                            </span>
-
-                            <span className="ms-3 text-muted">
-
-                                {customer.customerCode || `Customer #${customer.id}`}
-
-                            </span>
-
+                <div className="col-md-3">
+                    <div className="card shadow-sm text-center h-100">
+                        <div className="card-body">
+                            <small className="text-muted">Customer Since</small>
+                            <h5 className="mt-2">{formatDate(customer.createdAt)}</h5>
                         </div>
-
-                        <div className="col-lg-4 text-lg-end mt-4 mt-lg-0">
-
-                            <button
-                                className="btn btn-warning me-2"
-                                onClick={() =>
-                                    navigate(`/customers/edit/${customer.id}`)
-                                }
-                            >
-                                Edit
-                            </button>
-
-                            <button
-                                className="btn btn-danger me-2"
-                                onClick={handleDelete}
-                            >
-                                Delete
-                            </button>
-
-                            <button
-                                className="btn btn-outline-secondary"
-                                onClick={() => navigate("/customers")}
-                            >
-                                Back
-                            </button>
-
-                        </div>
-
                     </div>
+                </div>
 
+                <div className="col-md-3">
+                    <div className="card shadow-sm text-center h-100">
+                        <div className="card-body">
+                            <small className="text-muted">GST Number</small>
+                            <h5 className="mt-2">{customer.gstNumber || "-"}</h5>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="col-md-3">
+                    <div className="card shadow-sm text-center h-100">
+                        <div className="card-body">
+                            <small className="text-muted">Opportunity Value</small>
+                            <h5 className="mt-2">{formatCurrency(opportunity?.productValue)}</h5>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="col-md-3">
+                    <div className="card shadow-sm text-center h-100">
+                        <div className="card-body">
+                            <small className="text-muted">Assigned Employee</small>
+                            <h5 className="mt-2">{employee?.name || "-"}</h5>
+                        </div>
+                    </div>
                 </div>
 
             </div>
 
-            <div className="row g-3 mb-4">
-
-                <div className="col-md-3">
-
-                    <div className="card shadow-sm text-center h-100">
-
-                        <div className="card-body">
-
-                            <small className="text-muted">
-
-                                Customer Since
-
-                            </small>
-
-                            <h5 className="mt-2">
-
-                                {formatDate(customer.createdAt)}
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <div className="col-md-3">
-
-                    <div className="card shadow-sm text-center h-100">
-
-                        <div className="card-body">
-
-                            <small className="text-muted">
-
-                                GST Number
-
-                            </small>
-
-                            <h5 className="mt-2">
-
-                                {customer.gstNumber || "-"}
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <div className="col-md-3">
-
-                    <div className="card shadow-sm text-center h-100">
-
-                        <div className="card-body">
-
-                            <small className="text-muted">
-
-                                Opportunity Value
-
-                            </small>
-
-                            <h5 className="mt-2">
-
-                                {formatCurrency(opportunity?.productValue)}
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <div className="col-md-3">
-
-                    <div className="card shadow-sm text-center h-100">
-
-                        <div className="card-body">
-
-                            <small className="text-muted">
-
-                                Assigned Employee
-
-                            </small>
-
-                            <h5 className="mt-2">
-
-                                {employee?.name || "-"}
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-                        <div className="row">
+            <div className="row g-3">
 
                 <div className="col-lg-8">
 
-                    <div className="card shadow-sm border-0 mb-4">
+                    <SectionCard title="Company Information">
 
-                        <div className="card-body">
+                        <div className="row">
 
-                            <h5 className="fw-semibold mb-4">
-
-                                Company Information
-
-                            </h5>
-
-                            <DetailField
-                                label="Company Name"
-                                value={customer.companyName}
-                            />
-
-                            <DetailField
-                                label="Contact Person"
-                                value={customer.contactPerson}
-                            />
-
-                            <DetailField
-                                label="Designation"
-                                value={customer.designation}
-                            />
-
-                            <DetailField
-                                label="Phone"
-                                value={customer.phone}
-                            />
-
-                            <DetailField
-                                label="Alternate Phone"
-                                value={customer.alternatePhone}
-                            />
-
-                            <DetailField
-                                label="Email"
-                                value={customer.email}
-                            />
-
-                            <DetailField
-                                label="Secondary Email"
-                                value={customer.secondaryEmail}
-                            />
-
-                            <DetailField
-                                label="Website"
-                                value={customer.website}
-                            />
-
-                        </div>
-
-                    </div>
-
-                    <div className="card shadow-sm border-0">
-
-                        <div className="card-body">
-
-                            <h5 className="fw-semibold mb-4">
-
-                                Address Information
-
-                            </h5>
-
-                            <DetailField
-                                label="City"
-                                value={customer.city}
-                            />
-
-                            <DetailField
-                                label="State"
-                                value={customer.state}
-                            />
-
-                            <DetailField
-                                label="Pincode"
-                                value={customer.pincode}
-                            />
-
-                            <div className="mt-4">
-
-                                <label className="fw-semibold mb-2">
-
-                                    Billing Address
-
-                                </label>
-
-                                <div className="border rounded p-3 bg-light">
-
-                                    {customer.billingAddress || "-"}
-
-                                </div>
-
+                            <div className="col-md-6">
+                                <DetailField label="Company Name" value={customer.companyName} />
                             </div>
 
-                            <div className="mt-4">
+                            <div className="col-md-6">
+                                <DetailField label="Contact Person" value={customer.contactPerson} />
+                            </div>
 
-                                <label className="fw-semibold mb-2">
+                            <div className="col-md-6">
+                                <DetailField label="Designation" value={customer.designation} />
+                            </div>
 
-                                    Shipping Address
+                            <div className="col-md-6">
+                                <DetailField label="Phone" value={customer.phone} />
+                            </div>
 
-                                </label>
+                            <div className="col-md-6">
+                                <DetailField label="Alternate Phone" value={customer.alternatePhone} />
+                            </div>
 
-                                <div className="border rounded p-3 bg-light">
+                            <div className="col-md-6">
+                                <DetailField label="Email" value={customer.email} />
+                            </div>
 
-                                    {customer.shippingAddress || "-"}
+                            <div className="col-md-6">
+                                <DetailField label="Secondary Email" value={customer.secondaryEmail} />
+                            </div>
 
-                                </div>
-
+                            <div className="col-md-6">
+                                <DetailField label="Website" value={customer.website} />
                             </div>
 
                         </div>
 
-                    </div>
+                    </SectionCard>
+
+                    <SectionCard title="Address Information">
+
+                        <div className="row">
+
+                            <div className="col-md-4">
+                                <DetailField label="City" value={customer.city} />
+                            </div>
+
+                            <div className="col-md-4">
+                                <DetailField label="State" value={customer.state} />
+                            </div>
+
+                            <div className="col-md-4">
+                                <DetailField label="Pincode" value={customer.pincode} />
+                            </div>
+
+                        </div>
+
+                        <div className="mt-3">
+                            <label className="fw-semibold mb-2 d-block">Billing Address</label>
+                            <div className="border rounded p-3 bg-light">
+                                {customer.billingAddress || "-"}
+                            </div>
+                        </div>
+
+                        <div className="mt-3">
+                            <label className="fw-semibold mb-2 d-block">Shipping Address</label>
+                            <div className="border rounded p-3 bg-light">
+                                {customer.shippingAddress || "-"}
+                            </div>
+                        </div>
+
+                    </SectionCard>
+
+                    <ActivityPlaceholder />
 
                 </div>
 
                 <div className="col-lg-4">
 
-                    <div className="card shadow-sm border-0 mb-4">
+                    <SectionCard title="Opportunity Information">
 
-                        <div className="card-body">
+                        <DetailField label="Title" value={opportunity?.title} />
+                        <DetailField label="Sales Stage" status={opportunity?.salesStage?.name || "-"} />
+                        <DetailField label="Product Value" value={formatCurrency(opportunity?.productValue)} />
+                        <DetailField label="Expected Closing Date" value={formatDate(opportunity?.expectedClosingDate)} />
 
-                            <h5 className="fw-semibold mb-4">
+                    </SectionCard>
 
-                                Opportunity Information
+                    <SectionCard title="Assigned Employee">
 
-                            </h5>
+                        <DetailField label="Name" value={employee?.name} />
+                        <DetailField label="Email" value={employee?.email} />
+                        <DetailField label="Phone" value={employee?.phone} />
+                        <DetailField label="Status" status={employee?.isActive ? "Active" : "Inactive"} />
 
-                            <DetailField
-                                label="Title"
-                                value={opportunity?.title}
-                            />
+                    </SectionCard>
 
-                            <DetailField
-                                label="Sales Stage"
-                                status={opportunity?.salesStage?.name || "-"}
-                            />
+                    <SectionCard title="Record Info">
 
-                            <DetailField
-                                label="Product Value"
-                                value={formatCurrency(opportunity?.productValue)}
-                            />
+                        <DetailField label="Created" value={formatDateTime(customer.createdAt)} />
+                        <DetailField label="Last Updated" value={formatDateTime(customer.updatedAt)} />
 
-                            <DetailField
-                                label="Expected Closing Date"
-                                value={formatDate(opportunity?.expectedClosingDate)}
-                            />
-
-                        </div>
-
-                    </div>
-                                        <div className="card shadow-sm border-0">
-
-                        <div className="card-body">
-
-                            <h5 className="fw-semibold mb-4">
-
-                                Assigned Employee
-
-                            </h5>
-
-                            <DetailField
-                                label="Name"
-                                value={employee?.name}
-                            />
-
-                            <DetailField
-                                label="Email"
-                                value={employee?.email}
-                            />
-
-                            <DetailField
-                                label="Phone"
-                                value={employee?.phone}
-                            />
-
-                            <DetailField
-                                label="Status"
-                                status={employee?.isActive ? "Active" : "Inactive"}
-                            />
-
-                        </div>
-
-                    </div>
+                    </SectionCard>
 
                 </div>
 
             </div>
 
-        </div>
+            <DeleteModal
+                show={showDeleteModal}
+                title="Delete Customer"
+                message={`Are you sure you want to delete "${customer.companyName}"?`}
+                {...describeDeleteImpact(deleteImpact, "Customer")}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={confirmDelete}
+            />
+
+        </>
 
     );
 

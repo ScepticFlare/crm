@@ -1,18 +1,27 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { getFollowUpById } from "../services/followupService";
+import { getFollowUpById, deleteFollowUp } from "../services/followupService";
 import DetailField from "../components/DetailField";
+import SectionCard from "../components/ui/SectionCard";
 import LoadingState from "../components/ui/LoadingState";
+import DetailHeader from "../components/detail/DetailHeader";
+import ActivityPlaceholder from "../components/detail/ActivityPlaceholder";
+import DeleteModal from "../components/DeleteModal";
 
 export default function FollowUpDetails() {
 
     const { id } = useParams();
     const navigate = useNavigate();
 
+    // Backend is the source of truth (FOLLOWUP_DELETE is ADMIN-only - see
+    // FollowUpService.deleteFollowUp) - this only controls whether the
+    // Delete menu item is offered at all.
+    const isAdmin = localStorage.getItem("role") === "ADMIN";
+
     const [followUp, setFollowUp] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
 
     useEffect(() => {
         loadFollowUp();
@@ -38,6 +47,37 @@ export default function FollowUpDetails() {
 
     }
 
+    async function confirmDelete() {
+
+        try {
+
+            await deleteFollowUp(followUp.id);
+            navigate("/followups");
+
+        } catch (err) {
+
+            console.error(err);
+            alert("Unable to delete follow up.");
+            setShowDeleteModal(false);
+
+        }
+
+    }
+
+    function formatDateTime(value) {
+
+        if (!value) return "-";
+
+        return new Date(value).toLocaleString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+
+    }
+
     if (loading) {
 
         return (
@@ -58,103 +98,112 @@ export default function FollowUpDetails() {
 
     return (
 
-        <div className="container">
+        <>
 
-            <div className="d-flex justify-content-between align-items-center mb-4">
+            <DetailHeader
+                backTo="/followups"
+                title={followUp.activityType?.name || "Follow Up"}
+                subtitle={followUp.lead?.companyName || followUp.opportunity?.title}
+                status={followUp.status}
+                meta={`Follow Up #${followUp.id}`}
+                onEdit={() => navigate(`/followups/edit/${followUp.id}`)}
+                menuItems={isAdmin ? [
+                    {
+                        label: "Delete Follow Up",
+                        icon: "bi-trash",
+                        danger: true,
+                        onClick: () => setShowDeleteModal(true),
+                    },
+                ] : []}
+            />
 
-                <div>
+            <div className="row g-3">
 
-                    <h2 className="fw-bold mb-1">
-                        Follow Up Details
-                    </h2>
+                <div className="col-lg-8">
 
-                    <p className="text-muted">
-                        Complete Follow Up information
-                    </p>
+                    <SectionCard title="Follow Up Information">
 
-                </div>
+                        <div className="row">
 
-                <div>
+                            <div className="col-md-6">
+                                <DetailField label="Lead" value={followUp.lead?.companyName} />
+                            </div>
 
-                    <button
-                        className="btn btn-warning me-2"
-                        onClick={() => navigate(`/followups/edit/${followUp.id}`)}
-                    >
-                        <i className="bi bi-pencil me-2"></i>
-                        Edit
-                    </button>
+                            <div className="col-md-6">
+                                <DetailField label="Opportunity" value={followUp.opportunity?.title} />
+                            </div>
 
-                    <button
-                        className="btn btn-secondary"
-                        onClick={() => navigate("/followups")}
-                    >
-                        Back
-                    </button>
+                            <div className="col-md-6">
+                                <DetailField label="Activity Type" value={followUp.activityType?.name} />
+                            </div>
 
-                </div>
+                            <div className="col-md-6">
+                                <DetailField label="Status" status={followUp.status} />
+                            </div>
 
-            </div>
+                            <div className="col-md-6">
+                                <DetailField
+                                    label="Scheduled Date"
+                                    value={followUp.scheduledDate
+                                        ? new Date(followUp.scheduledDate).toLocaleString()
+                                        : ""}
+                                />
+                            </div>
 
-            <div className="card shadow-sm border-0">
-
-                <div className="card-body">
-
-                    <div className="row g-4">
-
-                        <div className="col-md-6">
-                            <DetailField label="Lead" value={followUp.lead?.companyName} />
-                        </div>
-
-                        <div className="col-md-6">
-                            <DetailField label="Opportunity" value={followUp.opportunity?.title} />
-                        </div>
-
-                        <div className="col-md-6">
-                            <DetailField label="Assigned Employee" value={followUp.employee?.name} />
-                        </div>
-
-                        <div className="col-md-6">
-                            <DetailField label="Activity Type" value={followUp.activityType?.name} />
-                        </div>
-
-                        <div className="col-md-6">
-                            <DetailField label="Status" status={followUp.status} />
-                        </div>
-
-                        <div className="col-md-6">
-                            <DetailField
-                                label="Scheduled Date"
-                                value={followUp.scheduledDate
-                                    ? new Date(followUp.scheduledDate).toLocaleString()
-                                    : ""}
-                            />
-                        </div>
-
-                        <div className="col-md-6">
-                            <DetailField
-                                label="Completed Date"
-                                value={followUp.completedDate
-                                    ? new Date(followUp.completedDate).toLocaleString()
-                                    : ""}
-                            />
-                        </div>
-
-                        <div className="col-12">
-                            <label className="text-muted small mb-1">Remarks</label>
-
-                            <div className="border rounded p-3 bg-light">
-                                {followUp.remarks || "No remarks available."}
+                            <div className="col-md-6">
+                                <DetailField
+                                    label="Completed Date"
+                                    value={followUp.completedDate
+                                        ? new Date(followUp.completedDate).toLocaleString()
+                                        : ""}
+                                />
                             </div>
 
                         </div>
 
-                    </div>
+                        <div className="mt-4">
+                            <label className="fw-semibold mb-2 d-block">Remarks</label>
+                            <div className="border rounded p-3 bg-light">
+                                {followUp.remarks || "No remarks available."}
+                            </div>
+                        </div>
+
+                    </SectionCard>
+
+                    <ActivityPlaceholder />
+
+                </div>
+
+                <div className="col-lg-4">
+
+                    <SectionCard title="Assigned Employee">
+
+                        <DetailField label="Name" value={followUp.employee?.name} />
+                        <DetailField label="Email" value={followUp.employee?.email} />
+                        <DetailField label="Phone" value={followUp.employee?.phone} />
+
+                    </SectionCard>
+
+                    <SectionCard title="Record Info">
+
+                        <DetailField label="Created" value={formatDateTime(followUp.createdAt)} />
+                        <DetailField label="Last Updated" value={formatDateTime(followUp.updatedAt)} />
+
+                    </SectionCard>
 
                 </div>
 
             </div>
 
-        </div>
+            <DeleteModal
+                show={showDeleteModal}
+                title="Delete Follow Up"
+                message="Are you sure you want to delete this follow up?"
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={confirmDelete}
+            />
+
+        </>
 
     );
 

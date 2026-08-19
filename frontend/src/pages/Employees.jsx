@@ -89,6 +89,32 @@ export default function Employees() {
             label: "Role",
         },
 
+        {
+            key: "managerName",
+            label: "Manager",
+            render: (employee) => (
+                <>
+                    {employee.managerName || "-"}
+                    {employee.hierarchyValid === false && (
+                        <i
+                            className="bi bi-exclamation-triangle-fill text-warning ms-2"
+                            title="Invalid manager assignment: the assigned manager no longer has the Manager role. Edit this employee to fix it."
+                        ></i>
+                    )}
+                </>
+            ),
+        },
+
+        {
+            key: "isActive",
+            label: "Status",
+            render: (employee) => (
+                <span className={`badge bg-${employee.isActive === false ? "secondary" : "success"}`}>
+                    {employee.isActive === false ? "Inactive" : "Active"}
+                </span>
+            ),
+        },
+
     ];
 
     return (

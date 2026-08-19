@@ -1,274 +1,297 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 import PageHeader from "../components/PageHeader";
 import DataTable from "../components/DataTable";
-import DeleteModal from "../components/DeleteModal";
-import MonthFilter from "../components/MonthFilter";
+import FilterPanel from "../components/list/FilterPanel";
+import ManageColumnsMenu from "../components/list/ManageColumnsMenu";
+import BulkActionBar from "../components/list/BulkActionBar";
+import ListPagination from "../components/list/ListPagination";
+
+import useServerList from "../hooks/useServerList";
+import usePersistedColumns from "../hooks/usePersistedColumns";
+import { downloadBlob } from "../utils/downloadFile";
 
 import {
     getAllCustomers,
-    deleteCustomer
+    bulkDeleteCustomers,
+    exportCustomers
 } from "../services/customerService";
+import { getAllIndustries } from "../services/industryService";
+import { getAllEmployees } from "../services/employeeService";
+
+const ALL_CUSTOMER_COLUMNS = [
+    { key: "customerCode", label: "Customer Code", sortable: false },
+    {
+        key: "companyName", label: "Company", sortable: true, sortKey: "company",
+        render: (row) => (
+            <Link to={`/customers/${row.id}`} className="record-link">
+                {row.companyName}
+            </Link>
+        )
+    },
+    { key: "contactPerson", label: "Contact", sortable: true, sortKey: "contactPerson", render: (row) => row.contactPerson },
+    { key: "phone", label: "Phone" },
+    { key: "email", label: "Email" },
+    { key: "city", label: "City" },
+    { key: "state", label: "State" },
+    {
+        key: "assignedEmployee", label: "Assigned Employee", sortable: true,
+        render: (row) => row.assignedEmployee?.name || "-"
+    },
+    {
+        key: "createdAt", label: "Created Date", sortable: true, sortKey: "createdDate",
+        render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "-"
+    },
+];
+
+// Compact default: email, city, state stay available via Manage Columns.
+const DEFAULT_VISIBLE_CUSTOMER_COLUMNS = [
+    "customerCode", "companyName", "contactPerson", "phone", "assignedEmployee", "createdAt"
+];
 
 export default function Customers() {
 
     const navigate = useNavigate();
 
-    const [customers, setCustomers] = useState([]);
-    const [loading, setLoading] = useState(true);
+    // Backend is the source of truth (CUSTOMER_DELETE/CUSTOMER_EXPORT are
+    // ADMIN-only permissions - see CustomerService) - this only controls
+    // whether the checkbox/bulk-delete/export affordances are shown at all,
+    // same "UX/defense-in-depth guard" rationale as AdminRoute.
+    const isAdmin = localStorage.getItem("role") === "ADMIN";
 
-    const [search, setSearch] = useState("");
-    const [month, setMonth] = useState("");
+    const list = useServerList({
+        fetchFn: getAllCustomers,
+        initialSort: { field: "createdDate", dir: "desc" }
+    });
 
-    const [page, setPage] = useState(0);
-    const [pageSize, setPageSize] = useState(50);
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalElements, setTotalElements] = useState(0);
+    const columns = usePersistedColumns(
+        "crm.columns.customers", ALL_CUSTOMER_COLUMNS, DEFAULT_VISIBLE_CUSTOMER_COLUMNS
+    );
 
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [selectedCustomer, setSelectedCustomer] = useState(null);
+    const [industries, setIndustries] = useState([]);
+    const [employees, setEmployees] = useState([]);
 
     useEffect(() => {
-        loadCustomers();
-    }, [page, pageSize, search, month]);
 
-    async function loadCustomers() {
+        getAllIndustries().then(setIndustries).catch(() => {});
+        getAllEmployees().then(setEmployees).catch(() => {});
+
+    }, []);
+
+    const filterDefs = useMemo(() => {
+
+        const defs = [];
+
+        if (employees.length > 0) {
+            defs.push({
+                key: "assignedEmployeeId", label: "Assigned Employee", type: "select",
+                options: employees.map((e) => ({ value: e.id, label: e.name }))
+            });
+        }
+
+        defs.push(
+            {
+                key: "industryId", label: "Industry", type: "select",
+                options: industries.map((i) => ({ value: i.id, label: i.name }))
+            },
+            { key: "city", label: "City", type: "text" },
+            { key: "state", label: "State", type: "text" },
+            { key: "created", label: "Created Date", type: "daterange", fromKey: "createdFrom", toKey: "createdTo" }
+        );
+
+        return defs;
+
+    }, [industries, employees]);
+
+    const [bulkDeleting, setBulkDeleting] = useState(false);
+    const [exporting, setExporting] = useState(false);
+
+    async function handleBulkDelete() {
+
+        if (!window.confirm(`Delete ${list.selectedIds.length} selected customer(s)?`)) {
+            return;
+        }
+
+        setBulkDeleting(true);
 
         try {
 
-            setLoading(true);
+            const result = await bulkDeleteCustomers(list.selectedIds);
 
-            const response = await getAllCustomers(
-                page,
-                pageSize,
-                search,
-                month
-            );
+            if (result.skippedIds && result.skippedIds.length > 0) {
+                alert(
+                    `Deleted ${result.succeededIds.length}. Skipped ${result.skippedIds.length} ` +
+                    "(not authorized or no longer exist)."
+                );
+            }
 
-            setCustomers(response.content);
-            setTotalPages(response.totalPages);
-            setTotalElements(response.totalElements);
+            list.clearSelection();
+            await list.reload();
 
         } catch (error) {
 
             console.error(error);
+            alert("Unable to delete the selected customers.");
 
         } finally {
 
-            setLoading(false);
+            setBulkDeleting(false);
 
         }
 
     }
 
-    function openDeleteModal(customer) {
+    async function handleExport(selectedOnly) {
 
-        setSelectedCustomer(customer);
-
-        setShowDeleteModal(true);
-
-    }
-
-    function closeDeleteModal() {
-
-        setSelectedCustomer(null);
-
-        setShowDeleteModal(false);
-
-    }
-
-    async function confirmDelete() {
+        setExporting(true);
 
         try {
 
-            await deleteCustomer(selectedCustomer.id);
+            const blob = await exportCustomers({
+                sort: list.sort,
+                filters: { search: list.search || undefined, ...list.filters },
+                selection: selectedOnly ? list.selectedIds : null,
+            });
 
-            closeDeleteModal();
-
-            await loadCustomers();
+            downloadBlob(blob, "customers.csv");
 
         } catch (error) {
 
             console.error(error);
+            alert("Unable to export customers.");
 
-            alert("Unable to delete customer.");
+        } finally {
+
+            setExporting(false);
 
         }
 
     }
 
-    const columns = [
+    const uniqueCities = new Set(list.data.map((c) => c.city)).size;
+    const uniqueEmployees = new Set(list.data.map((c) => c.assignedEmployee?.id)).size;
 
-        {
-            key: "company",
-            label: "Company",
-            render: row => row.companyName
-        },
-
-        {
-            key: "contact",
-            label: "Contact",
-            render: row => row.contactPerson
-        },
-
-        {
-            key: "phone",
-            label: "Phone"
-        },
-
-        {
-            key: "city",
-            label: "City"
-        },
-
-        {
-            key: "employee",
-            label: "Employee",
-            render: row => row.assignedEmployee?.name || "-"
-        }
-
-    ];
-
-    const uniqueCities =
-        new Set(customers.map(c => c.city)).size;
-
-    const uniqueEmployees =
-        new Set(customers.map(c => c.assignedEmployee?.id)).size;
-            return (
+    return (
 
         <>
 
             <PageHeader
                 title="Won"
-                subtitle={`${totalElements} Won Customer(s) Found`}
+                subtitle={`${list.totalElements} Won Customer(s) Found`}
             />
 
             <div className="row mb-4">
 
                 <div className="col-md-3">
-
                     <div className="card shadow-sm border-0">
-
                         <div className="card-body">
-
-                            <small className="text-muted">
-                                Total Customers
-                            </small>
-
-                            <h3>{totalElements}</h3>
-
+                            <small className="text-muted">Total Customers</small>
+                            <h3>{list.totalElements}</h3>
                         </div>
-
                     </div>
-
                 </div>
 
                 <div className="col-md-3">
-
                     <div className="card shadow-sm border-0">
-
                         <div className="card-body">
-
-                            <small className="text-muted">
-                                Cities
-                            </small>
-
+                            <small className="text-muted">Cities (this page)</small>
                             <h3>{uniqueCities}</h3>
-
                         </div>
-
                     </div>
-
                 </div>
 
                 <div className="col-md-3">
-
                     <div className="card shadow-sm border-0">
-
                         <div className="card-body">
-
-                            <small className="text-muted">
-                                Employees
-                            </small>
-
+                            <small className="text-muted">Employees (this page)</small>
                             <h3>{uniqueEmployees}</h3>
-
                         </div>
-
                     </div>
-
                 </div>
 
                 <div className="col-md-3">
-
                     <div className="card shadow-sm border-0">
-
                         <div className="card-body">
-
-                            <small className="text-muted">
-                                GST Registered
-                            </small>
-
-                            <h3>
-
-                                {
-                                    customers.filter(c => c.gstNumber).length
-                                }
-
-                            </h3>
-
+                            <small className="text-muted">GST Registered (this page)</small>
+                            <h3>{list.data.filter((c) => c.gstNumber).length}</h3>
                         </div>
-
                     </div>
-
                 </div>
 
             </div>
 
-            <div className="card shadow-sm border-0 mb-4">
+            <div className="card shadow-sm border-0 mb-3">
 
                 <div className="card-body">
 
-                    <div className="row g-2">
+                    <div className="d-flex flex-wrap gap-2 align-items-center">
 
-                        <div className="col">
+                        <div className="flex-grow-1" style={{ minWidth: "240px" }}>
 
                             <div className="input-group">
 
                                 <span className="input-group-text bg-white">
-
                                     <i className="bi bi-search"></i>
-
                                 </span>
 
                                 <input
                                     className="form-control border-start-0"
-                                    placeholder="Search by company, contact, phone, email, city, GST or employee..."
-                                    value={search}
-                                    onChange={(e) => {
-
-                                        setSearch(e.target.value);
-                                        setPage(0);
-
-                                    }}
+                                    placeholder="Search by company, contact, phone, email or GST..."
+                                    value={list.search}
+                                    onChange={(e) => list.setSearch(e.target.value)}
                                 />
 
                             </div>
 
                         </div>
 
-                        <div className="col-md-3">
+                        <FilterPanel
+                            filterDefs={filterDefs}
+                            filters={list.filters}
+                            onChange={list.setFilters}
+                            onClear={list.clearFilters}
+                        />
 
-                            <MonthFilter
-                                value={month}
-                                onChange={(value) => {
-                                    setMonth(value);
-                                    setPage(0);
-                                }}
-                            />
+                        <ManageColumnsMenu
+                            allColumns={columns.allColumns}
+                            visibleKeys={columns.visibleKeys}
+                            onToggle={columns.toggleColumn}
+                            onReset={columns.resetColumns}
+                        />
 
-                        </div>
+                        {isAdmin && (
+                            <div className="dropdown">
+
+                                <button
+                                    className="btn btn-outline-secondary dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    disabled={exporting}
+                                >
+                                    <i className="bi bi-download me-2"></i>
+                                    Export
+                                </button>
+
+                                <ul className="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <button className="dropdown-item" onClick={() => handleExport(false)}>
+                                            Export all matching
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button
+                                            className="dropdown-item"
+                                            disabled={list.selectedIds.length === 0}
+                                            onClick={() => handleExport(true)}
+                                        >
+                                            Export selected ({list.selectedIds.length})
+                                        </button>
+                                    </li>
+                                </ul>
+
+                            </div>
+                        )}
 
                     </div>
 
@@ -276,114 +299,50 @@ export default function Customers() {
 
             </div>
 
-            <DataTable
-                columns={columns}
-                data={customers}
-                loading={loading}
-                renderActions={(row) => (
-
-                    <div className="btn-group">
-
-                        <button
-                            className="btn btn-sm btn-primary"
-                            onClick={() => navigate(`/customers/${row.id}`)}
-                        >
-                            <i className="bi bi-eye"></i>
-                        </button>
-
-                        <button
-                            className="btn btn-sm btn-warning"
-                            onClick={() => navigate(`/customers/edit/${row.id}`)}
-                        >
-                            <i className="bi bi-pencil"></i>
-                        </button>
-
-                        <button
-                            className="btn btn-sm btn-danger"
-                            onClick={() => openDeleteModal(row)}
-                        >
-                            <i className="bi bi-trash"></i>
-                        </button>
-
-                    </div>
-
-                )}
-            />
-
-            {!loading && customers.length === 0 && (
-
-                <div className="alert alert-light border text-center mt-3">
-
-                    <i className="bi bi-search me-2"></i>
-
-                    No matching customers found.
-
-                </div>
-
+            {isAdmin && (
+                <BulkActionBar
+                    count={list.selectedIds.length}
+                    onClear={list.clearSelection}
+                    actions={[
+                        {
+                            key: "export", label: "Export Selected", icon: "bi-download",
+                            variant: "btn-outline-secondary", onClick: () => handleExport(true), disabled: exporting
+                        },
+                        {
+                            key: "delete", label: "Delete", icon: "bi-trash",
+                            variant: "btn-outline-danger", onClick: handleBulkDelete, disabled: bulkDeleting
+                        },
+                    ]}
+                />
             )}
 
-            <div className="d-flex justify-content-between align-items-center mt-3">
+            <DataTable
+                columns={columns.visibleColumns}
+                data={list.data}
+                loading={list.loading}
+                selectable={isAdmin}
+                selectedIds={list.selectedIds}
+                onToggleSelect={list.toggleSelect}
+                onToggleSelectAll={list.toggleSelectAll}
+                sort={list.sort}
+                onSortChange={list.toggleSort}
+                onRowClick={(row) => navigate(`/customers/${row.id}`)}
+            />
 
-                <div>
-
-                    <select
-                        className="form-select"
-                        style={{ width: "100px" }}
-                        value={pageSize}
-                        onChange={(e) => {
-
-                            setPageSize(Number(e.target.value));
-                            setPage(0);
-
-                        }}
-                    >
-
-                        <option value={25}>25</option>
-                        <option value={50}>50</option>
-                        <option value={100}>100</option>
-
-                    </select>
-
+            {!list.loading && list.data.length === 0 && (
+                <div className="alert alert-light border text-center mt-3">
+                    <i className="bi bi-search me-2"></i>
+                    No matching customers found.
                 </div>
+            )}
 
-                <div>
-
-                    <button
-                        className="btn btn-outline-primary me-2"
-                        disabled={page === 0}
-                        onClick={() => setPage(page - 1)}
-                    >
-                        Previous
-                    </button>
-
-                    <span className="mx-2">
-
-                        Page {page + 1} of {totalPages || 1}
-
-                    </span>
-
-                    <button
-                        className="btn btn-outline-primary"
-                        disabled={page + 1 >= totalPages}
-                        onClick={() => setPage(page + 1)}
-                    >
-                        Next
-                    </button>
-
-                </div>
-
-            </div>
-
-            <DeleteModal
-                show={showDeleteModal}
-                title="Delete Customer"
-                message={
-                    selectedCustomer
-                        ? `Delete "${selectedCustomer.companyName}"?`
-                        : ""
-                }
-                onClose={closeDeleteModal}
-                onConfirm={confirmDelete}
+            <ListPagination
+                page={list.page}
+                pageSize={list.pageSize}
+                totalPages={list.totalPages}
+                totalElements={list.totalElements}
+                onPageChange={list.setPage}
+                onPageSizeChange={list.setPageSize}
             />
 
         </>

@@ -9,6 +9,7 @@ export default function Invalid() {
             <Leads
                 title="Invalid Leads"
                 fetchLeads={getInvalidLeads}
+                addLeadPath="/leads/add?status=INVALID"
             />
 
             <div className="mt-4">

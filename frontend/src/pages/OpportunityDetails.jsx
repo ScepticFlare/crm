@@ -1,20 +1,32 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import PageHeader from "../components/PageHeader";
 import DetailField from "../components/DetailField";
+import SectionCard from "../components/ui/SectionCard";
 import FollowUpSection from "../components/FollowUpSection";
 import StatusBadge from "../components/ui/StatusBadge";
 import LoadingState from "../components/ui/LoadingState";
-import { getOpportunityById } from "../services/opportunityService";
+import DetailHeader from "../components/detail/DetailHeader";
+import ActivityPlaceholder from "../components/detail/ActivityPlaceholder";
+import DeleteModal from "../components/DeleteModal";
+
+import { getOpportunityById, deleteOpportunity, getOpportunityDeleteImpact } from "../services/opportunityService";
+import { describeDeleteImpact } from "../utils/deleteImpact";
 
 export default function OpportunityDetails() {
 
     const { id } = useParams();
     const navigate = useNavigate();
 
+    // Backend is the source of truth (OPPORTUNITY_DELETE is ADMIN-only -
+    // see OpportunityService.deleteOpportunity) - this only controls
+    // whether the Delete menu item is offered at all.
+    const isAdmin = localStorage.getItem("role") === "ADMIN";
+
     const [opportunity, setOpportunity] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteImpact, setDeleteImpact] = useState(null);
 
     useEffect(() => {
         loadOpportunity();
@@ -40,6 +52,41 @@ export default function OpportunityDetails() {
 
     }
 
+    async function openDeleteModal() {
+
+        try {
+
+            const impact = await getOpportunityDeleteImpact(opportunity.id);
+            setDeleteImpact(impact);
+
+        } catch (err) {
+
+            console.error(err);
+            setDeleteImpact(null);
+
+        }
+
+        setShowDeleteModal(true);
+
+    }
+
+    async function confirmDelete() {
+
+        try {
+
+            await deleteOpportunity(opportunity.id);
+            navigate("/opportunities");
+
+        } catch (err) {
+
+            console.error(err);
+            alert(err.response?.data?.message || "Unable to delete opportunity.");
+            setShowDeleteModal(false);
+
+        }
+
+    }
+
     function formatCurrency(value) {
 
         if (!value) return "-";
@@ -60,6 +107,20 @@ export default function OpportunityDetails() {
             day: "2-digit",
             month: "short",
             year: "numeric"
+        });
+
+    }
+
+    function formatDateTime(value) {
+
+        if (!value) return "-";
+
+        return new Date(value).toLocaleString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
         });
 
     }
@@ -90,361 +151,214 @@ export default function OpportunityDetails() {
 
     const lead = opportunity.lead;
     const employee = lead?.assignedEmployee;
+    const isWon = opportunity.salesStage?.name === "WON";
 
     return (
 
-        <div className="container-fluid">
+        <>
 
-            <PageHeader
-                title="Opportunity Details"
-                subtitle="View complete opportunity information"
+            <DetailHeader
+                backTo="/opportunities"
+                title={opportunity.title}
+                subtitle={lead?.companyName}
+                status={opportunity.salesStage?.name || "Not Set"}
+                meta={`Opportunity #${opportunity.id}`}
+                primaryAction={{
+                    label: "Convert to Customer",
+                    icon: "bi-arrow-repeat",
+                    disabled: !isWon,
+                    title: !isWon ? "Only WON opportunities can be converted to customers." : "",
+                    onClick: () => navigate(`/customers/convert/${opportunity.id}`),
+                }}
+                onEdit={() => navigate(`/opportunities/edit/${opportunity.id}`)}
+                menuItems={isAdmin ? [
+                    {
+                        label: "Delete Opportunity",
+                        icon: "bi-trash",
+                        danger: true,
+                        onClick: openDeleteModal,
+                    },
+                ] : []}
             />
 
-            <div className="card border-0 shadow-sm mb-4">
+            <div className="row g-3 mb-3">
 
-                <div className="card-body">
-
-                    <div className="row align-items-center">
-
-                        <div className="col-lg-8">
-
-                            <h2 className="fw-bold mb-1">
-
-                                {opportunity.title}
-
-                            </h2>
-
-                            <h5 className="text-muted mb-3">
-
-                                {lead?.companyName}
-
-                            </h5>
-
-                            <StatusBadge
-                                status={opportunity.salesStage?.name || "Not Set"}
-                                className="px-3 py-2"
-                            />
-
-                            <span className="ms-3 text-muted">
-
-                                Opportunity #{opportunity.id}
-
-                            </span>
-
+                <div className="col-md-3">
+                    <div className="card shadow-sm text-center h-100">
+                        <div className="card-body">
+                            <small className="text-muted">Opportunity Value</small>
+                            <h5 className="mt-2">{formatCurrency(opportunity.productValue)}</h5>
                         </div>
-
-                        <div className="col-lg-4 text-lg-end mt-4 mt-lg-0">
-
-                            <button
-                                className="btn btn-warning me-2"
-                                onClick={() =>
-                                    navigate(`/opportunities/edit/${opportunity.id}`)
-                                }
-                            >
-
-                                Edit
-
-                            </button>
-<button
-    className="btn btn-success me-2"
-    disabled={opportunity.salesStage?.name !== "WON"}
-
-title={
-    opportunity.salesStage?.name !== "WON"
-        ? "Only WON opportunities can be converted to customers."
-        : ""
-}
-    onClick={() =>
-        navigate(`/customers/convert/${opportunity.id}`)
-    }
->
-    Convert to Customer
-</button>
-
-                            <button
-                                className="btn btn-outline-secondary"
-                                onClick={() => navigate("/opportunities")}
-                            >
-
-                                Back
-
-                            </button>
-
-                        </div>
-
                     </div>
+                </div>
 
+                <div className="col-md-3">
+                    <div className="card shadow-sm text-center h-100">
+                        <div className="card-body">
+                            <small className="text-muted">Sales Stage</small>
+                            <h5 className="mt-2">
+                                <StatusBadge status={opportunity.salesStage?.name || "Not Set"} />
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="col-md-3">
+                    <div className="card shadow-sm text-center h-100">
+                        <div className="card-body">
+                            <small className="text-muted">Expected Close</small>
+                            <h5 className="mt-2">{formatDate(opportunity.expectedClosingDate)}</h5>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="col-md-3">
+                    <div className="card shadow-sm text-center h-100">
+                        <div className="card-body">
+                            <small className="text-muted">Assigned Employee</small>
+                            <h5 className="mt-2">{employee?.name || "-"}</h5>
+                        </div>
+                    </div>
                 </div>
 
             </div>
 
             <div className="row g-3">
 
-                <div className="col-md-3">
-
-                    <div className="card shadow-sm text-center h-100">
-
-                        <div className="card-body">
-
-                            <small className="text-muted">
-
-                                Opportunity Value
-
-                            </small>
-
-                            <h5 className="mt-2">
-
-                                {formatCurrency(opportunity.productValue)}
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <div className="col-md-3">
-
-                    <div className="card shadow-sm text-center h-100">
-
-                        <div className="card-body">
-
-                            <small className="text-muted">
-
-                                Sales Stage
-
-                            </small>
-
-                            <h5 className="mt-2">
-
-                                <StatusBadge status={opportunity.salesStage?.name || "Not Set"} />
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <div className="col-md-3">
-
-                    <div className="card shadow-sm text-center h-100">
-
-                        <div className="card-body">
-
-                            <small className="text-muted">
-
-                                Expected Close
-
-                            </small>
-
-                            <h5 className="mt-2">
-
-                                {formatDate(opportunity.expectedClosingDate)}
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <div className="col-md-3">
-
-                    <div className="card shadow-sm text-center h-100">
-
-                        <div className="card-body">
-
-                            <small className="text-muted">
-
-                                Assigned Employee
-
-                            </small>
-
-                            <h5 className="mt-2">
-
-                                {employee?.name || "-"}
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div className="row mt-4">
                 <div className="col-lg-8">
 
-    <div className="card shadow-sm border-0">
+                    <SectionCard title="Lead Information">
 
-        <div className="card-body">
+                        <div className="row">
 
-            <h5 className="fw-semibold mb-4">
+                            <div className="col-md-6">
+                                <DetailField label="Company" value={lead?.companyName} />
+                            </div>
 
-                Lead Information
+                            <div className="col-md-6">
+                                <DetailField label="Contact Person" value={lead?.contactPerson} />
+                            </div>
 
-            </h5>
+                            <div className="col-md-6">
+                                <DetailField label="Designation" value={lead?.designation} />
+                            </div>
 
-            <DetailField
-                label="Company"
-                value={lead?.companyName}
-            />
+                            <div className="col-md-6">
+                                <DetailField label="Phone" value={lead?.phone} />
+                            </div>
 
-            <DetailField
-                label="Contact Person"
-                value={lead?.contactPerson}
-            />
+                            <div className="col-md-6">
+                                <DetailField label="Alternate Phone" value={lead?.alternatePhone} />
+                            </div>
 
-            <DetailField
-                label="Designation"
-                value={lead?.designation}
-            />
+                            <div className="col-md-6">
+                                <DetailField label="Email" value={lead?.email} />
+                            </div>
 
-            <DetailField
-                label="Phone"
-                value={lead?.phone}
-            />
+                            <div className="col-md-6">
+                                <DetailField label="Secondary Email" value={lead?.secondaryEmail} />
+                            </div>
 
-            <DetailField
-                label="Alternate Phone"
-                value={lead?.alternatePhone}
-            />
+                            <div className="col-md-6">
+                                <DetailField
+                                    label="Products"
+                                    value={lead?.leadProducts?.length > 0
+                                        ? lead.leadProducts
+                                            .map(lp => `${lp.product?.name} (${lp.quantity})`)
+                                            .join(", ")
+                                        : ""}
+                                />
+                            </div>
 
-            <DetailField
-                label="Email"
-                value={lead?.email}
-            />
+                            <div className="col-md-6">
+                                <DetailField
+                                    label="Battery"
+                                    value={lead?.leadBatteries?.length > 0
+                                        ? lead.leadBatteries
+                                            .map(lb => `${lb.battery?.name} (${lb.quantity})`)
+                                            .join(", ")
+                                        : ""}
+                                />
+                            </div>
 
-            <DetailField
-                label="Secondary Email"
-                value={lead?.secondaryEmail}
-            />
+                            <div className="col-md-4">
+                                <DetailField label="City" value={lead?.city} />
+                            </div>
 
-            <DetailField
-                label="Products"
-                value={lead?.leadProducts?.length > 0
-                    ? lead.leadProducts
-                        .map(lp => `${lp.product?.name} (${lp.quantity})`)
-                        .join(", ")
-                    : ""}
-            />
+                            <div className="col-md-4">
+                                <DetailField label="State" value={lead?.state} />
+                            </div>
 
-            <DetailField
-                label="Battery"
-                value={lead?.leadBatteries?.length > 0
-                    ? lead.leadBatteries
-                        .map(lb => `${lb.battery?.name} (${lb.quantity})`)
-                        .join(", ")
-                    : ""}
-            />
+                            <div className="col-md-4">
+                                <DetailField label="Pincode" value={lead?.pincode} />
+                            </div>
 
-            <DetailField
-                label="City"
-                value={lead?.city}
-            />
+                            <div className="col-md-6">
+                                <DetailField label="Lead Source" value={lead?.leadSource?.name} />
+                            </div>
 
-            <DetailField
-                label="State"
-                value={lead?.state}
-            />
+                            <div className="col-md-6">
+                                <DetailField label="Lead Status" status={lead?.leadStatus} />
+                            </div>
 
-            <DetailField
-                label="Pincode"
-                value={lead?.pincode}
-            />
+                            <div className="col-md-6">
+                                <DetailField label="Validity" status={opportunity?.leadValidity} />
+                            </div>
 
-            <DetailField
-                label="Interested Product"
-                value={lead?.interestedProduct}
-            />
+                        </div>
 
-            <DetailField
-                label="Lead Source"
-                value={lead?.leadSource?.name || lead?.leadSource}
-            />
+                        <div className="mt-4">
 
-            <DetailField
-                label="Lead Status"
-                status={lead?.leadStatus}
-            />
+                            <label className="fw-semibold mb-2 d-block">Description</label>
 
-            <DetailField
-                label="Validity"
-                status={opportunity?.leadValidity}
-            />
+                            <div className="border rounded p-3 bg-light">
+                                {lead?.description || "No description available."}
+                            </div>
 
-            <div className="mt-4">
+                        </div>
 
-                <label className="fw-semibold mb-2">
+                    </SectionCard>
 
-                    Description
+                    <ActivityPlaceholder />
 
-                </label>
+                </div>
 
-                <div className="border rounded p-3 bg-light">
+                <div className="col-lg-4">
 
-                    {lead?.description || "No description available."}
+                    <SectionCard title="Assigned Employee">
+
+                        <DetailField label="Name" value={employee?.name} />
+                        <DetailField label="Email" value={employee?.email} />
+                        <DetailField label="Phone" value={employee?.phone} />
+                        <DetailField label="Status" status={employee?.isActive ? "Active" : "Inactive"} />
+
+                    </SectionCard>
+
+                    <SectionCard title="Record Info">
+
+                        <DetailField label="Created" value={formatDateTime(opportunity.createdAt)} />
+                        <DetailField label="Last Updated" value={formatDateTime(opportunity.updatedAt)} />
+
+                    </SectionCard>
 
                 </div>
 
             </div>
 
-        </div>
-
-    </div>
-
-</div>
-
-<div className="col-lg-4">
-
-    <div className="card shadow-sm border-0">
-
-        <div className="card-body">
-
-            <h5 className="fw-semibold mb-4">
-
-                Assigned Employee
-
-            </h5>
-
-            <DetailField
-                label="Name"
-                value={employee?.name}
+            <FollowUpSection
+                opportunityId={opportunity.id}
             />
 
-            <DetailField
-                label="Email"
-                value={employee?.email}
+            <DeleteModal
+                show={showDeleteModal}
+                title="Delete Opportunity"
+                message={`Are you sure you want to delete "${opportunity.title}"?`}
+                {...describeDeleteImpact(deleteImpact, "Opportunity")}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={confirmDelete}
             />
 
-            <DetailField
-                label="Phone"
-                value={employee?.phone}
-            />
+        </>
 
-            <DetailField
-                label="Status"
-                status={employee?.isActive ? "Active" : "Inactive"}
-            />
-
-        </div>
-
-    </div>
-
-</div>
-
-</div>
-<FollowUpSection
-    opportunityId={opportunity.id}
-/>
-
-</div>
-
-);
+    );
 }
