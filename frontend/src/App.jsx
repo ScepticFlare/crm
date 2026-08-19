@@ -43,6 +43,7 @@ import Dropped from "./pages/Dropped";
 import Lost from "./pages/Lost";
 import Unresponsive from "./pages/Unresponsive";
 import Invalid from "./pages/Invalid";
+import Inactive from "./pages/Inactive";
 
 
 function App() {
@@ -199,6 +200,8 @@ function App() {
                     <Route path="/unresponsive" element={<Unresponsive />} />
 
                     <Route path="/invalid" element={<Invalid />} />
+
+                    <Route path="/inactive" element={<Inactive />} />
 
 
 

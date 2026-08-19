@@ -34,6 +34,7 @@ const LEAD_STATUS_OPTIONS = [
     { value: "DROPPED", label: "Dropped" },
     { value: "UNRESPONSIVE", label: "Unresponsive" },
     { value: "INVALID", label: "Invalid" },
+    { value: "INACTIVE", label: "Inactive" },
 ];
 
 const LEAD_VALIDITY_OPTIONS = [

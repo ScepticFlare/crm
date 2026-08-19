@@ -489,6 +489,11 @@ export default function LeadForm({
             <option value="DROPPED">DROPPED</option>
             <option value="UNRESPONSIVE">UNRESPONSIVE</option>
             <option value="INVALID">INVALID</option>
+            {/* INACTIVE is set automatically by the 6-month stale-lead job,
+                never manually - this option only exists so editing an
+                already-Inactive Lead displays/preserves its real status
+                instead of showing a blank/mismatched selection. */}
+            <option value="INACTIVE">INACTIVE</option>
 
         </select>
 

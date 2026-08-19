@@ -57,6 +57,14 @@ export const getInvalidLeads = async (listArgs) => {
     return response.data;
 };
 
+// Leads the stale-lead scheduler automatically moved to INACTIVE after 6+
+// months of no meaningful activity - a separate bucket from Invalid (a
+// manual business judgment about a bad/unusable Lead).
+export const getInactiveLeads = async (listArgs) => {
+    const response = await api.get("/leads/inactive", { params: toListParams(listArgs) });
+    return response.data;
+};
+
 export const importLeads = async (file) => {
 
     const formData = new FormData();

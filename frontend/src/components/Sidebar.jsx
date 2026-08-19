@@ -60,6 +60,12 @@ export default function Sidebar() {
         },
 
         {
+            name: "Inactive",
+            path: "/inactive",
+            icon: "bi-moon"
+        },
+
+        {
             name: "Won",
             path: "/customers",
             icon: "bi-trophy-fill",
