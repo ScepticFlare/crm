@@ -112,6 +112,18 @@ export default function Sidebar() {
 
         });
 
+        menuItems.push({
+            name: "Email Templates",
+            path: "/email-templates",
+            icon: "bi-envelope-paper-fill",
+        });
+
+        menuItems.push({
+            name: "Documents",
+            path: "/documents",
+            icon: "bi-folder-fill",
+        });
+
     }
 
     // Employee Activity is visible to Admin and Manager (Manager sees

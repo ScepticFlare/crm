@@ -8,15 +8,22 @@ import FilterPanel from "../components/list/FilterPanel";
 import ManageColumnsMenu from "../components/list/ManageColumnsMenu";
 import BulkActionBar from "../components/list/BulkActionBar";
 import ListPagination from "../components/list/ListPagination";
+import RowActionsMenu from "../components/list/RowActionsMenu";
+import DeleteModal from "../components/DeleteModal";
+import EmailComposerModal from "../components/email/EmailComposerModal";
+import BulkKeepInTouchModal from "../components/email/BulkKeepInTouchModal";
 
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
 import { downloadBlob } from "../utils/downloadFile";
+import { describeDeleteImpact } from "../utils/deleteImpact";
 
 import {
     getAllLeads,
     bulkDeleteLeads,
-    exportLeads
+    exportLeads,
+    deleteLead,
+    getLeadDeleteImpact
 } from "../services/leadService";
 import { getAllIndustries } from "../services/industryService";
 import { getAllLeadSources } from "../services/leadSourceService";
@@ -113,6 +120,13 @@ export default function Leads({
     // same "UX/defense-in-depth guard" rationale as AdminRoute.
     const isAdmin = localStorage.getItem("role") === "ADMIN";
 
+    // EMAIL_SEND is granted (at OWN/TEAM/ALL scope respectively) to every
+    // role - see V6 migration / AccessControlService. This only controls
+    // whether the Send Email / Send Keep in Touch affordances are shown at
+    // all; the backend re-checks the real scope on every call regardless.
+    const role = localStorage.getItem("role");
+    const canSendEmail = role === "ADMIN" || role === "MANAGER" || role === "EMPLOYEE";
+
     const list = useServerList({
         fetchFn: fetchLeads,
         initialSort: { field: "createdDate", dir: "desc" }
@@ -182,6 +196,84 @@ export default function Leads({
 
     const [bulkDeleting, setBulkDeleting] = useState(false);
     const [exporting, setExporting] = useState(false);
+
+    // Individual Send Email (row menu) - the target lead being composed to.
+    const [composerLead, setComposerLead] = useState(null);
+
+    // Bulk Send Keep in Touch (bulk action bar).
+    const [showBulkEmailModal, setShowBulkEmailModal] = useState(false);
+
+    // Row-level Delete Lead (row menu) - same delete-impact-preview flow
+    // LeadDetails.jsx already uses, now also reachable directly from the list.
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deleteImpact, setDeleteImpact] = useState(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+    async function openDeleteModal(lead) {
+
+        setDeleteTarget(lead);
+
+        try {
+
+            const impact = await getLeadDeleteImpact(lead.id);
+            setDeleteImpact(impact);
+
+        } catch (error) {
+
+            console.error(error);
+            setDeleteImpact(null);
+
+        }
+
+        setShowDeleteModal(true);
+
+    }
+
+    async function confirmDelete() {
+
+        try {
+
+            await deleteLead(deleteTarget.id);
+
+            setShowDeleteModal(false);
+            setDeleteTarget(null);
+
+            await list.reload();
+
+        } catch (error) {
+
+            console.error(error);
+            alert(error.response?.data?.message || "Unable to delete lead.");
+            setShowDeleteModal(false);
+
+        }
+
+    }
+
+    function buildRowActions(row) {
+
+        const items = [];
+
+        if (canSendEmail) {
+            items.push({
+                label: "Send Email",
+                icon: "bi-envelope",
+                onClick: () => setComposerLead(row),
+            });
+        }
+
+        if (isAdmin) {
+            items.push({
+                label: "Delete Lead",
+                icon: "bi-trash",
+                danger: true,
+                onClick: () => openDeleteModal(row),
+            });
+        }
+
+        return items;
+
+    }
 
     async function handleBulkDelete() {
 
@@ -338,19 +430,27 @@ export default function Leads({
 
             </div>
 
-            {isAdmin && (
+            {(isAdmin || canSendEmail) && (
                 <BulkActionBar
                     count={list.selectedIds.length}
                     onClear={list.clearSelection}
                     actions={[
-                        {
-                            key: "export", label: "Export Selected", icon: "bi-download",
-                            variant: "btn-outline-secondary", onClick: () => handleExport(true), disabled: exporting
-                        },
-                        {
-                            key: "delete", label: "Delete", icon: "bi-trash",
-                            variant: "btn-outline-danger", onClick: handleBulkDelete, disabled: bulkDeleting
-                        },
+                        ...(isAdmin ? [
+                            {
+                                key: "export", label: "Export Selected", icon: "bi-download",
+                                variant: "btn-outline-secondary", onClick: () => handleExport(true), disabled: exporting
+                            },
+                            {
+                                key: "delete", label: "Delete", icon: "bi-trash",
+                                variant: "btn-outline-danger", onClick: handleBulkDelete, disabled: bulkDeleting
+                            },
+                        ] : []),
+                        ...(canSendEmail ? [
+                            {
+                                key: "keepInTouch", label: "Send Keep in Touch", icon: "bi-envelope",
+                                variant: "btn-outline-primary", onClick: () => setShowBulkEmailModal(true)
+                            },
+                        ] : []),
                     ]}
                 />
             )}
@@ -359,13 +459,14 @@ export default function Leads({
                 columns={columns.visibleColumns}
                 data={list.data}
                 loading={list.loading}
-                selectable={isAdmin}
+                selectable={isAdmin || canSendEmail}
                 selectedIds={list.selectedIds}
                 onToggleSelect={list.toggleSelect}
                 onToggleSelectAll={list.toggleSelectAll}
                 sort={list.sort}
                 onSortChange={list.toggleSort}
                 onRowClick={(row) => navigate(`/leads/${row.id}`)}
+                renderActions={(row) => <RowActionsMenu items={buildRowActions(row)} />}
             />
 
             <ListPagination
@@ -390,6 +491,32 @@ export default function Leads({
                     Unable to load leads. Please try again.
                 </div>
             )}
+
+            <EmailComposerModal
+                show={!!composerLead}
+                lead={composerLead}
+                onClose={() => setComposerLead(null)}
+                onSent={() => list.reload()}
+            />
+
+            <BulkKeepInTouchModal
+                show={showBulkEmailModal}
+                leads={list.data.filter((lead) => list.selectedIds.includes(lead.id))}
+                onClose={() => setShowBulkEmailModal(false)}
+                onSent={() => {
+                    list.clearSelection();
+                    list.reload();
+                }}
+            />
+
+            <DeleteModal
+                show={showDeleteModal}
+                title="Delete Lead"
+                message={deleteTarget ? `Are you sure you want to delete "${deleteTarget.companyName}"?` : ""}
+                {...describeDeleteImpact(deleteImpact, "Lead")}
+                onClose={() => { setShowDeleteModal(false); setDeleteTarget(null); }}
+                onConfirm={confirmDelete}
+            />
 
         </>
 

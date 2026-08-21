@@ -36,6 +36,8 @@ import ImportLeads from "./pages/ImportLeads";
 import Reports from "./pages/Reports";
 import FullReport from "./pages/FullReport";
 import EmployeeActivity from "./pages/EmployeeActivity";
+import EmailTemplates from "./pages/EmailTemplates";
+import Documents from "./pages/Documents";
 
 import InProgress from "./pages/InProgress";
 import Postponed from "./pages/Postponed";
@@ -188,6 +190,14 @@ function App() {
                     <Route
                         path="/activity"
                         element={<ManagerOrAdminRoute><EmployeeActivity /></ManagerOrAdminRoute>}
+                    />
+                    <Route
+                        path="/email-templates"
+                        element={<AdminRoute><EmailTemplates /></AdminRoute>}
+                    />
+                    <Route
+                        path="/documents"
+                        element={<AdminRoute><Documents /></AdminRoute>}
                     />
                     <Route path="/opportunities/in-progress" element={<InProgress />} />
 

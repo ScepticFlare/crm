@@ -8,6 +8,7 @@ import LoadingState from "../components/ui/LoadingState";
 import DetailHeader from "../components/detail/DetailHeader";
 import ActivityPlaceholder from "../components/detail/ActivityPlaceholder";
 import DeleteModal from "../components/DeleteModal";
+import EmailComposerModal from "../components/email/EmailComposerModal";
 
 import { getLeadById, deleteLead, getLeadDeleteImpact } from "../services/leadService";
 import { describeDeleteImpact } from "../utils/deleteImpact";
@@ -22,10 +23,19 @@ export default function LeadDetails() {
     // item is offered at all.
     const isAdmin = localStorage.getItem("role") === "ADMIN";
 
+    // EMAIL_SEND is granted (at OWN/TEAM/ALL scope respectively) to every
+    // role - see V6 migration / AccessControlService, same rationale as
+    // pages/Leads.jsx's row-level Send Email action. This only controls
+    // whether the Send Email menu item is offered at all; the backend
+    // re-checks the real scope on every call regardless.
+    const role = localStorage.getItem("role");
+    const canSendEmail = role === "ADMIN" || role === "MANAGER" || role === "EMPLOYEE";
+
     const [lead, setLead] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteImpact, setDeleteImpact] = useState(null);
+    const [showEmailComposer, setShowEmailComposer] = useState(false);
 
     useEffect(() => {
         loadLead();
@@ -148,14 +158,23 @@ export default function LeadDetails() {
                     onClick: () => navigate(`/opportunities/add?leadId=${lead.id}`),
                 }}
                 onEdit={() => navigate(`/leads/edit/${lead.id}`)}
-                menuItems={isAdmin ? [
-                    {
-                        label: "Delete Lead",
-                        icon: "bi-trash",
-                        danger: true,
-                        onClick: openDeleteModal,
-                    },
-                ] : []}
+                menuItems={[
+                    ...(canSendEmail ? [
+                        {
+                            label: "Send Email",
+                            icon: "bi-envelope",
+                            onClick: () => setShowEmailComposer(true),
+                        },
+                    ] : []),
+                    ...(isAdmin ? [
+                        {
+                            label: "Delete Lead",
+                            icon: "bi-trash",
+                            danger: true,
+                            onClick: openDeleteModal,
+                        },
+                    ] : []),
+                ]}
             />
 
             <div className="row g-3">
@@ -312,6 +331,13 @@ export default function LeadDetails() {
                 {...describeDeleteImpact(deleteImpact, "Lead")}
                 onClose={() => setShowDeleteModal(false)}
                 onConfirm={confirmDelete}
+            />
+
+            <EmailComposerModal
+                show={showEmailComposer}
+                lead={lead}
+                onClose={() => setShowEmailComposer(false)}
+                onSent={loadLead}
             />
 
         </>
