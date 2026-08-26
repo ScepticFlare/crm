@@ -1,7 +1,17 @@
 import axios from "axios";
 
+import { clearSession } from "../utils/session";
+
+// A request that never comes back (Render free-tier cold start after
+// inactivity, or the backend simply unreachable) must fail on its own
+// instead of leaving a page spinner up forever. 30s clears a warm response
+// and a normal cold start with room to spare; anything slower surfaces as
+// an error the user can retry against a now-warm backend.
+const REQUEST_TIMEOUT_MS = 30000;
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "http://localhost:8080/api"
+    baseURL: import.meta.env.VITE_API_URL || "http://localhost:8080/api",
+    timeout: REQUEST_TIMEOUT_MS
 });
 
 // Automatically attach JWT token. Login must NOT send a stale/expired
@@ -23,6 +33,46 @@ api.interceptors.request.use((config) => {
 
     return config;
 });
+
+// Once a redirect to the login page is under way, further failing
+// responses from other in-flight requests must not each kick off their own.
+let handlingExpiredSession = false;
+
+// The backend returns 401 only for a genuinely absent / expired / invalid
+// token (see SecurityConfig's authenticationEntryPoint). That is the single
+// signal that the session is dead: clear it and get the user to the login
+// page, with a full-page navigation so no component is left stranded on a
+// stale loading state.
+//
+// 403 is deliberately left untouched - this CRM uses it for "authenticated
+// but not permitted" (RBAC), which individual pages already handle. A 401
+// on the login call itself is just "wrong email/password", which Login.jsx
+// shows inline.
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+
+        const status = error.response?.status;
+
+        const requestUrl = (error.config?.url || "").replace(/\/+$/, "");
+        const isLoginRequest = requestUrl.endsWith("/auth/login");
+
+        if (status === 401 && !isLoginRequest && !handlingExpiredSession) {
+
+            clearSession();
+
+            // If we're already on the login page (e.g. a request that
+            // rejected just after a redirect) there's nothing more to do.
+            // Only latch the guard once an actual redirect is under way.
+            if (window.location.pathname !== "/") {
+                handlingExpiredSession = true;
+                window.location.replace("/");
+            }
+        }
+
+        return Promise.reject(error);
+    }
+);
 
 // Shared helper for the "Month" list filters: converts a "YYYY-MM" string
 // (or "" for "All Months") into the { year, month } query params the

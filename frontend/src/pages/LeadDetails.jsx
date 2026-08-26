@@ -6,7 +6,7 @@ import DetailField from "../components/DetailField";
 import SectionCard from "../components/ui/SectionCard";
 import LoadingState from "../components/ui/LoadingState";
 import DetailHeader from "../components/detail/DetailHeader";
-import ActivityPlaceholder from "../components/detail/ActivityPlaceholder";
+import LeadActivityHistory from "../components/detail/LeadActivityHistory";
 import DeleteModal from "../components/DeleteModal";
 import EmailComposerModal from "../components/email/EmailComposerModal";
 
@@ -287,7 +287,7 @@ export default function LeadDetails() {
 
                     </SectionCard>
 
-                    <ActivityPlaceholder />
+                    <LeadActivityHistory leadId={lead.id} />
 
                 </div>
 
@@ -311,7 +311,11 @@ export default function LeadDetails() {
 
                     <SectionCard title="Record Info">
 
-                        <DetailField label="Created" value={formatDateTime(lead.createdAt)} />
+                        <DetailField label="Lead Captured At" value={formatDateTime(lead.createdAt)} />
+                        <DetailField
+                            label="Lead Closed At"
+                            value={lead.closedAt ? formatDateTime(lead.closedAt) : "Not closed"}
+                        />
                         <DetailField label="Last Updated" value={formatDateTime(lead.updatedAt)} />
 
                     </SectionCard>
