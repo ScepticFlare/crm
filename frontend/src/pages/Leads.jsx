@@ -15,6 +15,7 @@ import BulkKeepInTouchModal from "../components/email/BulkKeepInTouchModal";
 
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
+import { formatDate } from "../utils/formatDate";
 import { downloadBlob } from "../utils/downloadFile";
 import { describeDeleteImpact } from "../utils/deleteImpact";
 
@@ -94,7 +95,7 @@ const ALL_LEAD_COLUMNS = [
         label: "Created Date",
         sortable: true,
         sortKey: "createdDate",
-        render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "-"
+        render: (row) => formatDate(row.createdAt)
     },
 ];
 

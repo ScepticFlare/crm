@@ -14,6 +14,7 @@ import {
     getCustomerDeleteImpact
 } from "../services/customerService";
 import { describeDeleteImpact } from "../utils/deleteImpact";
+import { formatDate, formatDateTime } from "../utils/formatDate";
 
 export default function CustomerDetails() {
 
@@ -97,32 +98,6 @@ export default function CustomerDetails() {
             style: "currency",
             currency: "INR",
             maximumFractionDigits: 0
-        });
-
-    }
-
-    function formatDate(date) {
-
-        if (!date) return "-";
-
-        return new Date(date).toLocaleDateString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric"
-        });
-
-    }
-
-    function formatDateTime(value) {
-
-        if (!value) return "-";
-
-        return new Date(value).toLocaleString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit"
         });
 
     }

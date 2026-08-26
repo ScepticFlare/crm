@@ -11,6 +11,7 @@ import ListPagination from "../components/list/ListPagination";
 
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
+import { formatDateTime } from "../utils/formatDate";
 import { downloadBlob } from "../utils/downloadFile";
 
 import {
@@ -42,7 +43,7 @@ const ALL_FOLLOWUP_COLUMNS = [
     },
     {
         key: "scheduledDate", label: "Scheduled", sortable: true,
-        render: (row) => row.scheduledDate ? new Date(row.scheduledDate).toLocaleString() : "-"
+        render: (row) => row.scheduledDate ? formatDateTime(row.scheduledDate) : "-"
     },
     { key: "status", label: "Status", sortable: true, render: (row) => <StatusBadge status={row.status} /> },
 ];

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getAllEmployees } from "../services/employeeService";
+import { formatDate } from "../utils/formatDate";
 
 export default function CustomerForm({
     opportunity,
@@ -177,7 +178,7 @@ export default function CustomerForm({
                     <label className="form-label">Expected Closing Date</label>
                     <input
                         className="form-control"
-                        value={opportunity?.expectedClosingDate || ""}
+                        value={opportunity?.expectedClosingDate ? formatDate(opportunity.expectedClosingDate) : ""}
                         readOnly
                     />
                 </div>

@@ -11,6 +11,7 @@ import ListPagination from "../components/list/ListPagination";
 
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
+import { formatDate } from "../utils/formatDate";
 import { downloadBlob } from "../utils/downloadFile";
 
 import {
@@ -39,7 +40,7 @@ const ALL_OPPORTUNITY_COLUMNS = [
     },
     {
         key: "date", label: "Closing Date", sortable: true, sortKey: "closingDate",
-        render: (row) => row.expectedClosingDate || "-"
+        render: (row) => formatDate(row.expectedClosingDate)
     },
     {
         key: "stage", label: "Stage", sortable: true,
@@ -51,7 +52,7 @@ const ALL_OPPORTUNITY_COLUMNS = [
     },
     {
         key: "createdAt", label: "Created Date", sortable: true, sortKey: "createdDate",
-        render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "-"
+        render: (row) => formatDate(row.createdAt)
     },
 ];
 

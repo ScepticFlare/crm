@@ -8,6 +8,7 @@ import LoadingState from "../components/ui/LoadingState";
 import DetailHeader from "../components/detail/DetailHeader";
 import ActivityPlaceholder from "../components/detail/ActivityPlaceholder";
 import DeleteModal from "../components/DeleteModal";
+import { formatDateTime } from "../utils/formatDate";
 
 export default function FollowUpDetails() {
 
@@ -61,20 +62,6 @@ export default function FollowUpDetails() {
             setShowDeleteModal(false);
 
         }
-
-    }
-
-    function formatDateTime(value) {
-
-        if (!value) return "-";
-
-        return new Date(value).toLocaleString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit"
-        });
 
     }
 
@@ -145,7 +132,7 @@ export default function FollowUpDetails() {
                                 <DetailField
                                     label="Scheduled Date"
                                     value={followUp.scheduledDate
-                                        ? new Date(followUp.scheduledDate).toLocaleString()
+                                        ? formatDateTime(followUp.scheduledDate)
                                         : ""}
                                 />
                             </div>
@@ -154,7 +141,7 @@ export default function FollowUpDetails() {
                                 <DetailField
                                     label="Completed Date"
                                     value={followUp.completedDate
-                                        ? new Date(followUp.completedDate).toLocaleString()
+                                        ? formatDateTime(followUp.completedDate)
                                         : ""}
                                 />
                             </div>

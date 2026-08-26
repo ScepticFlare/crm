@@ -10,6 +10,7 @@ import ListPagination from "../components/list/ListPagination";
 
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
+import { formatDate } from "../utils/formatDate";
 import { downloadBlob } from "../utils/downloadFile";
 
 import {
@@ -41,7 +42,7 @@ const ALL_CUSTOMER_COLUMNS = [
     },
     {
         key: "createdAt", label: "Created Date", sortable: true, sortKey: "createdDate",
-        render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "-"
+        render: (row) => formatDate(row.createdAt)
     },
 ];
 

@@ -3,6 +3,7 @@ import MasterModal from "../components/MasterModal";
 import LoadingState from "../components/ui/LoadingState";
 import EmptyState from "../components/ui/EmptyState";
 import StatusBadge from "../components/ui/StatusBadge";
+import { formatDate } from "../utils/formatDate";
 
 export default function MasterPage({
     title,
@@ -241,21 +242,13 @@ export default function MasterPage({
 
                                     <td>
 
-                                        {item.createdAt
-                                            ? new Date(
-                                                  item.createdAt
-                                              ).toLocaleDateString()
-                                            : "-"}
+                                        {formatDate(item.createdAt)}
 
                                     </td>
 
                                     <td>
 
-                                        {item.updatedAt
-                                            ? new Date(
-                                                  item.updatedAt
-                                              ).toLocaleDateString()
-                                            : "-"}
+                                        {formatDate(item.updatedAt)}
 
                                     </td>
 

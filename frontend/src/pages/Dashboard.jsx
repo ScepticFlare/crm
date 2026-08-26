@@ -7,6 +7,7 @@ import StatCard from "../components/StatCard";
 import { getStatusColor } from "../components/ui/StatusBadge";
 import LoadingState from "../components/ui/LoadingState";
 import EmptyState from "../components/ui/EmptyState";
+import { formatDateTime } from "../utils/formatDate";
 
 import { getAllLeads } from "../services/leadService";
 import { getAllCustomers } from "../services/customerService";
@@ -534,7 +535,7 @@ console.log(
 
                                             <span className="badge bg-light text-dark">
 
-                                                {new Date(item.scheduledDate).toLocaleString()}
+                                                {formatDateTime(item.scheduledDate)}
 
                                             </span>
 

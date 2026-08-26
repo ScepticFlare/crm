@@ -10,6 +10,7 @@ import ListPagination from "../components/list/ListPagination";
 import useServerList from "../hooks/useServerList";
 import { getActivity, getActivitySummary } from "../services/activityService";
 import { getAllEmployees } from "../services/employeeService";
+import { formatDateTime as formatDateTimeIN } from "../utils/formatDate";
 
 const MODULE_OPTIONS = [
     { value: "AUTH", label: "Auth" },
@@ -48,7 +49,7 @@ function formatDateTime(value) {
         return "—";
     }
 
-    return new Date(value).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+    return formatDateTimeIN(value);
 
 }
 

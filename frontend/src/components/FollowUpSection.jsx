@@ -9,6 +9,7 @@ import {
 import StatusBadge from "./ui/StatusBadge";
 import LoadingState from "./ui/LoadingState";
 import EmptyState from "./ui/EmptyState";
+import { formatDate } from "../utils/formatDate";
 
 export default function FollowUpSection({
     leadId,
@@ -88,21 +89,6 @@ export default function FollowUpSection({
             alert("Unable to delete follow up.");
 
         }
-
-    }
-
-    function formatDate(date) {
-
-        if (!date) return "-";
-
-        return new Date(date).toLocaleDateString(
-            "en-IN",
-            {
-                day: "2-digit",
-                month: "short",
-                year: "numeric"
-            }
-        );
 
     }
 

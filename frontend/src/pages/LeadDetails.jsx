@@ -12,6 +12,7 @@ import EmailComposerModal from "../components/email/EmailComposerModal";
 
 import { getLeadById, deleteLead, getLeadDeleteImpact } from "../services/leadService";
 import { describeDeleteImpact } from "../utils/deleteImpact";
+import { formatDateTime } from "../utils/formatDate";
 
 export default function LeadDetails() {
 
@@ -101,20 +102,6 @@ export default function LeadDetails() {
             setShowDeleteModal(false);
 
         }
-
-    }
-
-    function formatDateTime(value) {
-
-        if (!value) return "-";
-
-        return new Date(value).toLocaleString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit"
-        });
 
     }
 

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getActivity } from "../../services/activityService";
 import LoadingState from "../ui/LoadingState";
 import EmptyState from "../ui/EmptyState";
+import { formatDateTime } from "../../utils/formatDate";
 
 // Human-readable labels for the ActivityAction values that can actually
 // appear under ActivityModule.LEAD (see backend enums.ActivityAction /
@@ -24,20 +25,6 @@ const ACTION_LABELS = {
 // page, not a full list page, so there's no page-size picker like
 // ListPagination.jsx offers elsewhere.
 const PAGE_SIZE = 10;
-
-function formatDateTime(value) {
-
-    if (!value) return "-";
-
-    return new Date(value).toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-    });
-
-}
 
 // History/audit section for a single Lead - reuses the existing generic
 // Activity Log API (GET /api/activity, see services/activityService.js)
