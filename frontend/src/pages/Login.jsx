@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../services/authService";
+import { pingHealth } from "../services/api";
 import { jwtDecode } from "jwt-decode";
 
 function Login() {
@@ -14,6 +15,17 @@ function Login() {
     const [error, setError] = useState("");
 
     const navigate = useNavigate();
+
+    // Render free-tier cold start: the backend can be asleep when this page
+    // loads. Ping the public /health route once in the background so it
+    // starts waking up while the user is still typing their credentials,
+    // instead of only starting on the login submit itself. Fire-and-forget -
+    // a slow/failed health check must never block typing or show an error;
+    // if the backend really is unreachable, the login submit below will
+    // surface that on its own.
+    useEffect(() => {
+        pingHealth().catch(() => {});
+    }, []);
 
     async function handleLogin() {
 
@@ -38,7 +50,16 @@ function Login() {
 
     console.error("LOGIN ERROR:", err);
 
-    setError("Invalid email or password");
+    // err.response only exists when the backend actually answered with an
+    // HTTP status (e.g. 401 for a wrong email/password). A timeout or
+    // network failure - the cold-start case, where the request never got a
+    // response at all - leaves err.response undefined, so this tells the
+    // two apart without guessing at axios error codes.
+    if (err.response) {
+        setError("Invalid email or password");
+    } else {
+        setError("Server is taking longer than usual to respond. Please try again.");
+    }
 
 } finally {
 

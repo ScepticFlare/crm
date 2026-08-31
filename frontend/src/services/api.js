@@ -9,10 +9,25 @@ import { clearSession } from "../utils/session";
 // an error the user can retry against a now-warm backend.
 const REQUEST_TIMEOUT_MS = 30000;
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "http://localhost:8080/api",
+    baseURL: API_BASE_URL,
     timeout: REQUEST_TIMEOUT_MS
 });
+
+// Render cold-start wake-up. /health is served at the backend's root, not
+// under /api (see backend SecurityConfig + HealthController), so this uses
+// a plain axios call against the origin rather than the `api` instance -
+// that also keeps it off api's interceptors (no Authorization header, and a
+// failure here must never trigger the 401/expired-session redirect below).
+// Fire-and-forget: callers are not meant to await this for the UI to be
+// usable, just to let it run in the background.
+const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
+
+export function pingHealth() {
+    return axios.get(`${API_ORIGIN}/health`, { timeout: REQUEST_TIMEOUT_MS });
+}
 
 // Automatically attach JWT token. Login must NOT send a stale/expired
 // token from a previous session - the backend would otherwise have to
