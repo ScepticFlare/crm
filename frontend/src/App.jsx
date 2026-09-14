@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import PublicLeadForm from "./pages/PublicLeadForm";
 
 import Leads from "./pages/Leads";
 import AddLead from "./pages/AddLead";
@@ -59,6 +60,15 @@ function App() {
                 <Route
                     path="/"
                     element={<Login />}
+                />
+
+                {/* Public lead enquiry form - website "Request/Enquire"
+                    button + brochure QR codes. Deliberately outside
+                    ProtectedRoute: this is the one page in the app meant to
+                    be reached without a CRM login. */}
+                <Route
+                    path="/request"
+                    element={<PublicLeadForm />}
                 />
 
                 <Route

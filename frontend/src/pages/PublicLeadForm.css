@@ -1,0 +1,210 @@
+/* Standalone public enquiry form - deliberately NOT styled like the
+   internal CRM (no sidebar/topnav/table chrome, different palette) so it
+   reads as a public-facing page, not an admin screen. */
+
+.plf-page {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 48px 16px;
+    background: linear-gradient(160deg, #0f2340 0%, #143a63 45%, #1c5d92 100%);
+    box-sizing: border-box;
+}
+
+.plf-card {
+    width: 100%;
+    max-width: 720px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(8, 22, 45, 0.35);
+    padding: 40px clamp(20px, 5vw, 48px);
+    box-sizing: border-box;
+}
+
+.plf-header h1 {
+    margin: 0 0 8px;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #0f2340;
+}
+
+.plf-header p {
+    margin: 0 0 28px;
+    color: #5a6b82;
+    font-size: 1rem;
+}
+
+.plf-section-title {
+    margin: 28px 0 16px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #143a63;
+    border-bottom: 2px solid #eef2f7;
+    padding-bottom: 8px;
+}
+
+.plf-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px 20px;
+}
+
+@media (max-width: 560px) {
+    .plf-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.plf-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.plf-field-full {
+    grid-column: 1 / -1;
+}
+
+.plf-field span {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #33455e;
+}
+
+.plf-field input,
+.plf-field select,
+.plf-field textarea {
+    border: 1px solid #d7dee8;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: #0f2340;
+    background: #f9fbfd;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.plf-field input:focus,
+.plf-field select:focus,
+.plf-field textarea:focus {
+    outline: none;
+    border-color: #1c5d92;
+    box-shadow: 0 0 0 3px rgba(28, 93, 146, 0.15);
+    background: #ffffff;
+}
+
+.plf-empty-options {
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid #d7dee8;
+    border-radius: 8px;
+    background: #f9fbfd;
+    color: #5a6b82;
+    font-size: 0.85rem;
+}
+
+.plf-product-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    padding: 12px;
+    border: 1px solid #d7dee8;
+    border-radius: 8px;
+    background: #f9fbfd;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.plf-product-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: #33455e;
+    cursor: pointer;
+}
+
+.plf-submit {
+    width: 100%;
+    margin-top: 8px;
+    padding: 13px 20px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #1c5d92, #143a63);
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.plf-submit:hover:not(:disabled) {
+    opacity: 0.92;
+}
+
+.plf-submit:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.plf-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.plf-error {
+    background: #fdecec;
+    border: 1px solid #f3b8b8;
+    color: #a33333;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+}
+
+.plf-loading {
+    padding: 40px 0;
+    text-align: center;
+    color: #5a6b82;
+}
+
+.plf-success {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.plf-success-icon {
+    width: 64px;
+    height: 64px;
+    line-height: 64px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    background: #e5f6ec;
+    color: #1e8a4c;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.plf-success h1 {
+    margin: 0 0 10px;
+    color: #0f2340;
+}
+
+.plf-success p {
+    margin: 0;
+    color: #5a6b82;
+}
+
+/* Honeypot - invisible to a real visitor (moved off-screen, not
+   display:none/visibility:hidden, which some bots specifically detect and
+   skip) and never reachable via keyboard tab order. */
+.hp-field {
+    position: absolute;
+    left: -9999px;
+    top: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
