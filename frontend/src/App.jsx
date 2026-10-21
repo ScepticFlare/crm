@@ -36,6 +36,7 @@ import EditEmployee from "./pages/EditEmployee";
 import ImportLeads from "./pages/ImportLeads";
 import Reports from "./pages/Reports";
 import FullReport from "./pages/FullReport";
+import ManagementSummary from "./pages/ManagementSummary";
 import EmployeeActivity from "./pages/EmployeeActivity";
 import EmailTemplates from "./pages/EmailTemplates";
 import Documents from "./pages/Documents";
@@ -196,6 +197,10 @@ function App() {
                     <Route
                         path="/full-report"
                         element={<AdminRoute><FullReport /></AdminRoute>}
+                    />
+                    <Route
+                        path="/management"
+                        element={<ManagerOrAdminRoute><ManagementSummary /></ManagerOrAdminRoute>}
                     />
                     <Route
                         path="/activity"

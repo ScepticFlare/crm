@@ -98,3 +98,39 @@ export const exportOpportunities = async ({ sort = null, filters = {}, selection
     return response.data;
 
 };
+
+
+// Non-blocking Dashboard reminders: expired closing dates, active
+// opportunities with no upcoming follow-up, postponed review dates due.
+export const getWorkflowAlerts = async () => {
+
+    const response = await api.get("/opportunities/workflow-alerts");
+
+    return response.data;
+
+};
+
+// "OK" on a postponed review-date reminder. Does NOT change the stage.
+export const acknowledgePostponedReminder = async (id) => {
+
+    const response = await api.post(`/opportunities/${id}/postponed-reminder/acknowledge`);
+
+    return response.data;
+
+};
+
+// Explicit, separate action: POSTPONED -> IN PROGRESS. The closing date is
+// optional here - the backend keeps the existing one when omitted.
+export const returnToInProgress = async (id, expectedClosingDate, nextAction = {}) => {
+
+    // Resuming makes the opportunity active again, so it needs a pending
+    // follow-up with a next action; when it has none, the user enters it with
+    // the resume (nextAction) and the backend saves both together.
+    const response = await api.post(
+        `/opportunities/${id}/return-to-in-progress`,
+        { ...(expectedClosingDate ? { expectedClosingDate } : {}), ...nextAction }
+    );
+
+    return response.data;
+
+};

@@ -1,4 +1,5 @@
 import api from "./api";
+import { clearAllCache } from "../utils/apiCache";
 
 // api.js's shared default (30s) is fine for every other endpoint, but the
 // login POST is the one request that can legitimately land on a cold Render
@@ -20,6 +21,12 @@ export async function login(email, password) {
             timeout: LOGIN_TIMEOUT_MS
         }
     );
+
+    // A different user logging in in the same tab (e.g. after a session
+    // expired and the previous logout skipped, or switching accounts
+    // without closing the tab) must never see the previous user's cached
+    // RBAC-scoped master data - see utils/apiCache.
+    clearAllCache();
 
     return response.data;
 }

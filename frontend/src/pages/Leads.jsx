@@ -32,17 +32,15 @@ import { getAllProducts } from "../services/productService";
 import { getAllBatteries } from "../services/batteryService";
 import { getAllEmployees } from "../services/employeeService";
 
+// The Lead Status shown to users is exactly NEW / VALID / INVALID. A lead
+// saved with an older opportunity-style status (WON, LOST, QUOTATION SENT,
+// DROPPED...) is shown under the group it maps to (see the backend's
+// LeadWorkflow.effectiveStatus) with its original value as a small tag, and
+// is found by the same group in this filter.
 const LEAD_STATUS_OPTIONS = [
     { value: "NEW", label: "New" },
-    { value: "CONTACTED", label: "Contacted" },
-    { value: "QUOTATION_SENT", label: "Quotation Sent" },
-    { value: "NEGOTIATION", label: "Negotiation" },
-    { value: "WON", label: "Won" },
-    { value: "LOST", label: "Lost" },
-    { value: "DROPPED", label: "Dropped" },
-    { value: "UNRESPONSIVE", label: "Unresponsive" },
+    { value: "VALID", label: "Valid" },
     { value: "INVALID", label: "Invalid" },
-    { value: "INACTIVE", label: "Inactive" },
 ];
 
 const LEAD_VALIDITY_OPTIONS = [
@@ -67,7 +65,33 @@ const ALL_LEAD_COLUMNS = [
         label: "Lead Status",
         sortable: true,
         sortKey: "status",
-        render: (row) => <StatusBadge status={row.leadStatus} />
+        render: (row) => (
+            <>
+                <StatusBadge status={row.effectiveLeadStatus || row.leadStatus} />
+                {row.legacyStatus && (
+                    <span
+                        className="badge bg-light text-dark border ms-1"
+                        title="Older status kept from before the simplified lead statuses"
+                    >
+                        was {row.legacyStatus.replaceAll("_", " ")}
+                    </span>
+                )}
+                {row.stale && (
+                    <span
+                        className="badge bg-warning-subtle text-warning-emphasis border ms-1"
+                        title="No edit or follow-up for 6+ months. This is only a flag - the lead's status has not been changed."
+                    >
+                        stale 6+ months
+                    </span>
+                )}
+                {row.contactOverdue && (
+                    <i
+                        className="bi bi-telephone-x-fill text-danger ms-2"
+                        title={`Contact deadline (${formatDate(row.contactDeadline)}) has passed and the lead has not been contacted`}
+                    ></i>
+                )}
+            </>
+        )
     },
     { key: "leadSource", label: "Lead Source", render: (row) => row.leadSource?.name || "-" },
     { key: "industry", label: "Industry", render: (row) => row.industry?.name || "-" },
@@ -110,7 +134,9 @@ const DEFAULT_VISIBLE_LEAD_COLUMNS = [
 export default function Leads({
     title = "Leads",
     fetchLeads = getAllLeads,
-    addLeadPath = "/leads/add"
+    addLeadPath = "/leads/add",
+    // Optional explanatory text shown under the page header (Inactive page).
+    notice = null
 }) {
 
     const navigate = useNavigate();
@@ -158,7 +184,7 @@ export default function Leads({
     const filterDefs = useMemo(() => {
 
         const defs = [
-            { key: "status", label: "Lead Status", type: "select", options: LEAD_STATUS_OPTIONS },
+            { key: "statusGroup", label: "Lead Status", type: "select", options: LEAD_STATUS_OPTIONS },
             {
                 key: "leadSourceId", label: "Lead Source", type: "select",
                 options: leadSources.map((s) => ({ value: s.id, label: s.name }))
@@ -344,6 +370,8 @@ export default function Leads({
     return (
 
         <>
+
+            {notice}
 
             <PageHeader
                 title={title}

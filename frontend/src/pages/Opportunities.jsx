@@ -23,6 +23,7 @@ import { getAllSalesStages } from "../services/salesStageService";
 import { getAllProducts } from "../services/productService";
 import { getAllIndustries } from "../services/industryService";
 import { getAllEmployees } from "../services/employeeService";
+import { subStatusLabel } from "../components/workflowConstants";
 
 const ALL_OPPORTUNITY_COLUMNS = [
     { key: "company", label: "Lead", render: (row) => row.lead?.companyName || "-" },
@@ -44,7 +45,34 @@ const ALL_OPPORTUNITY_COLUMNS = [
     },
     {
         key: "stage", label: "Stage", sortable: true,
-        render: (row) => <StatusBadge status={row.salesStage?.name || "Not Set"} />
+        render: (row) => (
+            <>
+                <StatusBadge status={row.salesStage?.name || "Not Set"} />
+                {row.effectiveSubStatus && (
+                    <span className="badge bg-light text-dark border ms-1">
+                        {subStatusLabel(row.effectiveSubStatus)}
+                    </span>
+                )}
+                {row.closingDateExpired && (
+                    <i
+                        className="bi bi-exclamation-triangle-fill text-warning ms-2"
+                        title="Expected closing date has passed - review this opportunity"
+                    ></i>
+                )}
+                {row.noNextAction && (
+                    <i
+                        className="bi bi-bell-slash text-secondary ms-2"
+                        title="Next action missing - needs a pending follow-up with a future date"
+                    ></i>
+                )}
+                {row.postponedReminderDue && (
+                    <i
+                        className="bi bi-alarm text-info ms-2"
+                        title="Postponed review date reached"
+                    ></i>
+                )}
+            </>
+        )
     },
     {
         key: "assignedEmployee", label: "Assigned Employee", sortable: true,
@@ -204,7 +232,7 @@ export default function Opportunities({
     const totalValue = list.data.reduce((sum, o) => sum + (o.productValue || 0), 0);
 
     const wonValue = list.data
-        .filter((o) => (o.salesStage?.name || "") === "WON")
+        .filter((o) => o.salesStage?.stageType === "WON")
         .reduce((sum, o) => sum + (o.productValue || 0), 0);
 
     return (

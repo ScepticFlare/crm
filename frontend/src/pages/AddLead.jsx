@@ -43,6 +43,8 @@ export default function AddLead() {
         finalRemarks: "",
 
         leadStatus: defaultStatus,
+        invalidReason: "",
+        contactDeadline: "",
 
         assignedEmployeeId:
             role === "ADMIN"

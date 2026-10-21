@@ -25,6 +25,10 @@ export default function FollowUpForm({
 
     const role = localStorage.getItem("role");
 
+    // A pending follow-up attached to an opportunity is that opportunity's
+    // next action, so it must be described (the backend enforces this too).
+    const nextActionRequired = !!form.opportunityId && form.status === "PENDING";
+
     useEffect(() => {
         loadActivityTypes();
     }, []);
@@ -266,7 +270,7 @@ export default function FollowUpForm({
                             <div className="col-12">
 
                                 <label className="form-label">
-                                    Remarks
+                                    {nextActionRequired ? "Next action *" : "Remarks"}
                                 </label>
 
                                 <textarea
@@ -275,7 +279,16 @@ export default function FollowUpForm({
                                     name="remarks"
                                     value={form.remarks}
                                     onChange={handleChange}
+                                    required={nextActionRequired}
+                                    minLength={nextActionRequired ? 3 : undefined}
+                                    placeholder={nextActionRequired ? "Describe what will be done, e.g. Send the revised quotation" : undefined}
                                 />
+
+                                {nextActionRequired && (
+                                    <div className="form-text">
+                                        A pending follow-up on an opportunity is its next action, so it must say what the action is.
+                                    </div>
+                                )}
 
                             </div>
 

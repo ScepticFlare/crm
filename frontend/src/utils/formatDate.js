@@ -12,6 +12,18 @@ function toDate(value) {
         return null;
     }
 
+    // A date-only value ("2026-10-13" - closing / review dates) has no time
+    // or zone. new Date() would read it as UTC midnight and, in any zone
+    // behind UTC, display the previous day; build it as a local date instead.
+    if (typeof value === "string") {
+
+        const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+        if (dateOnly) {
+            return new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]));
+        }
+    }
+
     const date = value instanceof Date ? value : new Date(value);
 
     return Number.isNaN(date.getTime()) ? null : date;

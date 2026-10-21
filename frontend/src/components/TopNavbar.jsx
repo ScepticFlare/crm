@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { logout as logoutRequest } from "../services/activityService";
+import { clearAllCache } from "../utils/apiCache";
 
 export default function TopNavbar() {
 
@@ -32,6 +33,7 @@ export default function TopNavbar() {
         localStorage.removeItem("token");
         localStorage.removeItem("role");
         localStorage.removeItem("employeeName");
+        clearAllCache();
 
         navigate("/");
 

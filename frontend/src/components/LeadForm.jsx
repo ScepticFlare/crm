@@ -34,6 +34,7 @@ import {
 
 import DropdownAddManage from "./DropdownAddManage";
 import MultiItemQuantitySelector from "./MultiItemQuantitySelector";
+import DuplicateLeadWarning from "./DuplicateLeadWarning";
 
 export default function LeadForm({
 
@@ -42,7 +43,8 @@ export default function LeadForm({
     handleSubmit,
     loading,
     submitText,
-    onCancel
+    onCancel,
+    leadId = null
 
 }) {
 
@@ -158,6 +160,13 @@ export default function LeadForm({
     return (
 
         <form onSubmit={handleSubmit}>
+
+            <DuplicateLeadWarning
+                phone={form.phone}
+                email={form.email}
+                company={form.companyName}
+                excludeId={leadId}
+            />
             <h5 className="mb-4">
     Company Information
 </h5>
@@ -481,23 +490,70 @@ export default function LeadForm({
         >
 
             <option value="NEW">NEW</option>
-            <option value="CONTACTED">CONTACTED</option>
-            <option value="QUOTATION_SENT">QUOTATION SENT</option>
-            <option value="NEGOTIATION">NEGOTIATION</option>
-            <option value="WON">WON</option>
-            <option value="LOST">LOST</option>
-            <option value="DROPPED">DROPPED</option>
-            <option value="UNRESPONSIVE">UNRESPONSIVE</option>
+            <option value="VALID">VALID</option>
             <option value="INVALID">INVALID</option>
-            {/* INACTIVE is set automatically by the 6-month stale-lead job,
-                never manually - this option only exists so editing an
-                already-Inactive Lead displays/preserves its real status
-                instead of showing a blank/mismatched selection. */}
-            <option value="INACTIVE">INACTIVE</option>
+            {/* A lead saved before the simplified statuses may still carry an
+                older value (CONTACTED, WON, DROPPED, INACTIVE...). It is kept
+                as it is - shown here so editing the lead does not silently
+                change it - but it can no longer be chosen for any other
+                lead; pick NEW / VALID / INVALID to move it on. */}
+            {form.legacyStatus && (
+                <option value={form.legacyStatus}>
+                    {form.legacyStatus.replaceAll("_", " ")} (older status - kept as is)
+                </option>
+            )}
 
         </select>
 
     </div>
+
+    <div className="col-md-4 mb-3">
+
+        <label className="form-label">
+            Contact By
+        </label>
+
+        <input
+            type="date"
+            className="form-control"
+            name="contactDeadline"
+            value={form.contactDeadline || ""}
+            onChange={handleChange}
+        />
+
+        <div className="form-text">
+            When this lead should be contacted by. Left blank, it defaults to a couple of days after the lead is created.
+        </div>
+
+    </div>
+
+    {form.leadStatus === "INVALID" && (
+
+        <div className="col-12 mb-3">
+
+            <label className="form-label">
+                Reason this lead is invalid{form.legacyInvalidNoReason ? "" : " *"}
+            </label>
+
+            <textarea
+                className="form-control"
+                name="invalidReason"
+                rows={2}
+                value={form.invalidReason || ""}
+                onChange={handleChange}
+                placeholder="e.g. Wrong number, not our product range, duplicate of an existing customer, spam"
+                required={!form.legacyInvalidNoReason}
+            />
+
+            {form.legacyInvalidNoReason && (
+                <div className="form-text">
+                    This older invalid lead has no reason recorded - you may add one.
+                </div>
+            )}
+
+        </div>
+
+    )}
 
     <div className="col-md-4 mb-3">
 

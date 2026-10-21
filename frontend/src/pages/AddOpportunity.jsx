@@ -5,6 +5,7 @@ import PageHeader from "../components/PageHeader";
 import OpportunityForm from "../components/OpportunityForm";
 
 import { createOpportunity } from "../services/opportunityService";
+import { workflowPayload, nextActionPayload } from "../components/workflowConstants";
 
 export default function AddOpportunity() {
 
@@ -20,15 +21,27 @@ export default function AddOpportunity() {
         productValue: "",
         expectedClosingDate: "",
         salesStage: "",
-        leadValidity: "VALID"
+        leadValidity: "VALID",
+        subStatus: "",
+        lostReason: "",
+        postponedReviewDate: "",
+        postponedReason: "",
+        closingDateChangeReason: "",
+        nextActionDescription: "",
+        nextActionActivityTypeId: "",
+        nextFollowUpDate: ""
     });
 
+    // Functional update so several fields can be changed in one event
+    // (choosing a stage clears the fields that belong to another stage).
     function handleChange(e) {
 
-        setForm({
-            ...form,
-            [e.target.name]: e.target.value
-        });
+        const { name, value } = e.target;
+
+        setForm((current) => ({
+            ...current,
+            [name]: value
+        }));
 
     }
 
@@ -55,7 +68,11 @@ export default function AddOpportunity() {
 
         salesStage: form.salesStage,
 
-        leadValidity: form.leadValidity
+        leadValidity: form.leadValidity,
+
+        ...workflowPayload(form),
+
+        ...nextActionPayload(form)
 
     }
 );
@@ -68,7 +85,10 @@ export default function AddOpportunity() {
 
             console.error(error);
 
-            alert("Failed to create opportunity.");
+            alert(
+                error.response?.data?.message ||
+                "Failed to create opportunity."
+            );
 
         } finally {
 
@@ -99,6 +119,7 @@ export default function AddOpportunity() {
                         submitText="Convert Lead"
                         onCancel={() => navigate("/leads")}
                         leadId={leadId}
+                        isConversion
                     />
 
                 </div>

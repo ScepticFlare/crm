@@ -12,7 +12,7 @@ import EmailComposerModal from "../components/email/EmailComposerModal";
 
 import { getLeadById, deleteLead, getLeadDeleteImpact } from "../services/leadService";
 import { describeDeleteImpact } from "../utils/deleteImpact";
-import { formatDateTime } from "../utils/formatDate";
+import { formatDate, formatDateTime } from "../utils/formatDate";
 
 export default function LeadDetails() {
 
@@ -137,11 +137,16 @@ export default function LeadDetails() {
                 backTo="/leads"
                 title={lead.companyName}
                 subtitle={lead.contactPerson}
-                status={lead.leadStatus}
+                status={lead.effectiveLeadStatus || lead.leadStatus}
                 meta={`Lead #${lead.id}`}
                 primaryAction={{
                     label: "Convert to Opportunity",
                     icon: "bi-arrow-repeat",
+                    // Only a VALID (qualified) lead can become an opportunity, and
+                    // only once. The reason it cannot (if any) comes from the
+                    // backend, which enforces the same rule.
+                    disabled: !!lead.conversionBlockedReason,
+                    title: lead.conversionBlockedReason || "",
                     onClick: () => navigate(`/opportunities/add?leadId=${lead.id}`),
                 }}
                 onEdit={() => navigate(`/leads/edit/${lead.id}`)}
@@ -282,7 +287,30 @@ export default function LeadDetails() {
 
                     <SectionCard title="Lead Information">
 
-                        <DetailField label="Status" status={lead.leadStatus} />
+                        <DetailField label="Status" status={lead.effectiveLeadStatus || lead.leadStatus} />
+
+                        {lead.legacyStatus && (
+                            <DetailField
+                                label="Original (older) Status"
+                                value={`${lead.legacyStatus.replaceAll("_", " ")} - kept from before the simplified lead statuses`}
+                            />
+                        )}
+
+                        {lead.leadStatus === "INVALID" && (
+                            <DetailField label="Invalid Reason" value={lead.invalidReason || "Not recorded"} />
+                        )}
+
+                        <DetailField
+                            label="Contact By"
+                            value={lead.contactDeadline ? formatDate(lead.contactDeadline) : "-"}
+                        />
+
+                        {lead.contactOverdue && (
+                            <div className="alert alert-danger py-2 small">
+                                The contact deadline has passed and this lead has not been contacted yet.
+                            </div>
+                        )}
+
                         <DetailField label="Validity" status={lead.leadValidity} />
                         <DetailField label="Source" value={lead.leadSource?.name} />
 

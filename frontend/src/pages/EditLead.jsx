@@ -37,6 +37,10 @@ export default function EditLead() {
         finalRemarks: "",
 
         leadStatus: "NEW",
+        legacyStatus: "",
+        invalidReason: "",
+        legacyInvalidNoReason: false,
+        contactDeadline: "",
 
         assignedEmployeeId: 2
     });
@@ -84,7 +88,13 @@ export default function EditLead() {
                 description: data.description || "",
                 finalRemarks: data.finalRemarks || "",
 
+                // A lead saved with one of the older statuses keeps it as it is
+                // (shown by LeadForm as "older status - kept as is").
                 leadStatus: data.leadStatus || "NEW",
+                legacyStatus: data.legacyStatus || "",
+                invalidReason: data.invalidReason || "",
+                legacyInvalidNoReason: data.leadStatus === "INVALID" && !data.invalidReason,
+                contactDeadline: data.contactDeadline || "",
 
                 assignedEmployeeId:
                     data.assignedEmployee?.id ||
@@ -190,6 +200,7 @@ export default function EditLead() {
                         loading={saving}
                         submitText="Update Lead"
                         onCancel={() => navigate("/leads")}
+                        leadId={id}
                     />
 
                 </div>

@@ -21,6 +21,34 @@ const ACTION_LABELS = {
     REMARKS_UPDATED: "Remarks Updated",
 };
 
+// Field-level history entries (Opportunity workflow changes) carry the
+// field name plus its old/new value - see backend ActivityLogService.
+// logFieldChange. Older entries have no fieldName and render from
+// description exactly as before.
+const FIELD_LABELS = {
+    title: "Title",
+    productValue: "Value",
+    leadValidity: "Validity",
+    salesStage: "Stage",
+    subStatus: "Sub-status",
+    expectedClosingDate: "Expected closing date",
+    lostReason: "Lost reason",
+    postponedReviewDate: "Postponed review date",
+    postponedReminderAcknowledgedFor: "Postponed reminder acknowledged for review date",
+    postponedReason: "Postponed reason",
+    closingDateChangeReason: "Closing date change reason",
+    leadStatus: "Lead status",
+    invalidReason: "Invalid reason",
+    assignedEmployee: "Assigned to",
+    contactDeadline: "Contact by",
+};
+
+function displayValue(value, fieldName) {
+    return value === null || value === undefined || value === ""
+        ? "(none)"
+        : (fieldName === "subStatus" || fieldName === "leadStatus" ? String(value).replaceAll("_", " ") : String(value));
+}
+
 // Fixed at 10 - this is a compact, embedded section on the Lead Details
 // page, not a full list page, so there's no page-size picker like
 // ListPagination.jsx offers elsewhere.
@@ -38,7 +66,11 @@ const PAGE_SIZE = 10;
 // recorded on every open (LeadService.getLeadById) and remains fully
 // visible under "All Activity". Nothing is ever deleted or skipped at
 // write time, only hidden from this one default read.
-export default function LeadActivityHistory({ leadId }) {
+export default function LeadActivityHistory({ leadId, entityId, module = "LEAD", entityLabel = "lead" }) {
+
+    // `leadId` is the original prop (Lead Details page); `entityId` lets the
+    // Opportunity Details page reuse this same component with module="OPPORTUNITY".
+    const targetId = entityId ?? leadId;
 
     const [entries, setEntries] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -55,8 +87,8 @@ export default function LeadActivityHistory({ leadId }) {
 
             const response = await getActivity({
                 filters: {
-                    module: "LEAD",
-                    entityId: leadId,
+                    module,
+                    entityId: targetId,
                     ...(viewMode === "important" ? { excludeAction: "VIEW" } : {}),
                 },
                 sort: { field: "createdDate", dir: "desc" },
@@ -89,7 +121,7 @@ export default function LeadActivityHistory({ leadId }) {
         loadHistory();
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [leadId, viewMode, page]);
+    }, [targetId, module, viewMode, page]);
 
     function handleViewModeChange(nextMode) {
         setViewMode(nextMode);
@@ -129,7 +161,7 @@ export default function LeadActivityHistory({ leadId }) {
                     <EmptyState
                         icon="bi-exclamation-triangle"
                         title="Unable to Load History"
-                        message="Something went wrong while fetching this lead's activity."
+                        message={`Something went wrong while fetching this ${entityLabel}'s activity.`}
                         className="text-center text-muted py-4"
                     />
 
@@ -142,7 +174,7 @@ export default function LeadActivityHistory({ leadId }) {
                         title="No Activity Yet"
                         message={viewMode === "important"
                             ? "No important activity yet - switch to All Activity to see everything, including views."
-                            : "Changes and interactions for this lead will appear here."}
+                            : `Changes and interactions for this ${entityLabel} will appear here.`}
                         className="text-center text-muted py-4"
                     />
 
@@ -193,7 +225,19 @@ export default function LeadActivityHistory({ leadId }) {
                                             <td>
 
                                                 <div className="text-break" style={{ whiteSpace: "pre-wrap" }}>
-                                                    {entry.description || "-"}
+                                                    {entry.fieldName ? (
+                                                        <>
+                                                            <span className="fw-semibold">
+                                                                {FIELD_LABELS[entry.fieldName] || entry.fieldName}
+                                                            </span>
+                                                            {": "}
+                                                            <span className="text-muted">{displayValue(entry.oldValue, entry.fieldName)}</span>
+                                                            {" → "}
+                                                            <span>{displayValue(entry.newValue, entry.fieldName)}</span>
+                                                        </>
+                                                    ) : (
+                                                        entry.description || "-"
+                                                    )}
                                                 </div>
 
                                             </td>

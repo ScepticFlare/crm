@@ -109,3 +109,15 @@ export const exportLeads = async ({ sort = null, filters = {}, selection = null 
     return response.data;
 
 };
+
+// Possible duplicates of the lead being entered (same phone / email /
+// company). A warning aid only - nothing is blocked or merged. Blank values
+// are simply not matched on.
+export const getPossibleDuplicates = async ({ phone, email, company, excludeId }) => {
+
+    const response = await api.get("/leads/duplicates", {
+        params: { phone, email, company, excludeId }
+    });
+
+    return response.data;
+};

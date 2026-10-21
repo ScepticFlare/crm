@@ -133,6 +133,14 @@ export default function Sidebar() {
     // this iteration.
     if (role === "ADMIN" || role === "MANAGER") {
 
+        // Management metrics - Admin sees everyone, Manager their team (the
+        // backend scopes the numbers by the caller's permissions).
+        menuItems.push({
+            name: "Management Summary",
+            path: "/management",
+            icon: "bi-graph-up-arrow",
+        });
+
         menuItems.push({
             name: "Employee Activity",
             path: "/activity",

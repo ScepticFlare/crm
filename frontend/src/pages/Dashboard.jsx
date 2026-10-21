@@ -9,10 +9,8 @@ import LoadingState from "../components/ui/LoadingState";
 import EmptyState from "../components/ui/EmptyState";
 import { formatDateTime } from "../utils/formatDate";
 
-import { getAllLeads } from "../services/leadService";
-import { getAllCustomers } from "../services/customerService";
-import { getAllOpportunities } from "../services/opportunityService";
-import { getAllFollowUps } from "../services/followupService";
+import { getDashboardStats } from "../services/dashboardService";
+import OpportunityAlerts from "../components/OpportunityAlerts";
 
 export default function Dashboard() {
 
@@ -32,12 +30,15 @@ export default function Dashboard() {
 
     const [pipeline, setPipeline] = useState({
         NEW: 0,
-        QUOTATION_SENT: 0,
-        NEGOTIATION: 0,
+        IN_PROGRESS: 0,
         POSTPONED: 0,
         WON: 0,
         LOST: 0
     });
+
+    // Of the IN_PROGRESS count: how many are at each sub-status. A
+    // breakdown of that one card, not extra opportunities.
+    const [inProgressBreakdown, setInProgressBreakdown] = useState({});
 
     const greeting = useMemo(() => {
 
@@ -67,105 +68,19 @@ const employeeName =
 
         try {
 
-            const [
-
-                leadRes,
-                customerRes,
-                opportunityRes,
-                followupRes
-
-            ] = await Promise.all([
-
-                getAllLeads(),
-                getAllCustomers(),
-                getAllOpportunities(),
-                getAllFollowUps()
-
-            ]);
-            
-
-            const leads = leadRes.content || [];
-            const customers = customerRes.content || [];
-            const opportunities = opportunityRes.content || [];
-            console.log("Dashboard Opportunity Response:", opportunityRes);
-
-console.log(
-    "Dashboard Sales Stages:",
-    opportunities.map(o => ({
-        id: o.id,
-        salesStage: o.salesStage
-    }))
-);
-            const followups = followupRes.content || [];
+            const data = await getDashboardStats();
 
             setStats({
+                leads: data.leads,
+                customers: data.customers,
+                opportunities: data.opportunities,
+                followups: data.followUps
+            });
 
-    leads: leadRes.totalElements,
-    customers: customerRes.totalElements,
-    opportunities: opportunityRes.totalElements,
-    followups: followupRes.totalElements
-
-});
-
-            const latestLeads = [...leads]
-                .sort(
-                    (a, b) =>
-                        new Date(b.createdAt) -
-                        new Date(a.createdAt)
-                )
-                .slice(0, 5);
-
-            setRecentLeads(latestLeads);
-
-            
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            const nextFollowUps = [...followups]
-                .filter((followUp) => {
-
-                    if (followUp.status !== "PENDING") return false;
-
-                    const scheduledDate = new Date(followUp.scheduledDate);
-                    scheduledDate.setHours(0, 0, 0, 0);
-
-                    return scheduledDate >= today;
-
-                })
-                .sort(
-                    (a, b) =>
-                        new Date(a.scheduledDate) -
-                        new Date(b.scheduledDate)
-                )
-                .slice(0, 5);
-
-            setUpcomingFollowUps(nextFollowUps);
-
-            const stageCount = {
-
-                NEW: 0,
-                QUOTATION_SENT: 0,
-                NEGOTIATION: 0,
-                POSTPONED: 0,
-                WON: 0,
-                LOST: 0,
-                OTHER: 0
-
-            };
-
-            opportunities.forEach((opp) => {
-
-    const stage = opp.salesStage?.name;
-
-    if (stageCount.hasOwnProperty(stage)) {
-        stageCount[stage]++;
-    } else {
-        stageCount.OTHER++;
-    }
-
-});
-
-            setPipeline(stageCount);
+            setRecentLeads(data.recentLeads || []);
+            setUpcomingFollowUps(data.upcomingFollowUps || []);
+            setPipeline(data.pipeline || {});
+            setInProgressBreakdown(data.inProgressBreakdown || {});
 
         }
 
@@ -185,17 +100,17 @@ console.log(
 
     function openFollowUp(item) {
 
-        if (item.lead) {
+        if (item.opportunityId) {
 
-            navigate(`/leads/${item.lead.id}`);
+            navigate(`/opportunities/${item.opportunityId}`);
 
             return;
 
         }
 
-        if (item.opportunity) {
+        if (item.leadId) {
 
-            navigate(`/opportunities/${item.opportunity.id}`);
+            navigate(`/leads/${item.leadId}`);
 
         }
 
@@ -223,6 +138,8 @@ console.log(
             title={`${greeting}, ${employeeName}`}
             subtitle="Here's a quick overview of your CRM."
         />
+
+        <OpportunityAlerts />
 
         <div className="row g-4">
 
@@ -509,9 +426,7 @@ console.log(
 
                                             {
 
-                                                item.lead?.companyName ||
-
-                                                item.opportunity?.lead?.companyName ||
+                                                item.companyName ||
 
                                                 "Unknown"
 
@@ -523,7 +438,7 @@ console.log(
 
                                             {
 
-                                                item.activityType?.name ||
+                                                item.activityTypeName ||
 
                                                 "Follow Up"
 
@@ -613,6 +528,20 @@ console.log(
                                                 Opportunities
 
                                             </small>
+
+                                            {stage === "IN_PROGRESS" && count > 0 && (
+
+                                                <div className="small text-muted mt-1">
+
+                                                    Quotation Sent: {inProgressBreakdown.QUOTATION_SENT || 0}
+                                                    {" · "}
+                                                    Negotiation: {inProgressBreakdown.NEGOTIATION || 0}
+                                                    {" · "}
+                                                    No sub-status: {inProgressBreakdown.NO_SUB_STATUS || 0}
+
+                                                </div>
+
+                                            )}
 
                                         </div>
 

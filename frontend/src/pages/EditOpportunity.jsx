@@ -8,6 +8,7 @@ import {
     getOpportunityById,
     updateOpportunity
 } from "../services/opportunityService";
+import { workflowPayload, nextActionPayload } from "../components/workflowConstants";
 
 export default function EditOpportunity() {
 
@@ -16,6 +17,9 @@ export default function EditOpportunity() {
     const navigate = useNavigate();
 
     const [loading, setLoading] = useState(false);
+    const [currentStage, setCurrentStage] = useState(null);
+    const [originalClosingDate, setOriginalClosingDate] = useState(null);
+    const [hasNextAction, setHasNextAction] = useState(null);
 
     const [form, setForm] = useState({
         leadId: "",
@@ -23,7 +27,16 @@ export default function EditOpportunity() {
         productValue: "",
         expectedClosingDate: "",
         salesStage: "NEW",
-        leadValidity: "VALID"
+        leadValidity: "VALID",
+        subStatus: "",
+        lostReason: "",
+        postponedReviewDate: "",
+        postponedReason: "",
+        closingDateChangeReason: "",
+        nextActionDescription: "",
+        nextActionActivityTypeId: "",
+        nextFollowUpDate: "",
+        legacyLostNoReason: false
     });
 
     useEffect(() => {
@@ -41,13 +54,29 @@ export default function EditOpportunity() {
             console.log("Sales Stage:", data.salesStage);
             console.log("Sales Stage Name:", data.salesStage?.name);
 
+            setCurrentStage(data.salesStage || null);
+            setOriginalClosingDate(data.expectedClosingDate || null);
+            setHasNextAction(data.hasNextAction ?? null);
+
             setForm({
                 leadId: data.lead?.id || "",
                 title: data.title || "",
                 productValue: data.productValue || "",
                 expectedClosingDate: data.expectedClosingDate || "",
                 salesStage: data.salesStage?.name || "NEW",
-                leadValidity: data.leadValidity || "VALID"
+                leadValidity: data.leadValidity || "VALID",
+                subStatus: data.subStatus || "",
+                lostReason: data.lostReason || "",
+                postponedReviewDate: data.postponedReviewDate || "",
+                postponedReason: data.postponedReason || "",
+                closingDateChangeReason: "",
+                nextActionDescription: "",
+                nextActionActivityTypeId: "",
+                nextFollowUpDate: "",
+                // An older LOST opportunity saved before reasons existed:
+                // editing it must not force an invented reason.
+                legacyLostNoReason:
+                    data.salesStage?.stageType === "LOST" && !data.lostReason
             });
 
         } catch (error) {
@@ -58,12 +87,16 @@ export default function EditOpportunity() {
 
     }
 
+    // Functional update so several fields can be changed in one event
+    // (choosing a stage clears the fields that belong to another stage).
     function handleChange(e) {
 
-        setForm({
-            ...form,
-            [e.target.name]: e.target.value
-        });
+        const { name, value } = e.target;
+
+        setForm((current) => ({
+            ...current,
+            [name]: value
+        }));
 
     }
 
@@ -75,16 +108,23 @@ export default function EditOpportunity() {
 
         try {
 
-            await updateOpportunity(id, {
-                ...form,
+            const saved = await updateOpportunity(id, {
                 leadId: Number(form.leadId),
+                title: form.title,
                 productValue:
                     form.productValue === ""
                         ? null
-                        : Number(form.productValue)
+                        : Number(form.productValue),
+                expectedClosingDate: form.expectedClosingDate || null,
+                salesStage: form.salesStage,
+                leadValidity: form.leadValidity,
+                ...workflowPayload(form),
+                ...nextActionPayload(form)
             });
 
-            if (form.salesStage === "WON") {
+            // Decided by the stage type the server returns, so it still works
+            // if the WON stage has been renamed.
+            if (saved?.salesStage?.stageType === "WON") {
 
                 // Hand the employee straight to the customer completion
                 // form instead of requiring a separate manual click.
@@ -134,6 +174,9 @@ export default function EditOpportunity() {
                         submitText="Update Opportunity"
                         onCancel={() => navigate("/opportunities")}
                         leadId={form.leadId}
+                        currentStage={currentStage}
+                        originalClosingDate={originalClosingDate}
+                        hasNextAction={hasNextAction}
                     />
 
                 </div>
