@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import useListReturn from "../hooks/useListReturn";
 
 import DetailField from "../components/DetailField";
 import SectionCard from "../components/ui/SectionCard";
@@ -26,6 +27,7 @@ export default function OpportunityDetails() {
 
     const { id } = useParams();
     const navigate = useNavigate();
+    const { returnTo, returnState } = useListReturn("/opportunities");
 
     // Backend is the source of truth (OPPORTUNITY_DELETE is ADMIN-only -
     // see OpportunityService.deleteOpportunity) - this only controls
@@ -143,7 +145,7 @@ export default function OpportunityDetails() {
         try {
 
             await deleteOpportunity(opportunity.id);
-            navigate("/opportunities");
+            navigate(returnTo);
 
         } catch (err) {
 
@@ -219,9 +221,9 @@ export default function OpportunityDetails() {
                     icon: "bi-arrow-repeat",
                     disabled: !isWon,
                     title: !isWon ? "Only WON opportunities can be converted to customers." : "",
-                    onClick: () => navigate(`/customers/convert/${opportunity.id}`),
+                    onClick: () => navigate(`/customers/convert/${opportunity.id}`, { state: returnState }),
                 }}
-                onEdit={() => navigate(`/opportunities/edit/${opportunity.id}`)}
+                onEdit={() => navigate(`/opportunities/edit/${opportunity.id}`, { state: returnState })}
                 menuItems={isAdmin ? [
                     {
                         label: "Delete Opportunity",
@@ -391,7 +393,7 @@ export default function OpportunityDetails() {
 
                         <button
                             className="btn btn-sm btn-warning"
-                            onClick={() => navigate(`/opportunities/edit/${opportunity.id}`)}
+                            onClick={() => navigate(`/opportunities/edit/${opportunity.id}`, { state: returnState })}
                         >
                             Update date / stage
                         </button>
@@ -432,7 +434,7 @@ export default function OpportunityDetails() {
 
                         <button
                             className="btn btn-sm btn-outline-secondary"
-                            onClick={() => navigate(`/opportunities/edit/${opportunity.id}`)}
+                            onClick={() => navigate(`/opportunities/edit/${opportunity.id}`, { state: returnState })}
                         >
                             Edit opportunity
                         </button>

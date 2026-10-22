@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import PageHeader from "../components/PageHeader";
 import DataTable from "../components/DataTable";
 import FilterPanel from "../components/list/FilterPanel";
 import ManageColumnsMenu from "../components/list/ManageColumnsMenu";
 import BulkActionBar from "../components/list/BulkActionBar";
+import RecordLink from "../components/list/RecordLink";
 import ListPagination from "../components/list/ListPagination";
 
 import useServerList from "../hooks/useServerList";
@@ -26,9 +27,9 @@ const ALL_CUSTOMER_COLUMNS = [
     {
         key: "companyName", label: "Company", sortable: true, sortKey: "company",
         render: (row) => (
-            <Link to={`/customers/${row.id}`} className="record-link">
+            <RecordLink to={`/customers/${row.id}`} className="record-link">
                 {row.companyName}
-            </Link>
+            </RecordLink>
         )
     },
     { key: "contactPerson", label: "Contact", sortable: true, sortKey: "contactPerson", render: (row) => row.contactPerson },
@@ -54,6 +55,7 @@ const DEFAULT_VISIBLE_CUSTOMER_COLUMNS = [
 export default function Customers() {
 
     const navigate = useNavigate();
+    const location = useLocation();
 
     // Backend is the source of truth (CUSTOMER_DELETE/CUSTOMER_EXPORT are
     // ADMIN-only permissions - see CustomerService) - this only controls
@@ -327,7 +329,7 @@ export default function Customers() {
                 onToggleSelectAll={list.toggleSelectAll}
                 sort={list.sort}
                 onSortChange={list.toggleSort}
-                onRowClick={(row) => navigate(`/customers/${row.id}`)}
+                onRowClick={(row) => navigate(`/customers/${row.id}`, { state: { from: location.pathname + location.search } })}
             />
 
             {!list.loading && list.data.length === 0 && (

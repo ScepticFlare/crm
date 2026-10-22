@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import useListReturn from "../hooks/useListReturn";
 
 import PageHeader from "../components/PageHeader";
 import CustomerForm from "../components/CustomerForm";
@@ -16,6 +17,7 @@ export default function ConvertCustomer() {
     const { id } = useParams();
 
     const navigate = useNavigate();
+    const { returnTo } = useListReturn("/opportunities");
 
     const [loading, setLoading] = useState(false);
     const [pageLoading, setPageLoading] = useState(true);
@@ -184,7 +186,7 @@ export default function ConvertCustomer() {
                         handleSubmit={handleSubmit}
                         loading={loading}
                         submitText="Convert to Customer"
-                        onCancel={() => navigate("/opportunities")}
+                        onCancel={() => navigate(returnTo)}
                     />
 
                 </div>

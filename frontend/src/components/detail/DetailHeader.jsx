@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import StatusBadge from "../ui/StatusBadge";
 
 // Shared header for every record-detail page (Leads/Opportunities/
@@ -20,6 +20,7 @@ export default function DetailHeader({
 }) {
 
     const navigate = useNavigate();
+    const location = useLocation();
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef(null);
 
@@ -45,7 +46,7 @@ export default function DetailHeader({
                 <button
                     type="button"
                     className="btn btn-link p-0 mb-3 text-decoration-none detail-back-link"
-                    onClick={() => navigate(backTo)}
+                    onClick={() => navigate(location.state?.from || backTo)}
                 >
                     <i className="bi bi-arrow-left me-1"></i>
                     {backLabel}

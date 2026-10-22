@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import PageHeader from "../components/PageHeader";
 import DataTable from "../components/DataTable";
@@ -7,6 +7,7 @@ import StatusBadge from "../components/ui/StatusBadge";
 import FilterPanel from "../components/list/FilterPanel";
 import ManageColumnsMenu from "../components/list/ManageColumnsMenu";
 import BulkActionBar from "../components/list/BulkActionBar";
+import RecordLink from "../components/list/RecordLink";
 import ListPagination from "../components/list/ListPagination";
 
 import useServerList from "../hooks/useServerList";
@@ -36,9 +37,9 @@ const ALL_FOLLOWUP_COLUMNS = [
     {
         key: "activity", label: "Activity", sortable: true, sortKey: "activityType",
         render: (row) => (
-            <Link to={`/followups/${row.id}`} className="record-link">
+            <RecordLink to={`/followups/${row.id}`} className="record-link">
                 {row.activityType?.name || "-"}
-            </Link>
+            </RecordLink>
         )
     },
     {
@@ -53,6 +54,7 @@ const DEFAULT_VISIBLE_FOLLOWUP_COLUMNS = ALL_FOLLOWUP_COLUMNS.map((c) => c.key);
 export default function FollowUps() {
 
     const navigate = useNavigate();
+    const location = useLocation();
 
     // Backend is the source of truth (FOLLOWUP_DELETE/FOLLOWUP_EXPORT are
     // ADMIN-only permissions - see FollowUpService) - this only controls
@@ -333,7 +335,7 @@ export default function FollowUps() {
                 onToggleSelectAll={list.toggleSelectAll}
                 sort={list.sort}
                 onSortChange={list.toggleSort}
-                onRowClick={(row) => navigate(`/followups/${row.id}`)}
+                onRowClick={(row) => navigate(`/followups/${row.id}`, { state: { from: location.pathname + location.search } })}
             />
 
             {!list.loading && list.data.length === 0 && (

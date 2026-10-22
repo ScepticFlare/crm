@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import useListReturn from "../hooks/useListReturn";
 
 import FollowUpSection from "../components/FollowUpSection";
 import DetailField from "../components/DetailField";
@@ -18,6 +19,7 @@ export default function LeadDetails() {
 
     const { id } = useParams();
     const navigate = useNavigate();
+    const { returnTo, returnState } = useListReturn("/leads");
 
     // Backend is the source of truth (LEAD_DELETE is ADMIN-only - see
     // LeadService.deleteLead) - this only controls whether the Delete menu
@@ -93,7 +95,7 @@ export default function LeadDetails() {
         try {
 
             await deleteLead(lead.id);
-            navigate("/leads");
+            navigate(returnTo);
 
         } catch (error) {
 
@@ -149,7 +151,7 @@ export default function LeadDetails() {
                     title: lead.conversionBlockedReason || "",
                     onClick: () => navigate(`/opportunities/add?leadId=${lead.id}`),
                 }}
-                onEdit={() => navigate(`/leads/edit/${lead.id}`)}
+                onEdit={() => navigate(`/leads/edit/${lead.id}`, { state: returnState })}
                 menuItems={[
                     ...(canSendEmail ? [
                         {

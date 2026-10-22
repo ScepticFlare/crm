@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import useListReturn from "../hooks/useListReturn";
 
 import FollowUpForm from "../components/FollowUpForm";
 import LoadingState from "../components/ui/LoadingState";
@@ -18,6 +19,7 @@ export default function EditFollowUp() {
 
     const { id } = useParams();
     const navigate = useNavigate();
+    const { returnTo } = useListReturn("/followups");
 
     const [employees, setEmployees] = useState([]);
     const [leads, setLeads] = useState([]);
@@ -111,7 +113,7 @@ export default function EditFollowUp() {
 
             alert("Follow Up updated successfully.");
 
-            navigate("/followups");
+            navigate(returnTo);
 
         } catch(err){
 

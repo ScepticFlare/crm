@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import useListReturn from "../hooks/useListReturn";
 
 import PageHeader from "../components/PageHeader";
 import OpportunityForm from "../components/OpportunityForm";
@@ -15,6 +16,7 @@ export default function EditOpportunity() {
     const { id } = useParams();
 
     const navigate = useNavigate();
+    const { returnTo, returnState } = useListReturn("/opportunities");
 
     const [loading, setLoading] = useState(false);
     const [currentStage, setCurrentStage] = useState(null);
@@ -128,11 +130,11 @@ export default function EditOpportunity() {
 
                 // Hand the employee straight to the customer completion
                 // form instead of requiring a separate manual click.
-                navigate(`/customers/convert/${id}`);
+                navigate(`/customers/convert/${id}`, { state: returnState });
 
             } else {
 
-                navigate("/opportunities");
+                navigate(returnTo);
 
             }
 
@@ -172,7 +174,7 @@ export default function EditOpportunity() {
                         handleSubmit={handleSubmit}
                         loading={loading}
                         submitText="Update Opportunity"
-                        onCancel={() => navigate("/opportunities")}
+                        onCancel={() => navigate(returnTo)}
                         leadId={form.leadId}
                         currentStage={currentStage}
                         originalClosingDate={originalClosingDate}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import useListReturn from "../hooks/useListReturn";
 
 import DetailField from "../components/DetailField";
 import SectionCard from "../components/ui/SectionCard";
@@ -20,6 +21,7 @@ export default function CustomerDetails() {
 
     const { id } = useParams();
     const navigate = useNavigate();
+    const { returnTo, returnState } = useListReturn("/customers");
 
     // Backend is the source of truth (CUSTOMER_DELETE is ADMIN-only - see
     // CustomerService.deleteCustomer) - this only controls whether the
@@ -78,7 +80,7 @@ export default function CustomerDetails() {
         try {
 
             await deleteCustomer(customer.id);
-            navigate("/customers");
+            navigate(returnTo);
 
         } catch (err) {
 
@@ -139,7 +141,7 @@ export default function CustomerDetails() {
                 subtitle={customer.contactPerson}
                 status="WON"
                 meta={customer.customerCode || `Customer #${customer.id}`}
-                onEdit={() => navigate(`/customers/edit/${customer.id}`)}
+                onEdit={() => navigate(`/customers/edit/${customer.id}`, { state: returnState })}
                 menuItems={isAdmin ? [
                     {
                         label: "Delete Customer",

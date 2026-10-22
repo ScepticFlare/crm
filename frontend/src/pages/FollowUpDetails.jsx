@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import useListReturn from "../hooks/useListReturn";
 
 import { getFollowUpById, deleteFollowUp } from "../services/followupService";
 import DetailField from "../components/DetailField";
@@ -14,6 +15,7 @@ export default function FollowUpDetails() {
 
     const { id } = useParams();
     const navigate = useNavigate();
+    const { returnTo, returnState } = useListReturn("/followups");
 
     // Backend is the source of truth (FOLLOWUP_DELETE is ADMIN-only - see
     // FollowUpService.deleteFollowUp) - this only controls whether the
@@ -53,7 +55,7 @@ export default function FollowUpDetails() {
         try {
 
             await deleteFollowUp(followUp.id);
-            navigate("/followups");
+            navigate(returnTo);
 
         } catch (err) {
 
@@ -93,7 +95,7 @@ export default function FollowUpDetails() {
                 subtitle={followUp.lead?.companyName || followUp.opportunity?.title}
                 status={followUp.status}
                 meta={`Follow Up #${followUp.id}`}
-                onEdit={() => navigate(`/followups/edit/${followUp.id}`)}
+                onEdit={() => navigate(`/followups/edit/${followUp.id}`, { state: returnState })}
                 menuItems={isAdmin ? [
                     {
                         label: "Delete Follow Up",

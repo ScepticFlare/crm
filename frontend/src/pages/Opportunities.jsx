@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import PageHeader from "../components/PageHeader";
 import DataTable from "../components/DataTable";
@@ -7,6 +7,7 @@ import StatusBadge from "../components/ui/StatusBadge";
 import FilterPanel from "../components/list/FilterPanel";
 import ManageColumnsMenu from "../components/list/ManageColumnsMenu";
 import BulkActionBar from "../components/list/BulkActionBar";
+import RecordLink from "../components/list/RecordLink";
 import ListPagination from "../components/list/ListPagination";
 
 import useServerList from "../hooks/useServerList";
@@ -30,9 +31,9 @@ const ALL_OPPORTUNITY_COLUMNS = [
     {
         key: "title", label: "Opportunity", sortable: true,
         render: (row) => (
-            <Link to={`/opportunities/${row.id}`} className="record-link">
+            <RecordLink to={`/opportunities/${row.id}`} className="record-link">
                 {row.title}
-            </Link>
+            </RecordLink>
         )
     },
     {
@@ -93,6 +94,7 @@ export default function Opportunities({
 }) {
 
     const navigate = useNavigate();
+    const location = useLocation();
 
     // Backend is the source of truth (OPPORTUNITY_DELETE/OPPORTUNITY_EXPORT
     // are ADMIN-only permissions - see OpportunityService) - this only
@@ -380,7 +382,7 @@ export default function Opportunities({
                 onToggleSelectAll={list.toggleSelectAll}
                 sort={list.sort}
                 onSortChange={list.toggleSort}
-                onRowClick={(row) => navigate(`/opportunities/${row.id}`)}
+                onRowClick={(row) => navigate(`/opportunities/${row.id}`, { state: { from: location.pathname + location.search } })}
             />
 
             <ListPagination

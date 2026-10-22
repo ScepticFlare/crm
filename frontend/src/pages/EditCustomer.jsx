@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import useListReturn from "../hooks/useListReturn";
 
 import PageHeader from "../components/PageHeader";
 import CustomerForm from "../components/CustomerForm";
@@ -14,6 +15,7 @@ export default function EditCustomer() {
     const { id } = useParams();
 
     const navigate = useNavigate();
+    const { returnTo } = useListReturn("/customers");
 
     const [loading, setLoading] = useState(false);
 
@@ -96,7 +98,7 @@ export default function EditCustomer() {
                 opportunityId: Number(form.opportunityId)
             });
 
-            navigate("/customers");
+            navigate(returnTo);
 
         } catch (error) {
 
@@ -127,7 +129,7 @@ export default function EditCustomer() {
                         handleSubmit={handleSubmit}
                         loading={loading}
                         submitText="Update Customer"
-                        onCancel={() => navigate("/customers")}
+                        onCancel={() => navigate(returnTo)}
                     />
 
                 </div>

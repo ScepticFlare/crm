@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import useListReturn from "../hooks/useListReturn";
 import PageHeader from "../components/PageHeader";
 import LeadForm from "../components/LeadForm";
 import LoadingState from "../components/ui/LoadingState";
@@ -9,6 +10,7 @@ export default function EditLead() {
 
     const { id } = useParams();
     const navigate = useNavigate();
+    const { returnTo } = useListReturn("/leads");
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -151,7 +153,7 @@ export default function EditLead() {
 
             alert("Lead Updated Successfully");
 
-            navigate("/leads");
+            navigate(returnTo);
 
         } catch (err) {
 
@@ -199,7 +201,7 @@ export default function EditLead() {
                         handleSubmit={handleSubmit}
                         loading={saving}
                         submitText="Update Lead"
-                        onCancel={() => navigate("/leads")}
+                        onCancel={() => navigate(returnTo)}
                         leadId={id}
                     />
 
