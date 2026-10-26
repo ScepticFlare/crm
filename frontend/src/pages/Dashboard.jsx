@@ -146,7 +146,7 @@ const employeeName =
             <div className="col-lg-3 col-md-6">
 
                 <StatCard
-                    title="Leads"
+                    title="Active Leads"
                     value={stats.leads}
                     icon="bi-person-lines-fill"
                     color="#2563eb"

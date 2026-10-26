@@ -220,6 +220,10 @@ export default function EmployeeForm({
                                     Manager
                                 </option>
 
+                                <option value="MARKETING" disabled={roleChangeLocked}>
+                                    Marketing (can export own leads and opportunities)
+                                </option>
+
                                 <option value="ADMIN" disabled={roleChangeLocked}>
                                     Administrator
                                 </option>

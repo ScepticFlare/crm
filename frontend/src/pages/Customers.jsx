@@ -157,7 +157,7 @@ export default function Customers() {
                 selection: selectedOnly ? list.selectedIds : null,
             });
 
-            downloadBlob(blob, "customers.csv");
+            downloadBlob(blob, "customers.xlsx");
 
         } catch (error) {
 

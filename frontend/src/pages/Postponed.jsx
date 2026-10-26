@@ -6,6 +6,7 @@ export default function Postponed() {
         <Opportunities
             title="Postponed"
             fetchOpportunities={getPostponedOpportunities}
+            exportParams={{ stageType: "POSTPONED" }}
         />
     );
 }

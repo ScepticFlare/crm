@@ -48,6 +48,7 @@ import Lost from "./pages/Lost";
 import Unresponsive from "./pages/Unresponsive";
 import Invalid from "./pages/Invalid";
 import Inactive from "./pages/Inactive";
+import LeadCategories from "./pages/LeadCategories";
 
 
 function App() {
@@ -214,6 +215,7 @@ function App() {
                         path="/documents"
                         element={<AdminRoute><Documents /></AdminRoute>}
                     />
+                    <Route path="/lead-categories" element={<LeadCategories />} />
                     <Route path="/opportunities/in-progress" element={<InProgress />} />
 
                     <Route path="/opportunities/postponed" element={<Postponed />} />

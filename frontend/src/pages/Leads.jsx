@@ -17,7 +17,8 @@ import BulkKeepInTouchModal from "../components/email/BulkKeepInTouchModal";
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
 import { formatDate } from "../utils/formatDate";
-import { downloadBlob } from "../utils/downloadFile";
+import { downloadBlob, exportErrorMessage } from "../utils/downloadFile";
+import { canExportLeadsAndOpportunities } from "../utils/permissions";
 import { describeDeleteImpact } from "../utils/deleteImpact";
 
 import {
@@ -42,6 +43,15 @@ const LEAD_STATUS_OPTIONS = [
     { value: "NEW", label: "New" },
     { value: "VALID", label: "Valid" },
     { value: "INVALID", label: "Invalid" },
+];
+
+// The normal Leads page lists only NEW leads and VALID leads that have not
+// been converted yet - INVALID and converted leads are not on it (they stay
+// available under Lead Categories) - so offering "Invalid" here would only
+// ever give an empty list.
+const ACTIVE_LEAD_STATUS_OPTIONS = [
+    { value: "NEW", label: "New" },
+    { value: "VALID", label: "Valid (not yet converted)" },
 ];
 
 const LEAD_VALIDITY_OPTIONS = [
@@ -137,7 +147,13 @@ export default function Leads({
     fetchLeads = getAllLeads,
     addLeadPath = "/leads/add",
     // Optional explanatory text shown under the page header (Inactive page).
-    notice = null
+    notice = null,
+    // Which lead category the Export button exports (backend default: ACTIVE,
+    // the normal Leads page) and any extra export parameters that mirror a
+    // status page's forced server-side filter (e.g. { status: "DROPPED" }).
+    exportCategory = undefined,
+    exportParams = {},
+    showAddLead = true
 }) {
 
     const navigate = useNavigate();
@@ -154,7 +170,14 @@ export default function Leads({
     // whether the Send Email / Send Keep in Touch affordances are shown at
     // all; the backend re-checks the real scope on every call regardless.
     const role = localStorage.getItem("role");
-    const canSendEmail = role === "ADMIN" || role === "MANAGER" || role === "EMPLOYEE";
+    const canSendEmail = role === "ADMIN" || role === "MANAGER" || role === "EMPLOYEE" || role === "MARKETING";
+
+    // ADMIN and MARKETING see the export actions; the backend enforces the
+    // permission and limits the file to the caller's own permitted leads.
+    const canExport = canExportLeadsAndOpportunities(role);
+
+    // The default list (GET /leads) is the operational one: NEW + VALID not yet converted.
+    const isActiveList = fetchLeads === getAllLeads;
 
     const list = useServerList({
         fetchFn: fetchLeads,
@@ -186,7 +209,10 @@ export default function Leads({
     const filterDefs = useMemo(() => {
 
         const defs = [
-            { key: "statusGroup", label: "Lead Status", type: "select", options: LEAD_STATUS_OPTIONS },
+            {
+                key: "statusGroup", label: "Lead Status", type: "select",
+                options: isActiveList ? ACTIVE_LEAD_STATUS_OPTIONS : LEAD_STATUS_OPTIONS
+            },
             {
                 key: "leadSourceId", label: "Lead Source", type: "select",
                 options: leadSources.map((s) => ({ value: s.id, label: s.name }))
@@ -215,13 +241,15 @@ export default function Leads({
         defs.push(
             { key: "city", label: "City", type: "text" },
             { key: "state", label: "State", type: "text" },
-            { key: "leadValidity", label: "Lead Validity", type: "select", options: LEAD_VALIDITY_OPTIONS },
+            ...(isActiveList ? [] : [
+                { key: "leadValidity", label: "Lead Validity", type: "select", options: LEAD_VALIDITY_OPTIONS }
+            ]),
             { key: "created", label: "Created Date", type: "daterange", fromKey: "createdFrom", toKey: "createdTo" }
         );
 
         return defs;
 
-    }, [industries, leadSources, products, batteries, employees]);
+    }, [industries, leadSources, products, batteries, employees, isActiveList]);
 
     const [bulkDeleting, setBulkDeleting] = useState(false);
     const [exporting, setExporting] = useState(false);
@@ -350,16 +378,17 @@ export default function Leads({
 
             const blob = await exportLeads({
                 sort: list.sort,
-                filters: { search: list.search || undefined, ...list.filters },
+                filters: { search: list.search || undefined, ...list.filters, ...exportParams },
                 selection: selectedOnly ? list.selectedIds : null,
+                category: exportCategory,
             });
 
-            downloadBlob(blob, "leads.csv");
+            downloadBlob(blob, "leads.xlsx");
 
         } catch (error) {
 
             console.error(error);
-            alert("Unable to export leads.");
+            alert(await exportErrorMessage(error, "leads"));
 
         } finally {
 
@@ -378,7 +407,7 @@ export default function Leads({
             <PageHeader
                 title={title}
                 subtitle={`${list.totalElements} Lead(s) Found`}
-                buttonText="Add Lead"
+                buttonText={showAddLead ? "Add Lead" : undefined}
                 onButtonClick={() => navigate(addLeadPath)}
             />
 
@@ -422,7 +451,7 @@ export default function Leads({
                             onReset={columns.resetColumns}
                         />
 
-                        {isAdmin && (
+                        {canExport && (
                             <div className="dropdown">
 
                                 <button
@@ -461,16 +490,18 @@ export default function Leads({
 
             </div>
 
-            {(isAdmin || canSendEmail) && (
+            {(isAdmin || canSendEmail || canExport) && (
                 <BulkActionBar
                     count={list.selectedIds.length}
                     onClear={list.clearSelection}
                     actions={[
-                        ...(isAdmin ? [
+                        ...(canExport ? [
                             {
                                 key: "export", label: "Export Selected", icon: "bi-download",
                                 variant: "btn-outline-secondary", onClick: () => handleExport(true), disabled: exporting
                             },
+                        ] : []),
+                        ...(isAdmin ? [
                             {
                                 key: "delete", label: "Delete", icon: "bi-trash",
                                 variant: "btn-outline-danger", onClick: handleBulkDelete, disabled: bulkDeleting
@@ -490,7 +521,7 @@ export default function Leads({
                 columns={columns.visibleColumns}
                 data={list.data}
                 loading={list.loading}
-                selectable={isAdmin || canSendEmail}
+                selectable={isAdmin || canSendEmail || canExport}
                 selectedIds={list.selectedIds}
                 onToggleSelect={list.toggleSelect}
                 onToggleSelectAll={list.toggleSelectAll}

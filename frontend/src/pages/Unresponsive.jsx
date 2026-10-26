@@ -9,12 +9,15 @@ export default function Unresponsive() {
             <Leads
                 title="Unresponsive Leads"
                 fetchLeads={getUnresponsiveLeads}
+                exportCategory="ALL"
+                exportParams={{ status: "UNRESPONSIVE" }}
             />
 
             <div className="mt-4">
                 <Opportunities
                     title="Unresponsive Opportunities"
                     fetchOpportunities={getUnresponsiveOpportunities}
+                    exportParams={{ stageType: "LEGACY_UNRESPONSIVE" }}
                 />
             </div>
         </>

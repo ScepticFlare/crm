@@ -9,12 +9,15 @@ export default function Lost() {
             <Leads
                 title="Lost Leads"
                 fetchLeads={getLostLeads}
+                exportCategory="ALL"
+                exportParams={{ status: "LOST" }}
             />
 
             <div className="mt-4">
                 <Opportunities
                     title="Lost Opportunities"
                     fetchOpportunities={getLostOpportunities}
+                    exportParams={{ stageType: "LOST" }}
                 />
             </div>
         </>

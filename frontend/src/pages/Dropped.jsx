@@ -9,12 +9,15 @@ export default function Dropped() {
             <Leads
                 title="Dropped Leads"
                 fetchLeads={getDroppedLeads}
+                exportCategory="ALL"
+                exportParams={{ status: "DROPPED" }}
             />
 
             <div className="mt-4">
                 <Opportunities
                     title="Dropped Opportunities"
                     fetchOpportunities={getDroppedOpportunities}
+                    exportParams={{ stageType: "LEGACY_DROPPED" }}
                 />
             </div>
         </>

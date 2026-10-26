@@ -65,6 +65,22 @@ export const getInactiveLeads = async (listArgs) => {
     return response.data;
 };
 
+// History / reporting view of any lead category (ALL, ACTIVE, NEW,
+// VALID_UNCONVERTED, INVALID, CONVERTED) - invalid and converted leads are not
+// on the normal Leads page but stay reachable here.
+export const getLeadsByCategory = (category) => async (listArgs) => {
+    const response = await api.get("/leads/report", {
+        params: { ...toListParams(listArgs), category }
+    });
+    return response.data;
+};
+
+// { NEW, VALID_UNCONVERTED, INVALID, CONVERTED, TOTAL }
+export const getLeadCategoryCounts = async () => {
+    const response = await api.get("/leads/report/counts");
+    return response.data;
+};
+
 export const importLeads = async (file) => {
 
     const formData = new FormData();
@@ -94,13 +110,17 @@ export const bulkDeleteLeads = async (ids) => {
 
 // selection: array of row ids to export exactly (bulk "export selected"),
 // or null/undefined to export everything matching the current filters/search.
-export const exportLeads = async ({ sort = null, filters = {}, selection = null } = {}) => {
+// category: which lead category to export (ACTIVE - the normal Leads page - is
+// the backend default; ALL / INVALID / CONVERTED / ... for reporting).
+// Returns an .xlsx workbook.
+export const exportLeads = async ({ sort = null, filters = {}, selection = null, category = undefined } = {}) => {
 
     const response = await api.get("/leads/export", {
         params: {
             sortBy: sort?.field || undefined,
             sortDir: sort?.dir || undefined,
             ...filters,
+            category,
             ids: selection && selection.length > 0 ? selection.join(",") : undefined,
         },
         responseType: "blob",

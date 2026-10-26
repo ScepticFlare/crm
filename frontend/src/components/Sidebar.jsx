@@ -18,6 +18,11 @@ export default function Sidebar() {
             icon: "bi-person-lines-fill",
         },
         {
+            name: "Lead Categories",
+            path: "/lead-categories",
+            icon: "bi-funnel-fill",
+        },
+        {
             name: "Opportunities",
             path: "/opportunities",
             icon: "bi-briefcase-fill",

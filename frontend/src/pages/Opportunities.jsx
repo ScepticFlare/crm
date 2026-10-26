@@ -13,7 +13,8 @@ import ListPagination from "../components/list/ListPagination";
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
 import { formatDate } from "../utils/formatDate";
-import { downloadBlob } from "../utils/downloadFile";
+import { downloadBlob, exportErrorMessage } from "../utils/downloadFile";
+import { canExportLeadsAndOpportunities } from "../utils/permissions";
 
 import {
     getAllOpportunities,
@@ -90,7 +91,10 @@ const DEFAULT_VISIBLE_OPPORTUNITY_COLUMNS = ["company", "title", "value", "date"
 
 export default function Opportunities({
     title = "Opportunities",
-    fetchOpportunities = getAllOpportunities
+    fetchOpportunities = getAllOpportunities,
+    // Export parameters mirroring a stage page's forced server-side filter
+    // (e.g. { stageType: "LOST" }), so Export matches what the page lists.
+    exportParams = {}
 }) {
 
     const navigate = useNavigate();
@@ -101,6 +105,10 @@ export default function Opportunities({
     // controls whether the checkbox/bulk-delete/export affordances are
     // shown at all, same "UX/defense-in-depth guard" rationale as AdminRoute.
     const isAdmin = localStorage.getItem("role") === "ADMIN";
+
+    // ADMIN and MARKETING see the export actions (the backend enforces the
+    // OPPORTUNITY_EXPORT permission and the caller's own data scope).
+    const canExport = canExportLeadsAndOpportunities();
 
     const list = useServerList({
         fetchFn: fetchOpportunities,
@@ -212,16 +220,16 @@ export default function Opportunities({
 
             const blob = await exportOpportunities({
                 sort: list.sort,
-                filters: { search: list.search || undefined, ...list.filters },
+                filters: { search: list.search || undefined, ...list.filters, ...exportParams },
                 selection: selectedOnly ? list.selectedIds : null,
             });
 
-            downloadBlob(blob, "opportunities.csv");
+            downloadBlob(blob, "opportunities.xlsx");
 
         } catch (error) {
 
             console.error(error);
-            alert("Unable to export opportunities.");
+            alert(await exportErrorMessage(error, "opportunities"));
 
         } finally {
 
@@ -316,7 +324,7 @@ export default function Opportunities({
                             onReset={columns.resetColumns}
                         />
 
-                        {isAdmin && (
+                        {canExport && (
                             <div className="dropdown">
 
                                 <button
@@ -355,19 +363,19 @@ export default function Opportunities({
 
             </div>
 
-            {isAdmin && (
+            {(isAdmin || canExport) && (
                 <BulkActionBar
                     count={list.selectedIds.length}
                     onClear={list.clearSelection}
                     actions={[
-                        {
+                        ...(canExport ? [{
                             key: "export", label: "Export Selected", icon: "bi-download",
                             variant: "btn-outline-secondary", onClick: () => handleExport(true), disabled: exporting
-                        },
-                        {
+                        }] : []),
+                        ...(isAdmin ? [{
                             key: "delete", label: "Delete", icon: "bi-trash",
                             variant: "btn-outline-danger", onClick: handleBulkDelete, disabled: bulkDeleting
-                        },
+                        }] : []),
                     ]}
                 />
             )}
@@ -376,7 +384,7 @@ export default function Opportunities({
                 columns={columns.visibleColumns}
                 data={list.data}
                 loading={list.loading}
-                selectable={isAdmin}
+                selectable={isAdmin || canExport}
                 selectedIds={list.selectedIds}
                 onToggleSelect={list.toggleSelect}
                 onToggleSelectAll={list.toggleSelectAll}

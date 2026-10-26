@@ -16,6 +16,8 @@ export default function Inactive() {
         <Leads
             title="Inactive Leads"
             fetchLeads={getInactiveLeads}
+            exportCategory="ALL"
+            exportParams={{ inactiveView: true }}
             notice={(
                 <div className="alert alert-info py-2">
                     <strong>Stale leads need attention, not automatic action.</strong>{" "}

@@ -9,6 +9,8 @@ export default function Invalid() {
             <Leads
                 title="Invalid Leads"
                 fetchLeads={getInvalidLeads}
+                exportCategory="ALL"
+                exportParams={{ status: "INVALID" }}
                 addLeadPath="/leads/add?status=INVALID"
             />
 
@@ -16,6 +18,7 @@ export default function Invalid() {
                 <Opportunities
                     title="Invalid Opportunities"
                     fetchOpportunities={getInvalidOpportunities}
+                    exportParams={{ stageType: "LEGACY_INVALID" }}
                 />
             </div>
         </>

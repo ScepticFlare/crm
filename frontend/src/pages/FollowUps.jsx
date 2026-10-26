@@ -157,7 +157,7 @@ export default function FollowUps() {
                 selection: selectedOnly ? list.selectedIds : null,
             });
 
-            downloadBlob(blob, "followups.csv");
+            downloadBlob(blob, "followups.xlsx");
 
         } catch (error) {
 
