@@ -32,7 +32,7 @@ export default function LeadDetails() {
     // whether the Send Email menu item is offered at all; the backend
     // re-checks the real scope on every call regardless.
     const role = localStorage.getItem("role");
-    const canSendEmail = role === "ADMIN" || role === "MANAGER" || role === "EMPLOYEE" || role === "MARKETING";
+    const canSendEmail = role === "ADMIN" || role === "MANAGER" || role === "EMPLOYEE";
 
     const [lead, setLead] = useState(null);
     const [loading, setLoading] = useState(true);

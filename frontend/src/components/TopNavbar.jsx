@@ -55,7 +55,7 @@ export default function TopNavbar() {
 
                     {role === "ADMIN"
                         ? "Administrator"
-                        : role === "MARKETING" ? "Marketing" : "Employee"}
+                        : "Employee"}
 
                 </small>
 

@@ -14,7 +14,6 @@ import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
 import { formatDate } from "../utils/formatDate";
 import { downloadBlob, exportErrorMessage } from "../utils/downloadFile";
-import { canExportLeadsAndOpportunities } from "../utils/permissions";
 
 import {
     getAllOpportunities,
@@ -106,9 +105,9 @@ export default function Opportunities({
     // shown at all, same "UX/defense-in-depth guard" rationale as AdminRoute.
     const isAdmin = localStorage.getItem("role") === "ADMIN";
 
-    // ADMIN and MARKETING see the export actions (the backend enforces the
-    // OPPORTUNITY_EXPORT permission and the caller's own data scope).
-    const canExport = canExportLeadsAndOpportunities();
+    // Every employee can export opportunities (OPPORTUNITY_EXPORT is granted to
+    // every role by migration V11); the backend limits the file to the records
+    // the caller may already view and answers 403 otherwise.
 
     const list = useServerList({
         fetchFn: fetchOpportunities,
@@ -324,7 +323,7 @@ export default function Opportunities({
                             onReset={columns.resetColumns}
                         />
 
-                        {canExport && (
+                        {(
                             <div className="dropdown">
 
                                 <button
@@ -363,15 +362,15 @@ export default function Opportunities({
 
             </div>
 
-            {(isAdmin || canExport) && (
+            {(
                 <BulkActionBar
                     count={list.selectedIds.length}
                     onClear={list.clearSelection}
                     actions={[
-                        ...(canExport ? [{
+                        {
                             key: "export", label: "Export Selected", icon: "bi-download",
                             variant: "btn-outline-secondary", onClick: () => handleExport(true), disabled: exporting
-                        }] : []),
+                        },
                         ...(isAdmin ? [{
                             key: "delete", label: "Delete", icon: "bi-trash",
                             variant: "btn-outline-danger", onClick: handleBulkDelete, disabled: bulkDeleting
@@ -384,7 +383,7 @@ export default function Opportunities({
                 columns={columns.visibleColumns}
                 data={list.data}
                 loading={list.loading}
-                selectable={isAdmin || canExport}
+                selectable
                 selectedIds={list.selectedIds}
                 onToggleSelect={list.toggleSelect}
                 onToggleSelectAll={list.toggleSelectAll}

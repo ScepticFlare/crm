@@ -18,7 +18,6 @@ import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
 import { formatDate } from "../utils/formatDate";
 import { downloadBlob, exportErrorMessage } from "../utils/downloadFile";
-import { canExportLeadsAndOpportunities } from "../utils/permissions";
 import { describeDeleteImpact } from "../utils/deleteImpact";
 
 import {
@@ -53,6 +52,12 @@ const ACTIVE_LEAD_STATUS_OPTIONS = [
     { value: "NEW", label: "New" },
     { value: "VALID", label: "Valid (not yet converted)" },
 ];
+
+// The stored status of leads created before the NEW / VALID / INVALID workflow
+// (they are shown under the group they map to, with this value as a tag).
+const LEGACY_STATUS_OPTIONS = [
+    "CONTACTED", "QUOTATION_SENT", "NEGOTIATION", "WON", "LOST", "DROPPED", "UNRESPONSIVE", "INACTIVE",
+].map((value) => ({ value, label: value.replaceAll("_", " ") }));
 
 const LEAD_VALIDITY_OPTIONS = [
     { value: "VALID", label: "Valid" },
@@ -170,11 +175,11 @@ export default function Leads({
     // whether the Send Email / Send Keep in Touch affordances are shown at
     // all; the backend re-checks the real scope on every call regardless.
     const role = localStorage.getItem("role");
-    const canSendEmail = role === "ADMIN" || role === "MANAGER" || role === "EMPLOYEE" || role === "MARKETING";
+    const canSendEmail = role === "ADMIN" || role === "MANAGER" || role === "EMPLOYEE";
 
-    // ADMIN and MARKETING see the export actions; the backend enforces the
-    // permission and limits the file to the caller's own permitted leads.
-    const canExport = canExportLeadsAndOpportunities(role);
+    // Every employee can export leads (LEAD_EXPORT is granted to every role by
+    // migration V11); the backend limits the file to the records the caller
+    // may already view and answers 403 otherwise (shown by handleExport).
 
     // The default list (GET /leads) is the operational one: NEW + VALID not yet converted.
     const isActiveList = fetchLeads === getAllLeads;
@@ -241,6 +246,7 @@ export default function Leads({
         defs.push(
             { key: "city", label: "City", type: "text" },
             { key: "state", label: "State", type: "text" },
+            { key: "status", label: "Original (older) status", type: "select", options: LEGACY_STATUS_OPTIONS },
             ...(isActiveList ? [] : [
                 { key: "leadValidity", label: "Lead Validity", type: "select", options: LEAD_VALIDITY_OPTIONS }
             ]),
@@ -451,7 +457,7 @@ export default function Leads({
                             onReset={columns.resetColumns}
                         />
 
-                        {canExport && (
+                        {(
                             <div className="dropdown">
 
                                 <button
@@ -490,17 +496,15 @@ export default function Leads({
 
             </div>
 
-            {(isAdmin || canSendEmail || canExport) && (
+            {(
                 <BulkActionBar
                     count={list.selectedIds.length}
                     onClear={list.clearSelection}
                     actions={[
-                        ...(canExport ? [
-                            {
-                                key: "export", label: "Export Selected", icon: "bi-download",
-                                variant: "btn-outline-secondary", onClick: () => handleExport(true), disabled: exporting
-                            },
-                        ] : []),
+                        {
+                            key: "export", label: "Export Selected", icon: "bi-download",
+                            variant: "btn-outline-secondary", onClick: () => handleExport(true), disabled: exporting
+                        },
                         ...(isAdmin ? [
                             {
                                 key: "delete", label: "Delete", icon: "bi-trash",
@@ -521,7 +525,7 @@ export default function Leads({
                 columns={columns.visibleColumns}
                 data={list.data}
                 loading={list.loading}
-                selectable={isAdmin || canSendEmail || canExport}
+                selectable
                 selectedIds={list.selectedIds}
                 onToggleSelect={list.toggleSelect}
                 onToggleSelectAll={list.toggleSelectAll}

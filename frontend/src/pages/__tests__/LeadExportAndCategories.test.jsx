@@ -30,7 +30,6 @@ vi.mock("../../utils/downloadFile", async (importActual) => ({
 
 import Leads from "../Leads";
 import LeadCategories from "../LeadCategories";
-import { canExportLeadsAndOpportunities } from "../../utils/permissions";
 import { LEAD_CATEGORY_TABS } from "../../utils/leadCategories";
 
 function setRole(role) {
@@ -69,34 +68,24 @@ afterEach(() => {
     localStorage.clear();
 });
 
-describe("export permission affordance", () => {
+describe("export affordance", () => {
 
-    it("is shown for ADMIN and MARKETING only", () => {
-        expect(canExportLeadsAndOpportunities("ADMIN")).toBe(true);
-        expect(canExportLeadsAndOpportunities("MARKETING")).toBe(true);
-        expect(canExportLeadsAndOpportunities("MANAGER")).toBe(false);
-        expect(canExportLeadsAndOpportunities("EMPLOYEE")).toBe(false);
-        expect(canExportLeadsAndOpportunities(null)).toBe(false);
-    });
-
-    it("Leads page shows Export to MARKETING, hides it from a plain EMPLOYEE", async () => {
-        setRole("MARKETING");
-        const { unmount } = renderAt("/leads", <Leads />);
-        await waitFor(() => expect(leadService.getAllLeads).toHaveBeenCalled());
-        expect(screen.getByText("Export all matching")).toBeTruthy();
-        unmount();
-
-        setRole("EMPLOYEE");
-        renderAt("/leads", <Leads />);
-        await waitFor(() => expect(leadService.getAllLeads).toHaveBeenCalledTimes(2));
-        expect(screen.queryByText("Export all matching")).toBeNull();
+    it("Leads page shows Export to every role - no special role is needed", async () => {
+        for (const [i, role] of ["ADMIN", "MANAGER", "EMPLOYEE"].entries()) {
+            setRole(role);
+            const { unmount } = renderAt("/leads", <Leads />);
+            await waitFor(() => expect(leadService.getAllLeads).toHaveBeenCalledTimes(i + 1));
+            expect(screen.getByText("Export all matching")).toBeTruthy();
+            expect(screen.getByText(/Export selected/)).toBeTruthy();
+            unmount();
+        }
     });
 });
 
 describe("Leads page export", () => {
 
-    it("exports the active list as .xlsx by default (no category override)", async () => {
-        setRole("MARKETING");
+    it("an employee exports the active list as .xlsx by default (no category override)", async () => {
+        setRole("EMPLOYEE");
         renderAt("/leads", <Leads />);
         await waitFor(() => expect(leadService.getAllLeads).toHaveBeenCalled());
 
@@ -108,7 +97,7 @@ describe("Leads page export", () => {
     });
 
     it("shows a clear permission message when the backend answers 403", async () => {
-        setRole("MARKETING");
+        setRole("EMPLOYEE");
         leadService.exportLeads.mockRejectedValue({ response: { status: 403 } });
         renderAt("/leads", <Leads />);
         await waitFor(() => expect(leadService.getAllLeads).toHaveBeenCalled());
@@ -145,7 +134,7 @@ describe("Lead Categories page", () => {
     });
 
     it("shows the per-category counts, which add up to the total", async () => {
-        setRole("MARKETING");
+        setRole("EMPLOYEE");
         renderAt("/lead-categories", <LeadCategories />);
 
         await waitFor(() => expect(screen.getByText("10")).toBeTruthy());
@@ -157,7 +146,7 @@ describe("Lead Categories page", () => {
     });
 
     it("selecting a category loads that category and exports it", async () => {
-        setRole("MARKETING");
+        setRole("EMPLOYEE");
         const invalidFetch = vi.fn().mockResolvedValue(emptyPage);
         leadService.getLeadsByCategory.mockImplementation((category) =>
             category === "INVALID" ? invalidFetch : vi.fn().mockResolvedValue(emptyPage));
@@ -210,6 +199,8 @@ describe("normal Leads page", () => {
         await openFilters();
 
         expect(optionsOf("Lead Status")).toEqual(["All", "New", "Valid (not yet converted)"]);
+        // leads that still carry an older status can be isolated by it
+        expect(optionsOf("Original (older) status")).toContain("WON");
         expect(screen.queryByText("Lead Validity")).toBeNull();
         expect(screen.getByText("Add Lead")).toBeTruthy();
     });
