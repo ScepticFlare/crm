@@ -124,6 +124,12 @@ export default function Sidebar() {
         });
 
         menuItems.push({
+            name: "Do-not-email List",
+            path: "/email-suppressions",
+            icon: "bi-slash-circle-fill",
+        });
+
+        menuItems.push({
             name: "Documents",
             path: "/documents",
             icon: "bi-folder-fill",

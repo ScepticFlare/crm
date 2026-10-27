@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import TemplateSelect from "./TemplateSelect";
 
@@ -6,19 +6,39 @@ import { getEmailTemplates } from "../../services/emailTemplateService";
 import {
     BULK_EMAIL_MAX_RECORDS,
     RETRYABLE_OUTCOMES,
-    newBatchId,
+    UNSETTLED_OUTCOMES,
+    createBulkEmailBatch,
+    getBulkEmailBatch,
     previewBulkEmail,
     sendBulkEmail,
 } from "../../services/bulkEmailService";
+import {
+    clearBulkEmailRecovery,
+    loadBulkEmailRecovery,
+    saveBulkEmailRecovery,
+} from "../../services/bulkEmailRecovery";
 
 const OUTCOME_STYLE = {
     ACCEPTED: { className: "bg-success", label: "Accepted by provider" },
     FAILED: { className: "bg-danger", label: "Failed - not sent" },
     UNKNOWN: { className: "bg-warning text-dark", label: "Unknown - may have been sent" },
-    NO_RESPONSE: { className: "bg-warning text-dark", label: "No response - may have been sent" },
+    UNVERIFIED: { className: "bg-warning text-dark", label: "Unverified - may have been sent" },
     IN_PROGRESS: { className: "bg-info text-dark", label: "In progress" },
-    EXCLUDED: { className: "bg-secondary", label: "Not sent" },
-    NOT_ATTEMPTED: { className: "bg-secondary", label: "Not attempted" },
+    NOT_ATTEMPTED: { className: "bg-secondary", label: "Not sent yet" },
+    EXCLUDED: { className: "bg-secondary", label: "Not included" },
+    REMOVED: { className: "bg-light text-dark border", label: "Removed by you" },
+};
+
+// Used when a batch is picked up again after a refresh: only the exclusion CODE
+// was kept, never the original wording or any customer detail.
+const EXCLUSION_TEXT = {
+    NOT_AVAILABLE: "This record was not found or you do not have access to it.",
+    NO_EMAIL: "No email address on file.",
+    INVALID_EMAIL: "The email address on file is not valid.",
+    DUPLICATE_EMAIL: "Same email address as another selected record - one email is sent per address.",
+    UNRESOLVED_PLACEHOLDER: "A placeholder in the message had no value for this record.",
+    SUPPRESSED: "This email address is on the do-not-email list.",
+    RECENTLY_EMAILED: "This address (or record) was already emailed - or may have been - recently.",
 };
 
 const PLACEHOLDERS = {
@@ -27,13 +47,17 @@ const PLACEHOLDERS = {
 };
 
 // Bulk email for the selected Leads or Opportunities. Steps:
-//   recipients -> message -> review -> results
-// Nothing is sent until the explicit Send button on the review step. The
-// backend validates and authorizes every record on every call (preview and
-// each chunk of the send), so what is shown here is advice, not the authority.
-// Removing a recipient here only leaves them out of THIS batch - the CRM
-// record is never touched. Editing the subject/body only affects this batch;
-// the shared template is never modified.
+//   (resume) -> recipients -> message -> review -> results
+// Nothing is sent until the explicit Send button on the review step. Pressing it
+// first creates a BATCH on the server, which pins the recipients and the message;
+// from then on this window can only ask the server to send (more of) that batch -
+// it cannot change who gets it or what it says. The backend validates and
+// authorizes every record on every call, so what is shown here is advice, not the
+// authority. Removing a recipient only leaves them out of THIS batch (the CRM
+// record is never touched), and editing the message never modifies the template.
+//
+// An unfinished batch is remembered (id only, see bulkEmailRecovery) so it can be
+// resumed or reviewed after a refresh.
 export default function BulkEmailModal({ show, ...props }) {
 
     // The body is mounted only while the dialog is open, so every opening starts
@@ -42,20 +66,24 @@ export default function BulkEmailModal({ show, ...props }) {
 
 }
 
-function BulkEmailModalBody({ target, ids, onClose, onSent }) {
+function BulkEmailModalBody({ target, ids = [], resumeOnly = false, onClose, onSent }) {
 
     const noun = target === "OPPORTUNITY" ? "opportunity" : "lead";
     const nouns = target === "OPPORTUNITY" ? "opportunities" : "leads";
 
-    const [step, setStep] = useState("recipients"); // recipients | message | review | results
+    // An earlier, unfinished batch of this user (if any).
+    const [stored] = useState(() => loadBulkEmailRecovery(target));
+
+    const [step, setStep] = useState(stored ? "resume" : (resumeOnly ? "nothing" : "recipients"));
+    // recipients | message | review | results | resume | nothing
 
     const overCap = ids.length > BULK_EMAIL_MAX_RECORDS;
 
-    const [loading, setLoading] = useState(!overCap);
+    const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState(null);
     const [actionError, setActionError] = useState(null);
 
-    const error = overCap
+    const error = step === "recipients" && overCap
         ? `At most ${BULK_EMAIL_MAX_RECORDS} ${nouns} can be emailed in one batch - you selected ${ids.length}. Clear some and try again.`
         : (actionError || loadError);
 
@@ -70,15 +98,25 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
     const [reviewPreview, setReviewPreview] = useState(null);
     const [selectedPreviewId, setSelectedPreviewId] = useState(null);
 
+    // The resume offer.
+    const [resumeView, setResumeView] = useState(null);
+    const [resumeNote, setResumeNote] = useState(null);
+
+    // Once a batch exists (created here, or picked up again) it is frozen:
+    //   batch   { batchId, recipientIds }
+    //   context what happened to every OTHER selected record before sending
+    //   batchRows  the server's outcome for each recipient of the batch
+    const [batch, setBatch] = useState(null);
+    const [context, setContext] = useState({ selectedIds: [], preExcluded: {}, removedIds: [] });
+    const [batchRows, setBatchRows] = useState([]);
+
     const [sending, setSending] = useState(false);
     const [progress, setProgress] = useState({ done: 0, total: 0 });
-    const [results, setResults] = useState([]);
     const [sendError, setSendError] = useState(null);
 
-    // One id per batch, kept across retries - it is what makes a repeat safe.
-    const batchIdRef = useRef(null);
     // Synchronous guard against a double click before React re-renders.
     const sendingRef = useRef(false);
+    const previewRequested = useRef(false);
 
     function describeError(err, fallback) {
 
@@ -92,9 +130,11 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
     // Recipients check: authoritative, server-side, sends nothing.
     useEffect(() => {
 
-        if (overCap) {
+        if (step !== "recipients" || previewRequested.current || recipientsPreview || overCap || ids.length === 0) {
             return undefined;
         }
+
+        previewRequested.current = true;
 
         let cancelled = false;
 
@@ -109,10 +149,46 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
                 if (!cancelled) {
                     setLoadError(describeError(err, "Unable to check the selected records."));
                 }
-            })
-            .finally(() => {
+            });
+
+        return () => {
+            cancelled = true;
+            previewRequested.current = false;
+        };
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [step]);
+
+    // The resume offer: ask the server where the earlier batch stands.
+    useEffect(() => {
+
+        if (step !== "resume" || !stored) {
+            return undefined;
+        }
+
+        let cancelled = false;
+
+        getBulkEmailBatch(stored.batchId)
+            .then((view) => {
                 if (!cancelled) {
-                    setLoading(false);
+                    setResumeView(view);
+                }
+            })
+            .catch((err) => {
+
+                if (cancelled) {
+                    return;
+                }
+
+                const status = err.response?.status;
+
+                if (status === 403 || status === 404) {
+                    // The batch is gone or not ours any more: forget the pointer.
+                    clearBulkEmailRecovery(target);
+                    setResumeNote("The earlier bulk email batch is no longer available.");
+                    setStep(ids.length > 0 && !resumeOnly ? "recipients" : "nothing");
+                } else {
+                    setLoadError("Could not check the earlier bulk email batch. Try again in a moment.");
                 }
             });
 
@@ -121,7 +197,7 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
         };
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [step]);
 
     const eligible = (recipientsPreview?.recipients || []).filter((r) => r.eligible);
     const excluded = (recipientsPreview?.recipients || []).filter((r) => !r.eligible);
@@ -190,7 +266,65 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
 
     }
 
-    async function runSend(sendIds) {
+    function mergeBatchRows(incoming) {
+
+        setBatchRows((previous) => {
+
+            const merged = new Map(previous.map((r) => [r.id, r]));
+            incoming.forEach((r) => merged.set(r.id, r));
+
+            return Array.from(merged.values());
+
+        });
+
+    }
+
+    // The server's view of the whole batch replaces what we know locally.
+    async function refreshFromServer(batchId) {
+
+        try {
+
+            const view = await getBulkEmailBatch(batchId);
+
+            setBatchRows(view.results);
+
+            return view;
+
+        } catch (err) {
+
+            console.error(err);
+            setSendError((prev) => (prev ? `${prev} ` : "")
+                + "Could not refresh the results from the server - use Check status.");
+
+            return null;
+
+        }
+
+    }
+
+    async function runChunks(batchId, sendIds) {
+
+        setSendError(null);
+        setProgress({ done: 0, total: sendIds.length });
+
+        const outcome = await sendBulkEmail(
+            { batchId, ids: sendIds },
+            (soFar, done, total) => {
+                mergeBatchRows(soFar);
+                setProgress({ done, total });
+            }
+        );
+
+        mergeBatchRows(outcome.results);
+        setSendError(outcome.error);
+
+        // The server's record is authoritative for what happened to the batch.
+        await refreshFromServer(batchId);
+
+    }
+
+    // Review -> create the batch on the server, remember it, then send it in chunks.
+    async function handleSend() {
 
         if (sendingRef.current) {
             return;
@@ -198,27 +332,49 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
 
         sendingRef.current = true;
         setSending(true);
-        setSendError(null);
-        setStep("results");
-
-        if (!batchIdRef.current) {
-            batchIdRef.current = newBatchId();
-        }
-
-        setProgress({ done: 0, total: sendIds.length });
+        setActionError(null);
 
         try {
 
-            const outcome = await sendBulkEmail(
-                { target, ids: sendIds, subject, body, templateId, batchId: batchIdRef.current },
-                (soFar, done, total) => {
-                    setResults((prev) => mergeResults(prev, soFar));
-                    setProgress({ done, total });
-                }
-            );
+            const sendable = (reviewPreview?.recipients || []).filter((r) => r.eligible).map((r) => r.id);
 
-            setResults((prev) => mergeResults(prev, outcome.results));
-            setSendError(outcome.error);
+            let created;
+
+            try {
+                created = await createBulkEmailBatch({ target, ids: sendable, subject, body, templateId });
+            } catch (err) {
+                console.error(err);
+                setActionError(describeError(err, "Could not start the batch - nothing was sent."));
+                return;
+            }
+
+            // Everything selected that is NOT in the batch, and why.
+            const preExcluded = {};
+
+            (recipientsPreview?.recipients || []).filter((r) => !r.eligible)
+                .forEach((r) => { preExcluded[r.id] = { code: r.exclusionCode, message: r.exclusionMessage }; });
+
+            (reviewPreview?.recipients || []).filter((r) => !r.eligible)
+                .forEach((r) => { preExcluded[r.id] = { code: r.exclusionCode, message: r.exclusionMessage }; });
+
+            const nextContext = { selectedIds: [...ids], preExcluded, removedIds: [...removedIds] };
+
+            setContext(nextContext);
+            setBatch({ batchId: created.batchId, recipientIds: sendable });
+            setBatchRows(sendable.map((id) => ({ id, outcome: "NOT_ATTEMPTED", detail: "Not sent yet." })));
+            setStep("results");
+
+            const codes = {};
+            Object.entries(preExcluded).forEach(([id, v]) => { codes[id] = v.code; });
+
+            saveBulkEmailRecovery(target, {
+                batchId: created.batchId,
+                selectedIds: nextContext.selectedIds,
+                preExcluded: codes,
+                removedIds: nextContext.removedIds,
+            });
+
+            await runChunks(created.batchId, sendable);
 
         } finally {
 
@@ -229,35 +385,81 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
 
     }
 
-    function mergeResults(previous, incoming) {
+    // Sends only what is safe to send again: confirmed failures and records the
+    // server says it has not touched. Never UNKNOWN / UNVERIFIED / IN_PROGRESS.
+    async function handleRetry() {
 
-        const merged = new Map(previous.map((r) => [r.id, r]));
-        incoming.forEach((r) => merged.set(r.id, r));
+        if (sendingRef.current || !batch) {
+            return;
+        }
 
-        return Array.from(merged.values());
+        const retryIds = batchRows.filter((r) => RETRYABLE_OUTCOMES.includes(r.outcome)).map((r) => r.id);
+
+        if (retryIds.length === 0) {
+            return;
+        }
+
+        sendingRef.current = true;
+        setSending(true);
+
+        try {
+            await runChunks(batch.batchId, retryIds);
+        } finally {
+            sendingRef.current = false;
+            setSending(false);
+        }
 
     }
 
-    function handleSend() {
+    async function handleCheckStatus() {
 
-        const sendable = (reviewPreview?.recipients || []).filter((r) => r.eligible).map((r) => r.id);
+        if (sendingRef.current || !batch) {
+            return;
+        }
 
-        // The review's excluded recipients are shown in the results as "Not sent".
-        const notSent = (reviewPreview?.recipients || [])
-            .filter((r) => !r.eligible)
-            .map((r) => ({ id: r.id, companyName: r.companyName, email: r.email, outcome: "EXCLUDED", detail: r.exclusionMessage }));
+        sendingRef.current = true;
+        setSending(true);
+        setSendError(null);
 
-        setResults(notSent);
-        runSend(sendable);
+        try {
+            await refreshFromServer(batch.batchId);
+        } finally {
+            sendingRef.current = false;
+            setSending(false);
+        }
 
     }
 
-    function handleRetry() {
+    // Picks an earlier batch up again: the server's record is the truth.
+    function adoptEarlierBatch() {
 
-        const retryIds = results.filter((r) => RETRYABLE_OUTCOMES.includes(r.outcome)).map((r) => r.id);
+        const preExcluded = {};
 
-        if (retryIds.length > 0) {
-            runSend(retryIds);
+        Object.entries(stored.preExcluded || {}).forEach(([id, code]) => {
+            preExcluded[id] = { code, message: EXCLUSION_TEXT[code] || "Not included." };
+        });
+
+        setContext({
+            selectedIds: stored.selectedIds,
+            preExcluded,
+            removedIds: stored.removedIds || [],
+        });
+
+        setBatch({ batchId: stored.batchId, recipientIds: resumeView.batch?.recipientIds || resumeView.results.map((r) => r.id) });
+        setBatchRows(resumeView.results);
+        setStep("results");
+
+    }
+
+    function discardEarlierBatch() {
+
+        clearBulkEmailRecovery(target);
+        setResumeView(null);
+
+        if (ids.length > 0 && !resumeOnly) {
+            setStep("recipients");
+        } else {
+            onClose();
         }
 
     }
@@ -268,11 +470,17 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
             return;
         }
 
-        const shouldRefresh = step === "results";
+        const inResults = step === "results";
+
+        // A batch with nothing left to do is forgotten; an unfinished one is kept
+        // so it can be resumed.
+        if (inResults && !hasUnfinished(batchRows)) {
+            clearBulkEmailRecovery(target);
+        }
 
         onClose();
 
-        if (shouldRefresh) {
+        if (inResults) {
             onSent?.();
         }
 
@@ -282,8 +490,48 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
     const reviewExcluded = (reviewPreview?.recipients || []).filter((r) => !r.eligible);
     const previewed = reviewEligible.find((r) => r.id === selectedPreviewId) || reviewEligible[0];
 
-    const counts = results.reduce((acc, r) => ({ ...acc, [r.outcome]: (acc[r.outcome] || 0) + 1 }), {});
-    const retryable = results.filter((r) => RETRYABLE_OUTCOMES.includes(r.outcome)).length;
+    // ------- the final table: EVERY originally selected record, in selection order
+    const finalRows = useMemo(() => {
+
+        if (!batch) {
+            return [];
+        }
+
+        const byId = new Map(batchRows.map((r) => [r.id, r]));
+        const companyById = new Map((recipientsPreview?.recipients || []).map((r) => [r.id, r]));
+
+        return context.selectedIds.map((id) => {
+
+            const row = byId.get(id);
+
+            if (row) {
+                return row;
+            }
+
+            const known = companyById.get(id);
+            const base = { id, companyName: known?.companyName, email: known?.email };
+
+            if (context.removedIds.includes(id)) {
+                return { ...base, outcome: "REMOVED", detail: "Taken out of this batch by you." };
+            }
+
+            const pre = context.preExcluded[id];
+
+            return {
+                ...base,
+                outcome: "EXCLUDED",
+                exclusionCode: pre?.code,
+                detail: pre?.message || "Not included.",
+            };
+
+        });
+
+    }, [batch, batchRows, context, recipientsPreview]);
+
+    const counts = finalRows.reduce((acc, r) => ({ ...acc, [r.outcome]: (acc[r.outcome] || 0) + 1 }), {});
+    const retryable = batchRows.filter((r) => RETRYABLE_OUTCOMES.includes(r.outcome)).length;
+    const unsettled = batchRows.filter((r) => UNSETTLED_OUTCOMES.includes(r.outcome)).length;
+    const eligibleCount = batch ? batch.recipientIds.length : 0;
 
     return (
 
@@ -299,7 +547,9 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
 
                             <h5 className="modal-title">
                                 <i className="bi bi-envelope-paper me-2"></i>
-                                Bulk Email - {ids.length} selected {ids.length === 1 ? noun : nouns}
+                                {step === "resume" || step === "nothing" || (resumeOnly && step === "results")
+                                    ? "Bulk Email - earlier batch"
+                                    : `Bulk Email - ${ids.length} selected ${ids.length === 1 ? noun : nouns}`}
                             </h5>
 
                             <button className="btn-close" onClick={handleClose} disabled={sending} aria-label="Close"></button>
@@ -310,10 +560,50 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
 
                             {error && <div className="alert alert-danger py-2 px-3">{error}</div>}
 
+                            {resumeNote && step !== "resume" && <div className="alert alert-info py-2 px-3">{resumeNote}</div>}
+
+                            {/* ---------------- 0. an unfinished batch ---------------- */}
+                            {step === "resume" && (
+
+                                !resumeView ? (
+
+                                    !error && <div className="text-muted">Checking the earlier bulk email batch...</div>
+
+                                ) : (
+
+                                    <>
+                                        <div className="alert alert-warning py-2 px-3">
+                                            You have a bulk email batch that was started earlier
+                                            {resumeView.batch?.createdAt && <> ({new Date(resumeView.batch.createdAt).toLocaleString()})</>}.
+                                            Its recipients and message are fixed and cannot be changed.
+                                        </div>
+
+                                        <p className="mb-2">
+                                            {resumeView.results.length} recipient{resumeView.results.length === 1 ? "" : "s"}:{" "}
+                                            {Object.entries(OUTCOME_STYLE).map(([key, style]) => {
+                                                const n = resumeView.results.filter((r) => r.outcome === key).length;
+                                                return n ? <span key={key} className={`badge ${style.className} me-2`}>{n} {style.label.toLowerCase()}</span> : null;
+                                            })}
+                                        </p>
+
+                                        <p className="text-muted small mb-0">
+                                            Continue to review it, and to send anything that has not gone out yet. Discarding only forgets it here -
+                                            whatever was already sent stays recorded and will not be sent again.
+                                        </p>
+                                    </>
+
+                                )
+
+                            )}
+
+                            {step === "nothing" && (
+                                <div className="text-muted">There is no unfinished bulk email batch to resume.</div>
+                            )}
+
                             {/* ---------------- 1. recipients ---------------- */}
                             {step === "recipients" && (
 
-                                loading || !recipientsPreview ? (
+                                !recipientsPreview ? (
 
                                     !error && <div className="text-muted">Checking the selected {nouns}...</div>
 
@@ -457,6 +747,7 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
                                     <div className="alert alert-primary py-2 px-3">
                                         <strong>{reviewEligible.length}</strong> individual email{reviewEligible.length === 1 ? "" : "s"} will be sent
                                         {reviewExcluded.length > 0 && <> - {reviewExcluded.length} not included</>}.
+                                        {" "}Once you press Send, the recipients and the message are fixed.
                                     </div>
 
                                     {reviewEligible.length > 0 && (
@@ -520,7 +811,7 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
                                     {sending && (
                                         <div className="mb-3">
                                             <div className="small mb-1">
-                                                Sending... {progress.done} of {progress.total} processed. Please keep this window open.
+                                                Working... {progress.done} of {progress.total} processed. Please keep this window open.
                                             </div>
                                             <div className="progress">
                                                 <div
@@ -533,6 +824,12 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
 
                                     {sendError && <div className="alert alert-warning py-2 px-3">{sendError}</div>}
 
+                                    <p className="mb-1" data-testid="results-summary">
+                                        <strong>{context.selectedIds.length}</strong> selected
+                                        {" "}&middot; <strong>{eligibleCount}</strong> eligible when you pressed Send
+                                        {" "}&middot; <strong>{context.selectedIds.length - eligibleCount}</strong> not included
+                                    </p>
+
                                     <p className="mb-2">
                                         {Object.entries(OUTCOME_STYLE).map(([key, style]) => (
                                             counts[key] ? (
@@ -541,6 +838,9 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
                                                 </span>
                                             ) : null
                                         ))}
+                                        <span className="small text-muted" data-testid="results-total">
+                                            Total {finalRows.length} of {context.selectedIds.length}
+                                        </span>
                                     </p>
 
                                     <div className="table-responsive" style={{ maxHeight: "340px" }}>
@@ -549,7 +849,7 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
                                                 <tr><th>Company</th><th>Email</th><th>Result</th><th>Details</th></tr>
                                             </thead>
                                             <tbody>
-                                                {results.map((r) => {
+                                                {finalRows.map((r) => {
                                                     const style = OUTCOME_STYLE[r.outcome] || OUTCOME_STYLE.EXCLUDED;
                                                     return (
                                                         <tr key={r.id}>
@@ -567,11 +867,11 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
                                         </table>
                                     </div>
 
-                                    {!sending && (counts.UNKNOWN > 0 || counts.NO_RESPONSE > 0) && (
+                                    {!sending && (counts.UNKNOWN > 0 || counts.UNVERIFIED > 0) && (
                                         <p className="small text-muted mt-2 mb-0">
-                                            "Unknown" means the provider gave no reliable answer, so the email may or may not have
-                                            been sent. It is never retried automatically - check your email provider's log before
-                                            sending again.
+                                            "Unknown" or "unverified" means there is no reliable answer, so the email may or may not
+                                            have been sent. It is never retried automatically and cannot be sent again from here -
+                                            check your email provider's log if you need to be sure.
                                         </p>
                                     )}
 
@@ -582,6 +882,21 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
                         </div>
 
                         <div className="modal-footer">
+
+                            {step === "resume" && (
+                                <>
+                                    <button className="btn btn-outline-secondary" onClick={discardEarlierBatch} disabled={!resumeView}>
+                                        Discard it{ids.length > 0 && !resumeOnly ? " and start a new batch" : ""}
+                                    </button>
+                                    <button className="btn btn-primary" onClick={adoptEarlierBatch} disabled={!resumeView}>
+                                        Continue this batch
+                                    </button>
+                                </>
+                            )}
+
+                            {step === "nothing" && (
+                                <button className="btn btn-primary" onClick={handleClose}>Close</button>
+                            )}
 
                             {step === "recipients" && (
                                 <>
@@ -603,7 +918,7 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
 
                             {step === "review" && (
                                 <>
-                                    <button className="btn btn-outline-secondary" onClick={() => setStep("message")}>Back</button>
+                                    <button className="btn btn-outline-secondary" onClick={() => setStep("message")} disabled={sending}>Back</button>
                                     <button className="btn btn-success" disabled={sending || reviewEligible.length === 0} onClick={handleSend}>
                                         <i className="bi bi-send me-1"></i>
                                         Send {reviewEligible.length} email{reviewEligible.length === 1 ? "" : "s"}
@@ -613,7 +928,12 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
 
                             {step === "results" && (
                                 <>
-                                    {!sending && retryable > 0 && (
+                                    {!sending && unsettled > 0 && (
+                                        <button className="btn btn-outline-secondary" onClick={handleCheckStatus}>
+                                            Check status
+                                        </button>
+                                    )}
+                                    {!sending && retryable > 0 && unsettled === 0 && (
                                         <button className="btn btn-outline-primary" onClick={handleRetry}>
                                             Retry {retryable} that did not go out
                                         </button>
@@ -636,4 +956,9 @@ function BulkEmailModalBody({ target, ids, onClose, onSent }) {
 
     );
 
+}
+
+// Anything still to do (or still to be confirmed) keeps the batch resumable.
+function hasUnfinished(rows) {
+    return rows.some((r) => RETRYABLE_OUTCOMES.includes(r.outcome) || UNSETTLED_OUTCOMES.includes(r.outcome));
 }

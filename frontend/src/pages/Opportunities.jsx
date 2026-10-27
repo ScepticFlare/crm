@@ -9,6 +9,7 @@ import ManageColumnsMenu from "../components/list/ManageColumnsMenu";
 import BulkActionBar from "../components/list/BulkActionBar";
 import RecordLink from "../components/list/RecordLink";
 import BulkEmailModal from "../components/email/BulkEmailModal";
+import BulkEmailResumeBanner from "../components/email/BulkEmailResumeBanner";
 import ListPagination from "../components/list/ListPagination";
 
 import useServerList from "../hooks/useServerList";
@@ -175,6 +176,8 @@ export default function Opportunities({
 
     // Bulk Email to the opportunities' lead contacts - see BulkEmailModal.
     const [showBulkEmail, setShowBulkEmail] = useState(false);
+    // Re-opening an unfinished batch (no selection needed) - see BulkEmailResumeBanner.
+    const [resumeBulkEmail, setResumeBulkEmail] = useState(false);
     const [exporting, setExporting] = useState(false);
 
     async function handleBulkDelete() {
@@ -256,6 +259,10 @@ export default function Opportunities({
                 title={title}
                 subtitle={`${list.totalElements} Opportunity(s) Found`}
             />
+
+            {!showBulkEmail && !resumeBulkEmail && (
+                <BulkEmailResumeBanner target="OPPORTUNITY" onResume={() => setResumeBulkEmail(true)} />
+            )}
 
             <div className="row mb-4">
 
@@ -417,10 +424,14 @@ export default function Opportunities({
             )}
 
             <BulkEmailModal
-                show={showBulkEmail}
+                show={showBulkEmail || resumeBulkEmail}
                 target="OPPORTUNITY"
-                ids={list.selectedIds}
-                onClose={() => setShowBulkEmail(false)}
+                ids={resumeBulkEmail ? [] : list.selectedIds}
+                resumeOnly={resumeBulkEmail}
+                onClose={() => {
+                    setShowBulkEmail(false);
+                    setResumeBulkEmail(false);
+                }}
                 onSent={() => {
                     list.clearSelection();
                     list.reload();

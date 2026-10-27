@@ -246,4 +246,37 @@ describe("Leads page bulk email", () => {
 
         expect(await screen.findByText(/Bulk Email - 1 selected lead/)).toBeTruthy();
     });
+
+    it("offers to resume an unfinished batch without any selection (the batch survives a refresh)", async () => {
+        setRole("EMPLOYEE");
+        localStorage.setItem("employeeId", "7");
+        sessionStorage.setItem("crm.bulkEmail.v1.7.LEAD", JSON.stringify({
+            batchId: "00000000-0000-0000-0000-000000000042", target: "LEAD", employeeId: "7",
+            createdAt: Date.now(), selectedIds: [5], preExcluded: {}, removedIds: [],
+        }));
+
+        renderAt("/leads", <Leads />);
+
+        expect(await screen.findByText(/unfinished bulk email batch/)).toBeTruthy();
+
+        fireEvent.click(screen.getByText("Review / resume"));
+
+        expect(await screen.findByText(/Bulk Email - earlier batch/)).toBeTruthy();
+        sessionStorage.clear();
+    });
+
+    it("shows no resume offer when this user has no unfinished batch, or only another user's", async () => {
+        setRole("EMPLOYEE");
+        localStorage.setItem("employeeId", "8");
+        sessionStorage.setItem("crm.bulkEmail.v1.7.LEAD", JSON.stringify({
+            batchId: "00000000-0000-0000-0000-000000000042", target: "LEAD", employeeId: "7",
+            createdAt: Date.now(), selectedIds: [5], preExcluded: {}, removedIds: [],
+        }));
+
+        renderAt("/leads", <Leads />);
+
+        await waitFor(() => expect(leadService.getAllLeads).toHaveBeenCalled());
+        expect(screen.queryByText(/unfinished bulk email batch/)).toBeNull();
+        sessionStorage.clear();
+    });
 });

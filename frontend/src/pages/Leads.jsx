@@ -14,6 +14,7 @@ import DeleteModal from "../components/DeleteModal";
 import EmailComposerModal from "../components/email/EmailComposerModal";
 import BulkKeepInTouchModal from "../components/email/BulkKeepInTouchModal";
 import BulkEmailModal from "../components/email/BulkEmailModal";
+import BulkEmailResumeBanner from "../components/email/BulkEmailResumeBanner";
 
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
@@ -269,6 +270,8 @@ export default function Leads({
 
     // Bulk Email (template-based, personalised per lead) - see BulkEmailModal.
     const [showBulkEmail, setShowBulkEmail] = useState(false);
+    // Re-opening an unfinished batch (no selection needed) - see BulkEmailResumeBanner.
+    const [resumeBulkEmail, setResumeBulkEmail] = useState(false);
 
     // Row-level Delete Lead (row menu) - same delete-impact-preview flow
     // LeadDetails.jsx already uses, now also reachable directly from the list.
@@ -420,6 +423,10 @@ export default function Leads({
                 buttonText={showAddLead ? "Add Lead" : undefined}
                 onButtonClick={() => navigate(addLeadPath)}
             />
+
+            {!showBulkEmail && !resumeBulkEmail && (
+                <BulkEmailResumeBanner target="LEAD" onResume={() => setResumeBulkEmail(true)} />
+            )}
 
             <div className="card shadow-sm border-0 mb-3">
 
@@ -574,10 +581,14 @@ export default function Leads({
             />
 
             <BulkEmailModal
-                show={showBulkEmail}
+                show={showBulkEmail || resumeBulkEmail}
                 target="LEAD"
-                ids={list.selectedIds}
-                onClose={() => setShowBulkEmail(false)}
+                ids={resumeBulkEmail ? [] : list.selectedIds}
+                resumeOnly={resumeBulkEmail}
+                onClose={() => {
+                    setShowBulkEmail(false);
+                    setResumeBulkEmail(false);
+                }}
                 onSent={() => {
                     list.clearSelection();
                     list.reload();

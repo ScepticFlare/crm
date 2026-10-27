@@ -39,6 +39,7 @@ import FullReport from "./pages/FullReport";
 import ManagementSummary from "./pages/ManagementSummary";
 import EmployeeActivity from "./pages/EmployeeActivity";
 import EmailTemplates from "./pages/EmailTemplates";
+import EmailSuppressions from "./pages/EmailSuppressions";
 import Documents from "./pages/Documents";
 
 import InProgress from "./pages/InProgress";
@@ -210,6 +211,10 @@ function App() {
                     <Route
                         path="/email-templates"
                         element={<AdminRoute><EmailTemplates /></AdminRoute>}
+                    />
+                    <Route
+                        path="/email-suppressions"
+                        element={<AdminRoute><EmailSuppressions /></AdminRoute>}
                     />
                     <Route
                         path="/documents"
