@@ -23,6 +23,11 @@ vi.mock("../../services/leadSourceService", () => ({ getAllLeadSources: vi.fn().
 vi.mock("../../services/productService", () => ({ getAllProducts: vi.fn().mockResolvedValue([]) }));
 vi.mock("../../services/batteryService", () => ({ getAllBatteries: vi.fn().mockResolvedValue([]) }));
 vi.mock("../../services/employeeService", () => ({ getAllEmployees: vi.fn().mockResolvedValue([]) }));
+vi.mock("../../services/bulkEmailService", async (importActual) => ({
+    ...(await importActual()),
+    // the review call never answers - these tests only look at what the page offers
+    previewBulkEmail: vi.fn(() => new Promise(() => {})),
+}));
 vi.mock("../../utils/downloadFile", async (importActual) => ({
     ...(await importActual()),
     downloadBlob: download.downloadBlob,
@@ -215,5 +220,30 @@ describe("normal Leads page", () => {
 
         expect(optionsOf("Lead Status")).toEqual(["All", "New", "Valid", "Invalid"]);
         expect(screen.getByText("Lead Validity")).toBeTruthy();
+    });
+});
+
+describe("Leads page bulk email", () => {
+
+    const row = {
+        id: 5, companyName: "Acme Ltd", contactPerson: "Asha", email: "asha@acme.test",
+        leadStatus: "NEW", effectiveLeadStatus: "NEW", leadProducts: [], leadBatteries: [],
+    };
+
+    it("offers Bulk Email only once rows are selected, and opens it for the selection", async () => {
+        setRole("EMPLOYEE");
+        leadService.getAllLeads.mockResolvedValue({ content: [row], totalPages: 1, totalElements: 1 });
+
+        renderAt("/leads", <Leads />);
+
+        await screen.findByText("Acme Ltd");
+        expect(screen.queryByText("Bulk Email")).toBeNull();
+
+        const checkboxes = screen.getAllByRole("checkbox");
+        fireEvent.click(checkboxes[checkboxes.length - 1]);
+
+        fireEvent.click(await screen.findByText("Bulk Email"));
+
+        expect(await screen.findByText(/Bulk Email - 1 selected lead/)).toBeTruthy();
     });
 });

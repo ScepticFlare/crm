@@ -8,6 +8,7 @@ import FilterPanel from "../components/list/FilterPanel";
 import ManageColumnsMenu from "../components/list/ManageColumnsMenu";
 import BulkActionBar from "../components/list/BulkActionBar";
 import RecordLink from "../components/list/RecordLink";
+import BulkEmailModal from "../components/email/BulkEmailModal";
 import ListPagination from "../components/list/ListPagination";
 
 import useServerList from "../hooks/useServerList";
@@ -171,6 +172,9 @@ export default function Opportunities({
     }, [salesStages, products, industries, employees]);
 
     const [bulkDeleting, setBulkDeleting] = useState(false);
+
+    // Bulk Email to the opportunities' lead contacts - see BulkEmailModal.
+    const [showBulkEmail, setShowBulkEmail] = useState(false);
     const [exporting, setExporting] = useState(false);
 
     async function handleBulkDelete() {
@@ -368,6 +372,10 @@ export default function Opportunities({
                     onClear={list.clearSelection}
                     actions={[
                         {
+                            key: "bulkEmail", label: "Bulk Email", icon: "bi-envelope-paper",
+                            variant: "btn-outline-primary", onClick: () => setShowBulkEmail(true)
+                        },
+                        {
                             key: "export", label: "Export Selected", icon: "bi-download",
                             variant: "btn-outline-secondary", onClick: () => handleExport(true), disabled: exporting
                         },
@@ -407,6 +415,17 @@ export default function Opportunities({
                     No matching opportunities found.
                 </div>
             )}
+
+            <BulkEmailModal
+                show={showBulkEmail}
+                target="OPPORTUNITY"
+                ids={list.selectedIds}
+                onClose={() => setShowBulkEmail(false)}
+                onSent={() => {
+                    list.clearSelection();
+                    list.reload();
+                }}
+            />
 
         </>
 

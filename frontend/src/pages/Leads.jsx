@@ -13,6 +13,7 @@ import RowActionsMenu from "../components/list/RowActionsMenu";
 import DeleteModal from "../components/DeleteModal";
 import EmailComposerModal from "../components/email/EmailComposerModal";
 import BulkKeepInTouchModal from "../components/email/BulkKeepInTouchModal";
+import BulkEmailModal from "../components/email/BulkEmailModal";
 
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
@@ -266,6 +267,9 @@ export default function Leads({
     // Bulk Send Keep in Touch (bulk action bar).
     const [showBulkEmailModal, setShowBulkEmailModal] = useState(false);
 
+    // Bulk Email (template-based, personalised per lead) - see BulkEmailModal.
+    const [showBulkEmail, setShowBulkEmail] = useState(false);
+
     // Row-level Delete Lead (row menu) - same delete-impact-preview flow
     // LeadDetails.jsx already uses, now also reachable directly from the list.
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -513,6 +517,10 @@ export default function Leads({
                         ] : []),
                         ...(canSendEmail ? [
                             {
+                                key: "bulkEmail", label: "Bulk Email", icon: "bi-envelope-paper",
+                                variant: "btn-outline-primary", onClick: () => setShowBulkEmail(true)
+                            },
+                            {
                                 key: "keepInTouch", label: "Send Keep in Touch", icon: "bi-envelope",
                                 variant: "btn-outline-primary", onClick: () => setShowBulkEmailModal(true)
                             },
@@ -563,6 +571,17 @@ export default function Leads({
                 lead={composerLead}
                 onClose={() => setComposerLead(null)}
                 onSent={() => list.reload()}
+            />
+
+            <BulkEmailModal
+                show={showBulkEmail}
+                target="LEAD"
+                ids={list.selectedIds}
+                onClose={() => setShowBulkEmail(false)}
+                onSent={() => {
+                    list.clearSelection();
+                    list.reload();
+                }}
             />
 
             <BulkKeepInTouchModal

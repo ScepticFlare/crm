@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 const TYPE_OPTIONS = [
     { value: "PRODUCT_BROCHURE", label: "Product Brochure" },
     { value: "KEEP_IN_TOUCH", label: "Keep in Touch" },
+    { value: "AMC", label: "AMC (Annual Maintenance Contract)" },
 ];
 
 // Create/edit form for pages/EmailTemplates.jsx (ADMIN only). Separate from

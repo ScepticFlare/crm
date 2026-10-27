@@ -16,6 +16,7 @@ import {
 const TYPE_LABELS = {
     PRODUCT_BROCHURE: "Product Brochure",
     KEEP_IN_TOUCH: "Keep in Touch",
+    AMC: "AMC (Annual Maintenance Contract)",
 };
 
 // Admin-only management for the shared email template library used by the

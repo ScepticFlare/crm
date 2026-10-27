@@ -17,6 +17,11 @@ const EMAIL_TYPES = {
         description: "Send a friendly check-in, optionally with the company profile attached.",
         icon: "bi-people",
     },
+    AMC: {
+        label: "AMC Offer",
+        description: "Offer an Annual Maintenance Contract (the offer wording comes from the AMC template).",
+        icon: "bi-tools",
+    },
 };
 
 // Individual Lead email composer - opened from a Leads row's "..." menu
