@@ -12,7 +12,8 @@ import ListPagination from "../components/list/ListPagination";
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
 import { formatDate } from "../utils/formatDate";
-import { downloadBlob } from "../utils/downloadFile";
+import { downloadBlob, exportCountNotice, exportErrorMessage } from "../utils/downloadFile";
+import { describeLineItems } from "../utils/lineItems";
 
 import {
     getAllCustomers,
@@ -21,9 +22,14 @@ import {
 } from "../services/customerService";
 import { getAllIndustries } from "../services/industryService";
 import { getAllEmployees } from "../services/employeeService";
+import { getAllProducts } from "../services/productService";
+import { getAllBatteries } from "../services/batteryService";
 
+// Column keys double as export column keys (backend CustomerController.
+// EXPORT_COLUMNS): the exported file contains exactly the visible columns.
+// Opportunity / value / products / batteries come from the won Opportunity.
 const ALL_CUSTOMER_COLUMNS = [
-    { key: "customerCode", label: "Customer Code", sortable: false },
+    { key: "customerCode", label: "Customer Code", sortable: true, sortKey: "customerCode" },
     {
         key: "companyName", label: "Company", sortable: true, sortKey: "company",
         render: (row) => (
@@ -33,10 +39,33 @@ const ALL_CUSTOMER_COLUMNS = [
         )
     },
     { key: "contactPerson", label: "Contact", sortable: true, sortKey: "contactPerson", render: (row) => row.contactPerson },
+    { key: "designation", label: "Designation" },
     { key: "phone", label: "Phone" },
+    { key: "alternatePhone", label: "Alternate Phone" },
     { key: "email", label: "Email" },
-    { key: "city", label: "City" },
+    { key: "secondaryEmail", label: "Secondary Email" },
+    { key: "website", label: "Website" },
+    { key: "city", label: "City", sortable: true, sortKey: "city" },
     { key: "state", label: "State" },
+    { key: "pincode", label: "Pincode" },
+    { key: "billingAddress", label: "Billing Address" },
+    { key: "shippingAddress", label: "Shipping Address" },
+    { key: "gstNumber", label: "GST Number" },
+    { key: "industry", label: "Industry", render: (row) => row.opportunity?.lead?.industry?.name || "-" },
+    { key: "opportunity", label: "Opportunity", render: (row) => row.opportunity?.title || "-" },
+    {
+        key: "value", label: "Value",
+        render: (row) => (row.opportunity?.productValue != null
+            ? `₹${Number(row.opportunity.productValue).toLocaleString("en-IN")}` : "-")
+    },
+    {
+        key: "products", label: "Product",
+        render: (row) => describeLineItems(row.opportunity?.opportunityProducts, "product")
+    },
+    {
+        key: "batteries", label: "Battery",
+        render: (row) => describeLineItems(row.opportunity?.opportunityBatteries, "battery")
+    },
     {
         key: "assignedEmployee", label: "Assigned Employee", sortable: true,
         render: (row) => row.assignedEmployee?.name || "-"
@@ -44,6 +73,10 @@ const ALL_CUSTOMER_COLUMNS = [
     {
         key: "createdAt", label: "Created Date", sortable: true, sortKey: "createdDate",
         render: (row) => formatDate(row.createdAt)
+    },
+    {
+        key: "updatedAt", label: "Last Modified", sortable: true, sortKey: "updatedDate",
+        render: (row) => formatDate(row.updatedAt)
     },
 ];
 
@@ -74,29 +107,42 @@ export default function Customers() {
 
     const [industries, setIndustries] = useState([]);
     const [employees, setEmployees] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [batteries, setBatteries] = useState([]);
 
     useEffect(() => {
 
         getAllIndustries().then(setIndustries).catch(() => {});
         getAllEmployees().then(setEmployees).catch(() => {});
+        getAllProducts().then(setProducts).catch(() => {});
+        getAllBatteries().then(setBatteries).catch(() => {});
 
     }, []);
 
+    // Multi-select: any chosen value within a filter (OR), all filters (AND).
     const filterDefs = useMemo(() => {
 
         const defs = [];
 
         if (employees.length > 0) {
             defs.push({
-                key: "assignedEmployeeId", label: "Assigned Employee", type: "select",
+                key: "assignedEmployeeId", label: "Assigned Employee", type: "multiselect",
                 options: employees.map((e) => ({ value: e.id, label: e.name }))
             });
         }
 
         defs.push(
             {
-                key: "industryId", label: "Industry", type: "select",
+                key: "industryId", label: "Industry", type: "multiselect",
                 options: industries.map((i) => ({ value: i.id, label: i.name }))
+            },
+            {
+                key: "productId", label: "Product", type: "multiselect",
+                options: products.map((p) => ({ value: p.id, label: p.name }))
+            },
+            {
+                key: "batteryId", label: "Battery", type: "multiselect",
+                options: batteries.map((b) => ({ value: b.id, label: b.name }))
             },
             { key: "city", label: "City", type: "text" },
             { key: "state", label: "State", type: "text" },
@@ -105,7 +151,7 @@ export default function Customers() {
 
         return defs;
 
-    }, [industries, employees]);
+    }, [industries, employees, products, batteries]);
 
     const [bulkDeleting, setBulkDeleting] = useState(false);
     const [exporting, setExporting] = useState(false);
@@ -154,15 +200,23 @@ export default function Customers() {
             const blob = await exportCustomers({
                 sort: list.sort,
                 filters: { search: list.search || undefined, ...list.filters },
-                selection: selectedOnly ? list.selectedIds : null,
+                selection: selectedOnly ? list.selection : null,
+                columns: columns.visibleColumns.map((c) => c.key),
             });
 
             downloadBlob(blob, "customers.xlsx");
 
+            const notice = exportCountNotice(
+                blob, selectedOnly ? list.selectedCount : list.totalElements, "customers");
+
+            if (notice) {
+                alert(notice);
+            }
+
         } catch (error) {
 
             console.error(error);
-            alert("Unable to export customers.");
+            alert(await exportErrorMessage(error, "customers"));
 
         } finally {
 
@@ -279,17 +333,24 @@ export default function Customers() {
                                 <ul className="dropdown-menu dropdown-menu-end">
                                     <li>
                                         <button className="dropdown-item" onClick={() => handleExport(false)}>
-                                            Export all matching
+                                            Export all matching ({list.totalElements})
                                         </button>
                                     </li>
                                     <li>
                                         <button
                                             className="dropdown-item"
-                                            disabled={list.selectedIds.length === 0}
+                                            disabled={list.selectedCount === 0}
                                             onClick={() => handleExport(true)}
                                         >
-                                            Export selected ({list.selectedIds.length})
+                                            Export selected ({list.selectedCount})
                                         </button>
+                                    </li>
+                                    <li><hr className="dropdown-divider" /></li>
+                                    <li>
+                                        <span className="dropdown-item-text small text-muted">
+                                            Includes the {columns.visibleColumns.length} visible column(s) -
+                                            change them with Columns.
+                                        </span>
                                     </li>
                                 </ul>
 
@@ -304,8 +365,14 @@ export default function Customers() {
 
             {isAdmin && (
                 <BulkActionBar
-                    count={list.selectedIds.length}
+                    count={list.selectedCount}
                     onClear={list.clearSelection}
+                    allMatching={list.allMatching}
+                    excludedCount={list.excludedIds.length}
+                    pageFullySelected={list.pageFullySelected}
+                    pageRowCount={list.data.length}
+                    totalElements={list.totalElements}
+                    onSelectAllMatching={list.selectAllMatching}
                     actions={[
                         {
                             key: "export", label: "Export Selected", icon: "bi-download",
@@ -313,7 +380,9 @@ export default function Customers() {
                         },
                         {
                             key: "delete", label: "Delete", icon: "bi-trash",
-                            variant: "btn-outline-danger", onClick: handleBulkDelete, disabled: bulkDeleting
+                            variant: "btn-outline-danger", onClick: handleBulkDelete, disabled: bulkDeleting,
+                            unavailableForAllMatching:
+                                "Delete only works on records you tick individually, so nothing is deleted by accident."
                         },
                     ]}
                 />
@@ -325,6 +394,7 @@ export default function Customers() {
                 loading={list.loading}
                 selectable={isAdmin}
                 selectedIds={list.selectedIds}
+                isRowSelected={list.isSelected}
                 onToggleSelect={list.toggleSelect}
                 onToggleSelectAll={list.toggleSelectAll}
                 sort={list.sort}

@@ -5,7 +5,8 @@ import {
     getAllActivityTypesAdmin,
     createActivityType,
     deleteActivityType,
-    activateActivityType
+    activateActivityType,
+    updateActivityType
 } from "../services/activityTypeService";
 import DropdownAddManage from "./DropdownAddManage";
 
@@ -191,11 +192,15 @@ export default function FollowUpForm({
                                     onChange={handleChange}
                                     options={activityTypes}
                                     required
+                                    // Managing activity types is ADMIN-only on
+                                    // the server; others only pick active ones.
                                     isAdmin={role === "ADMIN"}
+                                    canAdd={role === "ADMIN"}
                                     create={createActivityType}
                                     getAllIncludingInactive={getAllActivityTypesAdmin}
                                     deactivate={deleteActivityType}
                                     activate={activateActivityType}
+                                    rename={updateActivityType}
                                     onRefresh={loadActivityTypes}
                                     currentLabel={form.activityTypeName}
                                     placeholder="Select Activity"

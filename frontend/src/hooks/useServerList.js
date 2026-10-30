@@ -14,11 +14,27 @@ function parseFilters(raw) {
 
 }
 
-// Empty-valued keys are dropped so "cleared" filters leave no trace in the URL.
+// Whether a filter value actually restricts anything. A multi-select filter
+// holds an array, which counts only when it has at least one value.
+export function isActiveFilterValue(value) {
+
+    if (Array.isArray(value)) {
+        return value.some((v) => v !== "" && v !== null && v !== undefined);
+    }
+
+    return value !== "" && value !== null && value !== undefined;
+
+}
+
+// Empty-valued keys (including empty multi-select arrays) are dropped so
+// "cleared" filters leave no trace in the URL - and never reach the backend
+// as an empty selection.
 export function serializeFilters(filters) {
 
     const clean = Object.fromEntries(
-        Object.entries(filters || {}).filter(([, v]) => v !== "" && v !== null && v !== undefined)
+        Object.entries(filters || {})
+            .filter(([, v]) => isActiveFilterValue(v))
+            .map(([k, v]) => [k, Array.isArray(v) ? v.filter((x) => x !== "" && x != null) : v])
     );
 
     return Object.keys(clean).length ? JSON.stringify(clean) : null;
@@ -60,6 +76,14 @@ export default function useServerList({
     const [totalElements, setTotalElements] = useState(0);
 
     const [selectedIds, setSelectedIds] = useState([]);
+
+    // "Select all N matching records": the selection is every record that
+    // matches the current search + filters (on the server, across all pages)
+    // except excludedIds - the rows the user unticked afterwards. No rows
+    // are downloaded for it; an export re-runs the same query server-side
+    // with the exclusions (see services/api.selectionParams).
+    const [allMatching, setAllMatching] = useState(false);
+    const [excludedIds, setExcludedIds] = useState([]);
 
     // Search, filters, sort, page and page size live in the URL query string
     // rather than component state. The list page unmounts when a record's
@@ -197,7 +221,8 @@ export default function useServerList({
             // A freshly loaded page is a new row set - any prior selection
             // no longer safely corresponds to what's on screen, regardless
             // of whether the reload was caused by a page, filter, search,
-            // or sort change.
+            // or sort change. (An "all matching" selection is not tied to
+            // one page; it is reset below whenever what matches changes.)
             setSelectedIds([]);
 
         }
@@ -211,6 +236,23 @@ export default function useServerList({
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [load]);
+
+    // A different search, filter set or data source means a different set
+    // of matching records: an "all matching" selection made for the old one
+    // must never carry over (it would silently export other records).
+    // Paging and sorting keep it - the set is the same. Reset while
+    // rendering (not in an effect), so no render ever pairs the new filters
+    // with the old selection.
+    const [selectionScope, setSelectionScope] = useState({ fetchFn, search: urlSearch, filtersKey });
+
+    if (selectionScope.fetchFn !== fetchFn
+        || selectionScope.search !== urlSearch
+        || selectionScope.filtersKey !== filtersKey) {
+
+        setSelectionScope({ fetchFn, search: urlSearch, filtersKey });
+        setAllMatching(false);
+        setExcludedIds([]);
+    }
 
     // If rows were removed (e.g. the last record on the final page was
     // deleted) and the current page no longer exists, step back to the last
@@ -245,19 +287,44 @@ export default function useServerList({
         setFilters({});
     }
 
+    function isSelected(id) {
+        return allMatching ? !excludedIds.includes(id) : selectedIds.includes(id);
+    }
+
+    // In "all matching" mode a row's checkbox toggles its exclusion.
     function toggleSelect(id) {
 
-        setSelectedIds((prev) =>
-            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-        );
+        const toggle = (prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+
+        if (allMatching) {
+            setExcludedIds(toggle);
+        } else {
+            setSelectedIds(toggle);
+        }
 
     }
 
-    // Select-all only ever applies to the rows currently on screen - never
-    // implies "every matching record across every page".
+    // The header checkbox only ever applies to the rows currently on screen.
+    // Selecting every matching record across pages is a separate, explicit
+    // step (selectAllMatching) offered once this page is fully selected.
     function toggleSelectAll() {
 
         const pageIds = data.map((row) => row.id);
+
+        if (allMatching) {
+
+            setExcludedIds((prev) => {
+
+                const pageFullySelected = pageIds.every((id) => !prev.includes(id));
+
+                return pageFullySelected
+                    ? Array.from(new Set([...prev, ...pageIds]))
+                    : prev.filter((id) => !pageIds.includes(id));
+
+            });
+
+            return;
+        }
 
         setSelectedIds((prev) => {
 
@@ -273,9 +340,39 @@ export default function useServerList({
 
     }
 
+    function selectAllMatching() {
+
+        if (totalElements === 0) {
+            return;
+        }
+
+        setAllMatching(true);
+        setExcludedIds([]);
+        setSelectedIds([]);
+
+    }
+
     function clearSelection() {
         setSelectedIds([]);
+        setAllMatching(false);
+        setExcludedIds([]);
     }
+
+    // How many records the selection covers. In "all matching" mode every
+    // excluded id was a matching row on some page, so this is exact for the
+    // result set as last loaded.
+    const selectedCount = allMatching
+        ? Math.max(0, totalElements - excludedIds.length)
+        : selectedIds.length;
+
+    const pageIds = data.map((row) => row.id);
+    const pageFullySelected = pageIds.length > 0 && pageIds.every((id) => isSelected(id));
+
+    // What an export / bulk action should act on - see api.selectionParams.
+    // null when nothing is selected.
+    const selection = allMatching
+        ? (selectedCount > 0 ? { allMatching: true, excludedIds } : null)
+        : (selectedIds.length > 0 ? selectedIds : null);
 
     return {
         data,
@@ -299,6 +396,13 @@ export default function useServerList({
         toggleSelect,
         toggleSelectAll,
         clearSelection,
+        isSelected,
+        allMatching,
+        excludedIds,
+        selectAllMatching,
+        selectedCount,
+        pageFullySelected,
+        selection,
         reload: load,
     };
 }

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import LeadForm from "../components/LeadForm";
 import { createLead } from "../services/leadService";
+import { lineItemErrors, toRequestItems } from "../utils/lineItems";
 
 export default function AddLead() {
 
@@ -36,8 +37,10 @@ export default function AddLead() {
         leadSourceId: "",
         leadSourceName: "",
 
-        products: [],
-        batteries: [],
+        // One empty row each, so the two required pickers are visible
+        // straight away (unfilled rows are dropped on save).
+        products: [{ itemId: "", itemName: "", quantity: 1 }],
+        batteries: [{ itemId: "", itemName: "", quantity: 1 }],
 
         description: "",
         finalRemarks: "",
@@ -61,11 +64,24 @@ export default function AddLead() {
 
     };
 
+    // Product and Battery are mandatory for a new lead. Messages appear once
+    // the user tries to save, and update live as they fix the fields.
+    const [triedToSave, setTriedToSave] = useState(false);
+    const itemErrors = triedToSave
+        ? lineItemErrors(form, { productRequired: true, batteryRequired: true })
+        : {};
+
     const handleSubmit = async (e) => {
 
         //console.log("HANDLE SUBMIT CALLED");
 
         e.preventDefault();
+
+        setTriedToSave(true);
+
+        if (Object.keys(lineItemErrors(form, { productRequired: true, batteryRequired: true })).length > 0) {
+            return;
+        }
 
         try {
 
@@ -74,18 +90,8 @@ export default function AddLead() {
             await createLead({
                 ...form,
                 assignedEmployeeId: Number(form.assignedEmployeeId),
-                products: (form.products || [])
-                    .filter(p => p.itemId)
-                    .map(p => ({
-                        productId: Number(p.itemId),
-                        quantity: Number(p.quantity) || 1
-                    })),
-                batteries: (form.batteries || [])
-                    .filter(b => b.itemId)
-                    .map(b => ({
-                        batteryId: Number(b.itemId),
-                        quantity: Number(b.quantity) || 1
-                    }))
+                products: toRequestItems(form.products, "productId"),
+                batteries: toRequestItems(form.batteries, "batteryId")
             });
 
             alert("Lead Created Successfully");
@@ -124,6 +130,9 @@ export default function AddLead() {
                         loading={loading}
                         submitText="Save Lead"
                         onCancel={() => navigate("/leads")}
+                        productRequired
+                        batteryRequired
+                        lineItemErrors={itemErrors}
                     />
 
                 </div>

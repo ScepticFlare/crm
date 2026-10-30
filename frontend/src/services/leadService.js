@@ -1,4 +1,4 @@
-import api, { toListParams } from "./api";
+import api, { selectionParams, toListParams, withRowCount } from "./api";
 
 // listArgs: { page, size, search, sort: {field, dir}|null, filters } - see
 // hooks/useServerList, which is what actually calls these.
@@ -121,12 +121,13 @@ export const exportLeads = async ({ sort = null, filters = {}, selection = null,
             sortDir: sort?.dir || undefined,
             ...filters,
             category,
-            ids: selection && selection.length > 0 ? selection.join(",") : undefined,
+            // [ids] or { allMatching, excludedIds } - see api.selectionParams.
+            ...selectionParams(selection),
         },
         responseType: "blob",
     });
 
-    return response.data;
+    return withRowCount(response);
 
 };
 

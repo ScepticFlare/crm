@@ -5,6 +5,7 @@ import PageHeader from "../components/PageHeader";
 import LeadForm from "../components/LeadForm";
 import LoadingState from "../components/ui/LoadingState";
 import { getLeadById, updateLead } from "../services/leadService";
+import { lineItemErrors, toRequestItems } from "../utils/lineItems";
 
 export default function EditLead() {
 
@@ -14,6 +15,8 @@ export default function EditLead() {
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [itemsRequired, setItemsRequired] = useState({ product: false, battery: false });
+    const [triedToSave, setTriedToSave] = useState(false);
 
     const [form, setForm] = useState({
         companyName: "",
@@ -56,6 +59,14 @@ export default function EditLead() {
         try {
 
             const data = await getLeadById(id);
+
+            // Required only when the lead already has one - an older lead
+            // saved without a Product / Battery stays editable without
+            // inventing a value (the backend applies the same rule).
+            setItemsRequired({
+                product: (data.leadProducts || []).length > 0,
+                battery: (data.leadBatteries || []).length > 0,
+            });
 
             setForm({
 
@@ -127,9 +138,18 @@ export default function EditLead() {
 
     };
 
+    const itemRules = { productRequired: itemsRequired.product, batteryRequired: itemsRequired.battery };
+    const itemErrors = triedToSave ? lineItemErrors(form, itemRules) : {};
+
     const handleSubmit = async (e) => {
 
         e.preventDefault();
+
+        setTriedToSave(true);
+
+        if (Object.keys(lineItemErrors(form, itemRules)).length > 0) {
+            return;
+        }
 
         try {
 
@@ -137,18 +157,8 @@ export default function EditLead() {
 
             await updateLead(id, {
                 ...form,
-                products: (form.products || [])
-                    .filter(p => p.itemId)
-                    .map(p => ({
-                        productId: Number(p.itemId),
-                        quantity: Number(p.quantity) || 1
-                    })),
-                batteries: (form.batteries || [])
-                    .filter(b => b.itemId)
-                    .map(b => ({
-                        batteryId: Number(b.itemId),
-                        quantity: Number(b.quantity) || 1
-                    }))
+                products: toRequestItems(form.products, "productId"),
+                batteries: toRequestItems(form.batteries, "batteryId")
             });
 
             alert("Lead Updated Successfully");
@@ -203,6 +213,9 @@ export default function EditLead() {
                         submitText="Update Lead"
                         onCancel={() => navigate(returnTo)}
                         leadId={id}
+                        productRequired={itemsRequired.product}
+                        batteryRequired={itemsRequired.battery}
+                        lineItemErrors={itemErrors}
                     />
 
                 </div>

@@ -1,4 +1,4 @@
-import api, { toListParams } from "./api";
+import api, { selectionParams, toListParams, withRowCount } from "./api";
 
 export const getAllFollowUps = async (listArgs) => {
     const response = await api.get("/followups", { params: toListParams(listArgs) });
@@ -46,11 +46,12 @@ export const exportFollowUps = async ({ sort = null, filters = {}, selection = n
             sortBy: sort?.field || undefined,
             sortDir: sort?.dir || undefined,
             ...filters,
-            ids: selection && selection.length > 0 ? selection.join(",") : undefined,
+            // [ids] or { allMatching, excludedIds } - see api.selectionParams.
+            ...selectionParams(selection),
         },
         responseType: "blob",
     });
 
-    return response.data;
+    return withRowCount(response);
 
 };

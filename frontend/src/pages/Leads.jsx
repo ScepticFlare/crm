@@ -19,7 +19,7 @@ import BulkEmailResumeBanner from "../components/email/BulkEmailResumeBanner";
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
 import { formatDate } from "../utils/formatDate";
-import { downloadBlob, exportErrorMessage } from "../utils/downloadFile";
+import { downloadBlob, exportCountNotice, exportErrorMessage } from "../utils/downloadFile";
 import { describeDeleteImpact } from "../utils/deleteImpact";
 
 import {
@@ -213,34 +213,36 @@ export default function Leads({
 
     }, []);
 
+    // Categorical filters are multi-select: any of the chosen values within a
+    // filter (e.g. status New OR Valid), and every filter must match (AND).
     const filterDefs = useMemo(() => {
 
         const defs = [
             {
-                key: "statusGroup", label: "Lead Status", type: "select",
+                key: "statusGroup", label: "Lead Status", type: "multiselect",
                 options: isActiveList ? ACTIVE_LEAD_STATUS_OPTIONS : LEAD_STATUS_OPTIONS
             },
             {
-                key: "leadSourceId", label: "Lead Source", type: "select",
+                key: "leadSourceId", label: "Lead Source", type: "multiselect",
                 options: leadSources.map((s) => ({ value: s.id, label: s.name }))
             },
             {
-                key: "industryId", label: "Industry", type: "select",
+                key: "industryId", label: "Industry", type: "multiselect",
                 options: industries.map((i) => ({ value: i.id, label: i.name }))
             },
             {
-                key: "productId", label: "Product", type: "select",
+                key: "productId", label: "Product", type: "multiselect",
                 options: products.map((p) => ({ value: p.id, label: p.name }))
             },
             {
-                key: "batteryId", label: "Battery", type: "select",
+                key: "batteryId", label: "Battery", type: "multiselect",
                 options: batteries.map((b) => ({ value: b.id, label: b.name }))
             },
         ];
 
         if (employees.length > 0) {
             defs.push({
-                key: "assignedEmployeeId", label: "Assigned Employee", type: "select",
+                key: "assignedEmployeeId", label: "Assigned Employee", type: "multiselect",
                 options: employees.map((e) => ({ value: e.id, label: e.name }))
             });
         }
@@ -248,9 +250,9 @@ export default function Leads({
         defs.push(
             { key: "city", label: "City", type: "text" },
             { key: "state", label: "State", type: "text" },
-            { key: "status", label: "Original (older) status", type: "select", options: LEGACY_STATUS_OPTIONS },
+            { key: "status", label: "Original (older) status", type: "multiselect", options: LEGACY_STATUS_OPTIONS },
             ...(isActiveList ? [] : [
-                { key: "leadValidity", label: "Lead Validity", type: "select", options: LEAD_VALIDITY_OPTIONS }
+                { key: "leadValidity", label: "Lead Validity", type: "multiselect", options: LEAD_VALIDITY_OPTIONS }
             ]),
             { key: "created", label: "Created Date", type: "daterange", fromKey: "createdFrom", toKey: "createdTo" }
         );
@@ -392,11 +394,18 @@ export default function Leads({
             const blob = await exportLeads({
                 sort: list.sort,
                 filters: { search: list.search || undefined, ...list.filters, ...exportParams },
-                selection: selectedOnly ? list.selectedIds : null,
+                selection: selectedOnly ? list.selection : null,
                 category: exportCategory,
             });
 
             downloadBlob(blob, "leads.xlsx");
+
+            const notice = exportCountNotice(
+                blob, selectedOnly ? list.selectedCount : list.totalElements, "leads");
+
+            if (notice) {
+                alert(notice);
+            }
 
         } catch (error) {
 
@@ -490,10 +499,10 @@ export default function Leads({
                                     <li>
                                         <button
                                             className="dropdown-item"
-                                            disabled={list.selectedIds.length === 0}
+                                            disabled={list.selectedCount === 0}
                                             onClick={() => handleExport(true)}
                                         >
-                                            Export selected ({list.selectedIds.length})
+                                            Export selected ({list.selectedCount})
                                         </button>
                                     </li>
                                 </ul>
@@ -509,8 +518,14 @@ export default function Leads({
 
             {(
                 <BulkActionBar
-                    count={list.selectedIds.length}
+                    count={list.selectedCount}
                     onClear={list.clearSelection}
+                    allMatching={list.allMatching}
+                    excludedCount={list.excludedIds.length}
+                    pageFullySelected={list.pageFullySelected}
+                    pageRowCount={list.data.length}
+                    totalElements={list.totalElements}
+                    onSelectAllMatching={list.selectAllMatching}
                     actions={[
                         {
                             key: "export", label: "Export Selected", icon: "bi-download",
@@ -519,17 +534,25 @@ export default function Leads({
                         ...(isAdmin ? [
                             {
                                 key: "delete", label: "Delete", icon: "bi-trash",
-                                variant: "btn-outline-danger", onClick: handleBulkDelete, disabled: bulkDeleting
+                                variant: "btn-outline-danger", onClick: handleBulkDelete, disabled: bulkDeleting,
+                                unavailableForAllMatching:
+                                    "Delete only works on records you tick individually, so nothing is deleted by accident."
                             },
                         ] : []),
                         ...(canSendEmail ? [
                             {
                                 key: "bulkEmail", label: "Bulk Email", icon: "bi-envelope-paper",
-                                variant: "btn-outline-primary", onClick: () => setShowBulkEmail(true)
+                                variant: "btn-outline-primary", onClick: () => setShowBulkEmail(true),
+                                unavailableForAllMatching:
+                                    "Bulk Email sends to records you tick individually (at most 100 per batch). " +
+                                    "Clear the selection and tick the records instead."
                             },
                             {
                                 key: "keepInTouch", label: "Send Keep in Touch", icon: "bi-envelope",
-                                variant: "btn-outline-primary", onClick: () => setShowBulkEmailModal(true)
+                                variant: "btn-outline-primary", onClick: () => setShowBulkEmailModal(true),
+                                unavailableForAllMatching:
+                                    "Keep in Touch sends to records you tick on this page. " +
+                                    "Clear the selection and tick the records instead."
                             },
                         ] : []),
                     ]}
@@ -542,6 +565,7 @@ export default function Leads({
                 loading={list.loading}
                 selectable
                 selectedIds={list.selectedIds}
+                isRowSelected={list.isSelected}
                 onToggleSelect={list.toggleSelect}
                 onToggleSelectAll={list.toggleSelectAll}
                 sort={list.sort}

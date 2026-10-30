@@ -11,6 +11,9 @@ export default function DataTable({
     renderActions,
     selectable = false,
     selectedIds = [],
+    // Optional (id) => boolean; takes precedence over selectedIds so a list
+    // in "all matching records" mode can show every row ticked unless excluded.
+    isRowSelected = null,
     onToggleSelect,
     onToggleSelectAll,
     sort = null,
@@ -51,9 +54,11 @@ export default function DataTable({
         );
     }
 
+    const selected = isRowSelected || ((id) => selectedIds.includes(id));
+
     const pageIds = data.map((row) => row.id);
-    const allSelected = selectable && pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
-    const someSelected = selectable && !allSelected && pageIds.some((id) => selectedIds.includes(id));
+    const allSelected = selectable && pageIds.length > 0 && pageIds.every(selected);
+    const someSelected = selectable && !allSelected && pageIds.some(selected);
 
     return (
 
@@ -72,6 +77,7 @@ export default function DataTable({
                                     <input
                                         type="checkbox"
                                         className="form-check-input"
+                                        aria-label="Select all rows on this page"
                                         checked={allSelected}
                                         ref={(el) => {
                                             if (el) el.indeterminate = someSelected;
@@ -138,7 +144,8 @@ export default function DataTable({
                                         <input
                                             type="checkbox"
                                             className="form-check-input"
-                                            checked={selectedIds.includes(row.id)}
+                                            aria-label={`Select row ${row.id}`}
+                                            checked={selected(row.id)}
                                             onChange={() => onToggleSelect(row.id)}
                                         />
                                     </td>

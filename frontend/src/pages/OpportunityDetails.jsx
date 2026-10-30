@@ -22,6 +22,7 @@ import { subStatusLabel, nextActionPayload } from "../components/workflowConstan
 import { getAllActivityTypes } from "../services/activityTypeService";
 import { describeDeleteImpact } from "../utils/deleteImpact";
 import { formatDate, formatDateTime } from "../utils/formatDate";
+import { describeLineItems } from "../utils/lineItems";
 
 export default function OpportunityDetails() {
 
@@ -494,7 +495,7 @@ export default function OpportunityDetails() {
 
                 <div className="col-lg-8">
 
-                    <SectionCard title="Lead Information">
+                    <SectionCard title="Customer & Requirement">
 
                         <div className="row">
 
@@ -503,7 +504,7 @@ export default function OpportunityDetails() {
                             </div>
 
                             <div className="col-md-6">
-                                <DetailField label="Contact Person" value={lead?.contactPerson} />
+                                <DetailField label="Contact Person" value={opportunity.contactPerson} />
                             </div>
 
                             <div className="col-md-6">
@@ -511,7 +512,7 @@ export default function OpportunityDetails() {
                             </div>
 
                             <div className="col-md-6">
-                                <DetailField label="Phone" value={lead?.phone} />
+                                <DetailField label="Phone" value={opportunity.contactPhone} />
                             </div>
 
                             <div className="col-md-6">
@@ -519,7 +520,7 @@ export default function OpportunityDetails() {
                             </div>
 
                             <div className="col-md-6">
-                                <DetailField label="Email" value={lead?.email} />
+                                <DetailField label="Email" value={opportunity.contactEmail} />
                             </div>
 
                             <div className="col-md-6">
@@ -529,10 +530,8 @@ export default function OpportunityDetails() {
                             <div className="col-md-6">
                                 <DetailField
                                     label="Products"
-                                    value={lead?.leadProducts?.length > 0
-                                        ? lead.leadProducts
-                                            .map(lp => `${lp.product?.name} (${lp.quantity})`)
-                                            .join(", ")
+                                    value={opportunity.opportunityProducts?.length > 0
+                                        ? describeLineItems(opportunity.opportunityProducts, "product")
                                         : ""}
                                 />
                             </div>
@@ -540,10 +539,8 @@ export default function OpportunityDetails() {
                             <div className="col-md-6">
                                 <DetailField
                                     label="Battery"
-                                    value={lead?.leadBatteries?.length > 0
-                                        ? lead.leadBatteries
-                                            .map(lb => `${lb.battery?.name} (${lb.quantity})`)
-                                            .join(", ")
+                                    value={opportunity.opportunityBatteries?.length > 0
+                                        ? describeLineItems(opportunity.opportunityBatteries, "battery")
                                         : ""}
                                 />
                             </div>

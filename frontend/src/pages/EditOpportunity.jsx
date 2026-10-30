@@ -10,6 +10,8 @@ import {
     updateOpportunity
 } from "../services/opportunityService";
 import { workflowPayload, nextActionPayload } from "../components/workflowConstants";
+import { toRequestItems, toSelectorRows } from "../utils/lineItems";
+import { opportunityDetailErrors, requiredOpportunityDetails } from "../utils/opportunityDetails";
 
 export default function EditOpportunity() {
 
@@ -38,8 +40,22 @@ export default function EditOpportunity() {
         nextActionDescription: "",
         nextActionActivityTypeId: "",
         nextFollowUpDate: "",
-        legacyLostNoReason: false
+        legacyLostNoReason: false,
+        // The Opportunity's own contact details and line items - edited here
+        // independently of the original Lead.
+        contactPerson: "",
+        contactPhone: "",
+        contactEmail: "",
+        products: [],
+        batteries: []
     });
+
+    // The values as loaded, to decide what is required and which values
+    // changed (see utils/opportunityDetails).
+    const [originalDetails, setOriginalDetails] = useState(null);
+    const [triedToSave, setTriedToSave] = useState(false);
+
+    const detailErrors = triedToSave && originalDetails ? opportunityDetailErrors(form, originalDetails) : {};
 
     useEffect(() => {
 
@@ -60,7 +76,18 @@ export default function EditOpportunity() {
             setOriginalClosingDate(data.expectedClosingDate || null);
             setHasNextAction(data.hasNextAction ?? null);
 
+            const details = {
+                contactPerson: data.contactPerson || "",
+                contactPhone: data.contactPhone || "",
+                contactEmail: data.contactEmail || "",
+                products: toSelectorRows(data.opportunityProducts, "product"),
+                batteries: toSelectorRows(data.opportunityBatteries, "battery"),
+            };
+
+            setOriginalDetails(details);
+
             setForm({
+                ...details,
                 leadId: data.lead?.id || "",
                 title: data.title || "",
                 productValue: data.productValue || "",
@@ -106,11 +133,26 @@ export default function EditOpportunity() {
 
         e.preventDefault();
 
+        setTriedToSave(true);
+
+        if (originalDetails && Object.keys(opportunityDetailErrors(form, originalDetails)).length > 0) {
+            return;
+        }
+
         setLoading(true);
 
         try {
 
             const saved = await updateOpportunity(id, {
+                // The Opportunity's own details. Sent only once loaded, so a
+                // failed load can never blank them (null = keep as is).
+                ...(originalDetails ? {
+                    contactPerson: form.contactPerson,
+                    contactPhone: form.contactPhone,
+                    contactEmail: form.contactEmail,
+                    products: toRequestItems(form.products, "productId"),
+                    batteries: toRequestItems(form.batteries, "batteryId"),
+                } : {}),
                 leadId: Number(form.leadId),
                 title: form.title,
                 productValue:
@@ -179,6 +221,8 @@ export default function EditOpportunity() {
                         currentStage={currentStage}
                         originalClosingDate={originalClosingDate}
                         hasNextAction={hasNextAction}
+                        requiredDetails={requiredOpportunityDetails(originalDetails)}
+                        detailErrors={detailErrors}
                     />
 
                 </div>

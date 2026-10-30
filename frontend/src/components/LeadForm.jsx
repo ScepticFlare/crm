@@ -44,7 +44,13 @@ export default function LeadForm({
     loading,
     submitText,
     onCancel,
-    leadId = null
+    leadId = null,
+    // Product / Battery: marked required (new leads, and existing leads that
+    // already have one) and the messages to show under them - see
+    // utils/lineItems.lineItemErrors. The backend enforces the same rule.
+    productRequired = false,
+    batteryRequired = false,
+    lineItemErrors = {}
 
 }) {
 
@@ -220,7 +226,7 @@ export default function LeadForm({
 <div className="mb-3">
 
     <label className="form-label">
-        Products
+        Products{productRequired ? " *" : ""}
     </label>
 
     <MultiItemQuantitySelector
@@ -239,12 +245,16 @@ export default function LeadForm({
         placeholder="Select Product"
     />
 
+    {lineItemErrors.products && (
+        <div className="invalid-feedback d-block" role="alert">{lineItemErrors.products}</div>
+    )}
+
 </div>
 
 <div className="mb-3">
 
     <label className="form-label">
-        Battery
+        Battery{batteryRequired ? " *" : ""}
     </label>
 
     <MultiItemQuantitySelector
@@ -262,6 +272,10 @@ export default function LeadForm({
         onRefresh={loadBatteries}
         placeholder="Select Battery"
     />
+
+    {lineItemErrors.batteries && (
+        <div className="invalid-feedback d-block" role="alert">{lineItemErrors.batteries}</div>
+    )}
 
 </div>
 

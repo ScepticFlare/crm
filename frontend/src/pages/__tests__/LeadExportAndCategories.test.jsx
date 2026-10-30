@@ -192,10 +192,20 @@ describe("normal Leads page", () => {
         await screen.findByText("Lead Status");
     }
 
+    // The categorical filters are multi-selects (react-select): open the
+    // menu and read the values it offers. "All" is its empty placeholder.
     function optionsOf(labelText) {
         const label = screen.getByText(labelText);
         const select = label.parentElement.querySelector("select");
-        return Array.from(select.options).map((o) => o.textContent);
+        if (select) {
+            return Array.from(select.options).map((o) => o.textContent);
+        }
+        const input = label.parentElement.querySelector("input");
+        fireEvent.keyDown(input, { key: "ArrowDown" });
+        const offered = Array.from(document.querySelectorAll(".filter-multiselect__option"))
+            .map((o) => o.textContent);
+        fireEvent.keyDown(input, { key: "Escape" });
+        return offered;
     }
 
     it("offers only New and Valid (not yet converted) as status filters, and no validity filter", async () => {
@@ -203,7 +213,7 @@ describe("normal Leads page", () => {
         renderAt("/leads", <Leads />);
         await openFilters();
 
-        expect(optionsOf("Lead Status")).toEqual(["All", "New", "Valid (not yet converted)"]);
+        expect(optionsOf("Lead Status")).toEqual(["New", "Valid (not yet converted)"]);
         // leads that still carry an older status can be isolated by it
         expect(optionsOf("Original (older) status")).toContain("WON");
         expect(screen.queryByText("Lead Validity")).toBeNull();
@@ -218,7 +228,7 @@ describe("normal Leads page", () => {
         fireEvent.click(screen.getByText("Filters"));
         await screen.findByText("Lead Status");
 
-        expect(optionsOf("Lead Status")).toEqual(["All", "New", "Valid", "Invalid"]);
+        expect(optionsOf("Lead Status")).toEqual(["New", "Valid", "Invalid"]);
         expect(screen.getByText("Lead Validity")).toBeTruthy();
     });
 });

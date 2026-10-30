@@ -1,4 +1,4 @@
-import api, { toListParams } from "./api";
+import api, { selectionParams, toListParams, withRowCount } from "./api";
 
 export const createOpportunity = async (leadId, data) => {
 
@@ -83,19 +83,22 @@ export const bulkDeleteOpportunities = async (ids) => {
     return response.data;
 };
 
-export const exportOpportunities = async ({ sort = null, filters = {}, selection = null } = {}) => {
+// selection: see api.selectionParams. columns: the column chooser's visible
+// keys, in order - the file contains exactly those columns.
+export const exportOpportunities = async ({ sort = null, filters = {}, selection = null, columns = null } = {}) => {
 
     const response = await api.get("/opportunities/export", {
         params: {
             sortBy: sort?.field || undefined,
             sortDir: sort?.dir || undefined,
             ...filters,
-            ids: selection && selection.length > 0 ? selection.join(",") : undefined,
+            ...selectionParams(selection),
+            columns: columns && columns.length > 0 ? columns.join(",") : undefined,
         },
         responseType: "blob",
     });
 
-    return response.data;
+    return withRowCount(response);
 
 };
 

@@ -15,6 +15,23 @@ export function downloadBlob(blob, filename) {
 
 }
 
+// After an export: a note when the file holds a different number of rows
+// than the user had selected / saw listed (records changed since the list
+// loaded, or some are outside their export permission). Null when they
+// match or the server did not report a count.
+export function exportCountNotice(blob, expected, what) {
+
+    const actual = blob?.rowCount;
+
+    if (typeof actual !== "number" || typeof expected !== "number" || actual === expected) {
+        return null;
+    }
+
+    return `The export contains ${actual} ${what}, but ${expected} were selected. ` +
+        "Records may have changed since the list was loaded, or some are outside your export permission.";
+
+}
+
 // Message for a failed export. The export request uses responseType "blob",
 // so an error body arrives as a Blob and must be read before it is useful.
 export async function exportErrorMessage(error, what) {

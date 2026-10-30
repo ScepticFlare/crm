@@ -13,7 +13,11 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api"
 
 const api = axios.create({
     baseURL: API_BASE_URL,
-    timeout: REQUEST_TIMEOUT_MS
+    timeout: REQUEST_TIMEOUT_MS,
+    // Multi-value filters (e.g. productId: ["1", "2"]) go out as repeated
+    // keys - productId=1&productId=2 - which Spring binds to a List. (The
+    // axios default, productId[]=1, would not bind.)
+    paramsSerializer: { indexes: null }
 });
 
 // Render cold-start wake-up. /health is served at the backend's root, not
@@ -109,6 +113,50 @@ export const monthParams = (month) => {
 // is called with: { page, size, search, sort: {field, dir}|null, filters }.
 // This is the one place that turns it into query params, so every module's
 // service file stays a one-line wrapper instead of repeating the mapping.
+// Export query params for a list selection (see hooks/useServerList):
+//  - null / []                        -> nothing: every matching record;
+//  - [ids]                            -> ids=1,2,3 - exactly those rows;
+//  - { allMatching: true, excludedIds } -> every matching record except the
+//    unticked ones (excludeIds=...). The server re-applies the filters and
+//    the caller's permissions, so the browser never has to load the rows.
+export const selectionParams = (selection) => {
+
+    if (!selection) {
+        return {};
+    }
+
+    if (Array.isArray(selection)) {
+        return selection.length > 0 ? { ids: selection.join(",") } : {};
+    }
+
+    if (selection.allMatching) {
+        const excluded = selection.excludedIds || [];
+        return excluded.length > 0 ? { excludeIds: excluded.join(",") } : {};
+    }
+
+    return {};
+
+};
+
+// An export's file, with the number of rows the server put in it (the
+// X-Export-Row-Count header) attached as blob.rowCount when available.
+export const withRowCount = (response) => {
+
+    const blob = response.data;
+    const count = Number(response.headers?.["x-export-row-count"]);
+
+    if (blob && Number.isFinite(count)) {
+        try {
+            blob.rowCount = count;
+        } catch {
+            // not extensible - the count is informational only
+        }
+    }
+
+    return blob;
+
+};
+
 export const toListParams = ({ page = 0, size = 50, search = "", sort = null, filters = {} } = {}) => ({
     page,
     size,

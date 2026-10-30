@@ -13,7 +13,7 @@ import ListPagination from "../components/list/ListPagination";
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
 import { formatDateTime } from "../utils/formatDate";
-import { downloadBlob } from "../utils/downloadFile";
+import { downloadBlob, exportCountNotice, exportErrorMessage } from "../utils/downloadFile";
 
 import {
     getAllFollowUps,
@@ -81,19 +81,20 @@ export default function FollowUps() {
 
     }, []);
 
+    // Multi-select: any chosen value within a filter (OR), all filters (AND).
     const filterDefs = useMemo(() => {
 
         const defs = [
             {
-                key: "activityTypeId", label: "Activity Type", type: "select",
+                key: "activityTypeId", label: "Activity Type", type: "multiselect",
                 options: activityTypes.map((a) => ({ value: a.id, label: a.name }))
             },
-            { key: "status", label: "Status", type: "select", options: FOLLOWUP_STATUS_OPTIONS },
+            { key: "status", label: "Status", type: "multiselect", options: FOLLOWUP_STATUS_OPTIONS },
         ];
 
         if (employees.length > 0) {
             defs.push({
-                key: "assignedEmployeeId", label: "Assigned Employee", type: "select",
+                key: "assignedEmployeeId", label: "Assigned Employee", type: "multiselect",
                 options: employees.map((e) => ({ value: e.id, label: e.name }))
             });
         }
@@ -154,15 +155,22 @@ export default function FollowUps() {
             const blob = await exportFollowUps({
                 sort: list.sort,
                 filters: { search: list.search || undefined, ...list.filters },
-                selection: selectedOnly ? list.selectedIds : null,
+                selection: selectedOnly ? list.selection : null,
             });
 
             downloadBlob(blob, "followups.xlsx");
 
+            const notice = exportCountNotice(
+                blob, selectedOnly ? list.selectedCount : list.totalElements, "follow-ups");
+
+            if (notice) {
+                alert(notice);
+            }
+
         } catch (error) {
 
             console.error(error);
-            alert("Unable to export follow-ups.");
+            alert(await exportErrorMessage(error, "follow-ups"));
 
         } finally {
 
@@ -291,10 +299,10 @@ export default function FollowUps() {
                                     <li>
                                         <button
                                             className="dropdown-item"
-                                            disabled={list.selectedIds.length === 0}
+                                            disabled={list.selectedCount === 0}
                                             onClick={() => handleExport(true)}
                                         >
-                                            Export selected ({list.selectedIds.length})
+                                            Export selected ({list.selectedCount})
                                         </button>
                                     </li>
                                 </ul>
@@ -310,8 +318,14 @@ export default function FollowUps() {
 
             {isAdmin && (
                 <BulkActionBar
-                    count={list.selectedIds.length}
+                    count={list.selectedCount}
                     onClear={list.clearSelection}
+                    allMatching={list.allMatching}
+                    excludedCount={list.excludedIds.length}
+                    pageFullySelected={list.pageFullySelected}
+                    pageRowCount={list.data.length}
+                    totalElements={list.totalElements}
+                    onSelectAllMatching={list.selectAllMatching}
                     actions={[
                         {
                             key: "export", label: "Export Selected", icon: "bi-download",
@@ -319,7 +333,9 @@ export default function FollowUps() {
                         },
                         {
                             key: "delete", label: "Delete", icon: "bi-trash",
-                            variant: "btn-outline-danger", onClick: handleBulkDelete, disabled: bulkDeleting
+                            variant: "btn-outline-danger", onClick: handleBulkDelete, disabled: bulkDeleting,
+                            unavailableForAllMatching:
+                                "Delete only works on records you tick individually, so nothing is deleted by accident."
                         },
                     ]}
                 />
@@ -331,6 +347,7 @@ export default function FollowUps() {
                 loading={list.loading}
                 selectable={isAdmin}
                 selectedIds={list.selectedIds}
+                isRowSelected={list.isSelected}
                 onToggleSelect={list.toggleSelect}
                 onToggleSelectAll={list.toggleSelectAll}
                 sort={list.sort}

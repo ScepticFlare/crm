@@ -1,4 +1,21 @@
 import { useEffect, useState } from "react";
+import Select from "react-select";
+
+import { isActiveFilterValue } from "../../hooks/useServerList";
+
+// A multi-select filter's value as an array of strings. Older URLs (and
+// single-select filters that became multi-select) hold a single value.
+function toValueArray(value) {
+
+    if (value === undefined || value === null || value === "") {
+        return [];
+    }
+
+    return (Array.isArray(value) ? value : [value])
+        .filter((v) => v !== undefined && v !== null && v !== "")
+        .map(String);
+
+}
 
 const DATE_PRESETS = [
     { key: "today", label: "Today" },
@@ -74,7 +91,11 @@ function presetRange(key) {
 // Generic combinable filter drawer, driven entirely by a filterDefs config
 // array so every module (Leads/Opportunities/Customers/FollowUps) reuses
 // this one component instead of hand-building its own filter UI.
-// filterDefs: [{ key, label, type: "select" | "text" | "date" | "daterange", options, fromKey, toKey }]
+// filterDefs: [{ key, label, type: "select" | "multiselect" | "text" | "date" | "daterange", options, fromKey, toKey }]
+//
+// "multiselect" holds an array of values: a record matches ANY selected value
+// of that filter (OR), while different filters still all have to match (AND).
+// Selecting nothing means "All" - the key is dropped, never sent empty.
 //
 // Self-contained: renders its own "Filters" trigger button (with an active-
 // count badge) plus the drawer. Filters are staged locally (draft) and only
@@ -95,12 +116,14 @@ export default function FilterPanel({ filterDefs, filters, onChange, onClear }) 
 
     }, [open]);
 
-    const activeCount = Object.values(filters).filter(
-        (v) => v !== undefined && v !== null && v !== ""
-    ).length;
+    const activeCount = Object.values(filters).filter(isActiveFilterValue).length;
 
     function updateDraft(key, value) {
-        setDraft((prev) => ({ ...prev, [key]: value === "" ? undefined : value }));
+
+        const empty = value === "" || (Array.isArray(value) && value.length === 0);
+
+        setDraft((prev) => ({ ...prev, [key]: empty ? undefined : value }));
+
     }
 
     function applyPreset(def, presetKey) {
@@ -180,6 +203,34 @@ export default function FilterPanel({ filterDefs, filters, onChange, onClear }) 
                                             ))}
                                         </select>
                                     )}
+
+                                    {def.type === "multiselect" && (() => {
+
+                                        const selected = toValueArray(draft[def.key]);
+                                        const options = def.options.map((opt) => ({
+                                            value: String(opt.value),
+                                            label: opt.label,
+                                        }));
+
+                                        return (
+                                            <Select
+                                                isMulti
+                                                inputId={`filter-${def.key}`}
+                                                aria-label={def.label}
+                                                classNamePrefix="filter-multiselect"
+                                                placeholder="All"
+                                                closeMenuOnSelect={false}
+                                                options={options}
+                                                value={options.filter((o) => selected.includes(o.value))}
+                                                onChange={(chosen) =>
+                                                    updateDraft(def.key, (chosen || []).map((o) => o.value))
+                                                }
+                                                menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                                                styles={{ menuPortal: (base) => ({ ...base, zIndex: 2000 }) }}
+                                            />
+                                        );
+
+                                    })()}
 
                                     {def.type === "text" && (
                                         <input

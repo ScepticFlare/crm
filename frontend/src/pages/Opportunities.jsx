@@ -8,14 +8,16 @@ import FilterPanel from "../components/list/FilterPanel";
 import ManageColumnsMenu from "../components/list/ManageColumnsMenu";
 import BulkActionBar from "../components/list/BulkActionBar";
 import RecordLink from "../components/list/RecordLink";
+import RowActionsMenu from "../components/list/RowActionsMenu";
 import BulkEmailModal from "../components/email/BulkEmailModal";
 import BulkEmailResumeBanner from "../components/email/BulkEmailResumeBanner";
 import ListPagination from "../components/list/ListPagination";
 
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
-import { formatDate } from "../utils/formatDate";
-import { downloadBlob, exportErrorMessage } from "../utils/downloadFile";
+import { formatDate, formatDateTime } from "../utils/formatDate";
+import { downloadBlob, exportCountNotice, exportErrorMessage } from "../utils/downloadFile";
+import { describeLineItems } from "../utils/lineItems";
 
 import {
     getAllOpportunities,
@@ -24,12 +26,20 @@ import {
 } from "../services/opportunityService";
 import { getAllSalesStages } from "../services/salesStageService";
 import { getAllProducts } from "../services/productService";
+import { getAllBatteries } from "../services/batteryService";
 import { getAllIndustries } from "../services/industryService";
 import { getAllEmployees } from "../services/employeeService";
 import { subStatusLabel } from "../components/workflowConstants";
 
+// Column keys double as export column keys (backend OpportunityController.
+// EXPORT_COLUMNS): the exported file contains exactly the visible columns.
+// Contact, product and battery values are the Opportunity's own current
+// values (editable after conversion), not the original Lead's.
 const ALL_OPPORTUNITY_COLUMNS = [
-    { key: "company", label: "Lead", render: (row) => row.lead?.companyName || "-" },
+    {
+        key: "company", label: "Company", sortable: true, sortKey: "company",
+        render: (row) => row.lead?.companyName || "-"
+    },
     {
         key: "title", label: "Opportunity", sortable: true,
         render: (row) => (
@@ -37,6 +47,17 @@ const ALL_OPPORTUNITY_COLUMNS = [
                 {row.title}
             </RecordLink>
         )
+    },
+    { key: "contactPerson", label: "Contact Person", sortable: true, render: (row) => row.contactPerson || "-" },
+    { key: "contactPhone", label: "Contact Phone", render: (row) => row.contactPhone || "-" },
+    { key: "contactEmail", label: "Contact Email", render: (row) => row.contactEmail || "-" },
+    {
+        key: "products", label: "Product",
+        render: (row) => describeLineItems(row.opportunityProducts, "product")
+    },
+    {
+        key: "batteries", label: "Battery",
+        render: (row) => describeLineItems(row.opportunityBatteries, "battery")
     },
     {
         key: "value", label: "Value", sortable: true, sortKey: "value",
@@ -78,17 +99,42 @@ const ALL_OPPORTUNITY_COLUMNS = [
         )
     },
     {
+        key: "subStatus", label: "Sub-Status",
+        render: (row) => (row.effectiveSubStatus ? subStatusLabel(row.effectiveSubStatus) : "-")
+    },
+    {
         key: "assignedEmployee", label: "Assigned Employee", sortable: true,
         render: (row) => row.lead?.assignedEmployee?.name || "-"
     },
+    { key: "industry", label: "Industry", render: (row) => row.lead?.industry?.name || "-" },
+    { key: "city", label: "City", render: (row) => row.lead?.city || "-" },
+    { key: "state", label: "State", render: (row) => row.lead?.state || "-" },
+    { key: "leadSource", label: "Lead Source", render: (row) => row.lead?.leadSource?.name || "-" },
+    { key: "leadValidity", label: "Validity", render: (row) => row.leadValidity || "-" },
+    {
+        key: "nextFollowUp", label: "Next Follow-up",
+        render: (row) => formatDateTime(row.nextFollowUpDate)
+    },
+    {
+        key: "postponedReviewDate", label: "Postponed Review Date",
+        render: (row) => formatDate(row.postponedReviewDate)
+    },
+    { key: "postponedReason", label: "Postponed Reason", render: (row) => row.postponedReason || "-" },
+    { key: "lostReason", label: "Lost Reason", render: (row) => row.lostReason || "-" },
     {
         key: "createdAt", label: "Created Date", sortable: true, sortKey: "createdDate",
         render: (row) => formatDate(row.createdAt)
     },
+    {
+        key: "updatedAt", label: "Last Modified", sortable: true, sortKey: "updatedDate",
+        render: (row) => formatDate(row.updatedAt)
+    },
 ];
 
-// Compact default: createdAt stays available via Manage Columns.
-const DEFAULT_VISIBLE_OPPORTUNITY_COLUMNS = ["company", "title", "value", "date", "stage", "assignedEmployee"];
+// Compact default: everything else stays one click away via Manage Columns.
+const DEFAULT_VISIBLE_OPPORTUNITY_COLUMNS = [
+    "company", "title", "products", "batteries", "value", "date", "stage", "assignedEmployee"
+];
 
 export default function Opportunities({
     title = "Opportunities",
@@ -122,6 +168,7 @@ export default function Opportunities({
 
     const [salesStages, setSalesStages] = useState([]);
     const [products, setProducts] = useState([]);
+    const [batteries, setBatteries] = useState([]);
     const [industries, setIndustries] = useState([]);
     const [employees, setEmployees] = useState([]);
 
@@ -129,31 +176,39 @@ export default function Opportunities({
 
         getAllSalesStages().then(setSalesStages).catch(() => {});
         getAllProducts().then(setProducts).catch(() => {});
+        getAllBatteries().then(setBatteries).catch(() => {});
         getAllIndustries().then(setIndustries).catch(() => {});
         getAllEmployees().then(setEmployees).catch(() => {});
 
     }, []);
 
+    // Categorical filters are multi-select: any of the chosen values within a
+    // filter (e.g. Stage is In Progress OR Postponed), and every filter must
+    // match (AND). Product / Battery match the Opportunity's own current items.
     const filterDefs = useMemo(() => {
 
         const defs = [
             {
-                key: "salesStageId", label: "Stage", type: "select",
+                key: "salesStageId", label: "Stage", type: "multiselect",
                 options: salesStages.map((s) => ({ value: s.id, label: s.name }))
             },
             {
-                key: "productId", label: "Product", type: "select",
+                key: "productId", label: "Product", type: "multiselect",
                 options: products.map((p) => ({ value: p.id, label: p.name }))
             },
             {
-                key: "industryId", label: "Industry", type: "select",
+                key: "batteryId", label: "Battery", type: "multiselect",
+                options: batteries.map((b) => ({ value: b.id, label: b.name }))
+            },
+            {
+                key: "industryId", label: "Industry", type: "multiselect",
                 options: industries.map((i) => ({ value: i.id, label: i.name }))
             },
         ];
 
         if (employees.length > 0) {
             defs.push({
-                key: "assignedEmployeeId", label: "Assigned Employee", type: "select",
+                key: "assignedEmployeeId", label: "Assigned Employee", type: "multiselect",
                 options: employees.map((e) => ({ value: e.id, label: e.name }))
             });
         }
@@ -170,7 +225,7 @@ export default function Opportunities({
 
         return defs;
 
-    }, [salesStages, products, industries, employees]);
+    }, [salesStages, products, batteries, industries, employees]);
 
     const [bulkDeleting, setBulkDeleting] = useState(false);
 
@@ -218,6 +273,10 @@ export default function Opportunities({
 
     }
 
+    // Exports exactly what is listed: same search, filters, page-forced
+    // parameters and sort, with the visible columns (in table order).
+    // selectedOnly: the current selection - picked rows, or every matching
+    // record minus unticked ones; otherwise every matching record.
     async function handleExport(selectedOnly) {
 
         setExporting(true);
@@ -227,10 +286,18 @@ export default function Opportunities({
             const blob = await exportOpportunities({
                 sort: list.sort,
                 filters: { search: list.search || undefined, ...list.filters, ...exportParams },
-                selection: selectedOnly ? list.selectedIds : null,
+                selection: selectedOnly ? list.selection : null,
+                columns: columns.visibleColumns.map((c) => c.key),
             });
 
             downloadBlob(blob, "opportunities.xlsx");
+
+            const notice = exportCountNotice(
+                blob, selectedOnly ? list.selectedCount : list.totalElements, "opportunities");
+
+            if (notice) {
+                alert(notice);
+            }
 
         } catch (error) {
 
@@ -350,17 +417,24 @@ export default function Opportunities({
                                 <ul className="dropdown-menu dropdown-menu-end">
                                     <li>
                                         <button className="dropdown-item" onClick={() => handleExport(false)}>
-                                            Export all matching
+                                            Export all matching ({list.totalElements})
                                         </button>
                                     </li>
                                     <li>
                                         <button
                                             className="dropdown-item"
-                                            disabled={list.selectedIds.length === 0}
+                                            disabled={list.selectedCount === 0}
                                             onClick={() => handleExport(true)}
                                         >
-                                            Export selected ({list.selectedIds.length})
+                                            Export selected ({list.selectedCount})
                                         </button>
+                                    </li>
+                                    <li><hr className="dropdown-divider" /></li>
+                                    <li>
+                                        <span className="dropdown-item-text small text-muted">
+                                            Includes the {columns.visibleColumns.length} visible column(s) -
+                                            change them with Columns.
+                                        </span>
                                     </li>
                                 </ul>
 
@@ -375,12 +449,21 @@ export default function Opportunities({
 
             {(
                 <BulkActionBar
-                    count={list.selectedIds.length}
+                    count={list.selectedCount}
                     onClear={list.clearSelection}
+                    allMatching={list.allMatching}
+                    excludedCount={list.excludedIds.length}
+                    pageFullySelected={list.pageFullySelected}
+                    pageRowCount={list.data.length}
+                    totalElements={list.totalElements}
+                    onSelectAllMatching={list.selectAllMatching}
                     actions={[
                         {
                             key: "bulkEmail", label: "Bulk Email", icon: "bi-envelope-paper",
-                            variant: "btn-outline-primary", onClick: () => setShowBulkEmail(true)
+                            variant: "btn-outline-primary", onClick: () => setShowBulkEmail(true),
+                            unavailableForAllMatching:
+                                "Bulk Email sends to records you tick individually (at most 100 per batch). " +
+                                "Clear the selection and tick the records instead."
                         },
                         {
                             key: "export", label: "Export Selected", icon: "bi-download",
@@ -388,7 +471,9 @@ export default function Opportunities({
                         },
                         ...(isAdmin ? [{
                             key: "delete", label: "Delete", icon: "bi-trash",
-                            variant: "btn-outline-danger", onClick: handleBulkDelete, disabled: bulkDeleting
+                            variant: "btn-outline-danger", onClick: handleBulkDelete, disabled: bulkDeleting,
+                            unavailableForAllMatching:
+                                "Delete only works on records you tick individually, so nothing is deleted by accident."
                         }] : []),
                     ]}
                 />
@@ -400,11 +485,25 @@ export default function Opportunities({
                 loading={list.loading}
                 selectable
                 selectedIds={list.selectedIds}
+                isRowSelected={list.isSelected}
                 onToggleSelect={list.toggleSelect}
                 onToggleSelectAll={list.toggleSelectAll}
                 sort={list.sort}
                 onSortChange={list.toggleSort}
                 onRowClick={(row) => navigate(`/opportunities/${row.id}`, { state: { from: location.pathname + location.search } })}
+                renderActions={(row) => (
+                    <RowActionsMenu
+                        items={[{
+                            // The backend decides whether this user may edit it
+                            // (OPPORTUNITY_MANAGE within their scope).
+                            label: "Edit Opportunity",
+                            icon: "bi-pencil",
+                            onClick: () => navigate(`/opportunities/edit/${row.id}`, {
+                                state: { from: location.pathname + location.search }
+                            }),
+                        }]}
+                    />
+                )}
             />
 
             <ListPagination

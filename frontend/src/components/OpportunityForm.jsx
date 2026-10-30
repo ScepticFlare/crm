@@ -10,6 +10,7 @@ import {
     updateSalesStage
 } from "../services/salesStageService";
 import DropdownAddManage from "./DropdownAddManage";
+import ProductBatteryFields from "./ProductBatteryFields";
 import {
     SUB_STATUS_OPTIONS,
     isLegacySubStage,
@@ -33,7 +34,12 @@ export default function OpportunityForm({
     originalClosingDate = null,
     // Edit page: whether the opportunity already has a qualifying next action
     // (pending, future, described follow-up) - false asks for one here.
-    hasNextAction = null
+    hasNextAction = null,
+    // Edit page: which of the opportunity's own contact / product / battery
+    // fields are required (those that already have a value - see
+    // EditOpportunity), and the messages to show under them.
+    requiredDetails = {},
+    detailErrors = {}
 }) {
 
     const role = localStorage.getItem("role");
@@ -163,9 +169,16 @@ export default function OpportunityForm({
                     </div>
                 )}
 
-                <h5 className="mb-4">
-                    Lead Information
+                <h5 className={isConversion ? "mb-4" : "mb-2"}>
+                    {isConversion ? "Lead Information" : "Original Lead (for reference)"}
                 </h5>
+
+                {!isConversion && (
+                    <p className="text-muted small mb-3">
+                        The values this opportunity was converted from. The contact details, products and
+                        batteries below belong to the opportunity and can be changed without touching the lead.
+                    </p>
+                )}
 
                 <div className="row">
 
@@ -248,6 +261,26 @@ export default function OpportunityForm({
                     <div className="col-md-6 mb-3">
 
                         <label className="form-label fw-bold">
+                            Battery
+                        </label>
+
+                        <input
+                            className="form-control"
+                            value={
+                                lead?.leadBatteries?.length > 0
+                                    ? lead.leadBatteries
+                                        .map(lb => `${lb.battery?.name} (${lb.quantity})`)
+                                        .join(", ")
+                                    : ""
+                            }
+                            disabled
+                        />
+
+                    </div>
+
+                    <div className="col-md-6 mb-3">
+
+                        <label className="form-label fw-bold">
                             Industry
                         </label>
 
@@ -260,6 +293,99 @@ export default function OpportunityForm({
                     </div>
 
                 </div>
+
+                {isConversion && (
+                    <div className="form-text mb-2">
+                        The contact details, products and batteries above are copied onto the new opportunity.
+                        If the customer's requirement changes later, edit the opportunity - the lead keeps
+                        its original values.
+                    </div>
+                )}
+
+                {!isConversion && (
+
+                    <>
+
+                        <hr className="my-4"/>
+
+                        <h5 className="mb-4">
+                            Customer Contact &amp; Requirement
+                        </h5>
+
+                        <div className="row">
+
+                            <div className="col-md-4 mb-3">
+
+                                <label className="form-label">
+                                    Contact Person{requiredDetails.contactPerson ? " *" : ""}
+                                </label>
+
+                                <input
+                                    className={`form-control${detailErrors.contactPerson ? " is-invalid" : ""}`}
+                                    name="contactPerson"
+                                    value={form.contactPerson || ""}
+                                    onChange={handleChange}
+                                />
+
+                                {detailErrors.contactPerson && (
+                                    <div className="invalid-feedback" role="alert">{detailErrors.contactPerson}</div>
+                                )}
+
+                            </div>
+
+                            <div className="col-md-4 mb-3">
+
+                                <label className="form-label">
+                                    Contact Phone{requiredDetails.contactPhone ? " *" : ""}
+                                </label>
+
+                                <input
+                                    className={`form-control${detailErrors.contactPhone ? " is-invalid" : ""}`}
+                                    name="contactPhone"
+                                    inputMode="numeric"
+                                    value={form.contactPhone || ""}
+                                    onChange={handleChange}
+                                />
+
+                                {detailErrors.contactPhone && (
+                                    <div className="invalid-feedback" role="alert">{detailErrors.contactPhone}</div>
+                                )}
+
+                            </div>
+
+                            <div className="col-md-4 mb-3">
+
+                                <label className="form-label">
+                                    Contact Email
+                                </label>
+
+                                <input
+                                    className={`form-control${detailErrors.contactEmail ? " is-invalid" : ""}`}
+                                    name="contactEmail"
+                                    value={form.contactEmail || ""}
+                                    onChange={handleChange}
+                                />
+
+                                {detailErrors.contactEmail && (
+                                    <div className="invalid-feedback" role="alert">{detailErrors.contactEmail}</div>
+                                )}
+
+                            </div>
+
+                        </div>
+
+                        <ProductBatteryFields
+                            products={form.products}
+                            batteries={form.batteries}
+                            handleChange={handleChange}
+                            productRequired={!!requiredDetails.products}
+                            batteryRequired={!!requiredDetails.batteries}
+                            errors={detailErrors}
+                        />
+
+                    </>
+
+                )}
 
                 <hr className="my-4"/>
 
