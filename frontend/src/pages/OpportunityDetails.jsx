@@ -417,11 +417,10 @@ export default function OpportunityDetails() {
                 <div className="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2">
 
                     <div>
-                        <span className="fw-semibold">Next action missing.</span>{" "}
-                        An active opportunity needs a pending follow-up with a next action and a future date.
-                        Schedule one (describe the next action), or use Edit to enter it while saving. Until
-                        then the opportunity cannot be saved as active, but you can still view it, close it
-                        (Won / Lost) or postpone it.
+                        <span className="fw-semibold">Next follow-up missing.</span>{" "}
+                        Every active or Postponed opportunity needs a pending follow-up with a next action and a
+                        future date. Schedule one (describe the next action), or use Edit to enter it while
+                        saving. Until then the opportunity can be viewed but not saved.
                     </div>
 
                     <div className="d-flex gap-2">

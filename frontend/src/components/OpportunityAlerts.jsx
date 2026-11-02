@@ -62,8 +62,8 @@ export default function OpportunityAlerts() {
             items: alerts.noNextAction,
             icon: "bi-bell-slash",
             variant: "secondary",
-            title: "Active opportunities missing a next action",
-            hint: "These cannot be saved as active until a pending follow-up with a next action and a future date exists. Open the opportunity and schedule one (or close / postpone it).",
+            title: "Opportunities missing a next follow-up",
+            hint: "Every active or Postponed opportunity needs a pending follow-up with a next action and a future date - these cannot be saved until one exists. Open the opportunity and schedule one.",
             detail: (item) => item.stage,
         },
     ].filter((s) => s.count > 0);

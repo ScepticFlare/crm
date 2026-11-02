@@ -14,6 +14,16 @@ import {
 import { getAllEmployees } from "../services/employeeService";
 import { getAllLeads } from "../services/leadService";
 import { getAllOpportunities } from "../services/opportunityService";
+import { getFollowUpsByOpportunity } from "../services/followupService";
+import { nextActionPayload, requiresNextFollowUp } from "../components/workflowConstants";
+
+// A follow-up that counts as an opportunity's next one: pending, scheduled
+// now or later, with a described next action (the backend's FollowUpRules).
+function qualifies(f) {
+    return f.status === "PENDING"
+        && !!f.scheduledDate && new Date(f.scheduledDate) >= new Date()
+        && (f.remarks || "").trim().length >= 3;
+}
 
 export default function EditFollowUp() {
 
@@ -26,6 +36,11 @@ export default function EditFollowUp() {
     const [opportunities, setOpportunities] = useState([]);
 
     const [loading, setLoading] = useState(true);
+
+    // As loaded: the status before this edit and the opportunity (if any)
+    // with its other upcoming follow-up - they decide whether completing this
+    // one must schedule the next.
+    const [original, setOriginal] = useState(null);
 
    const [form, setForm] = useState({
     leadId: "",
@@ -59,6 +74,27 @@ export default function EditFollowUp() {
             getAllOpportunities({ page: 0, size: 1000, search: "" })
         ]);
 
+        // Only an active or Postponed opportunity needs a next follow-up (Won,
+        // Lost and Dropped do not). A lead's follow-up whose lead became an
+        // opportunity is checked by the backend, which says so.
+        const opportunity = followUp.opportunity || null;
+        const needsNext = !!opportunity && requiresNextFollowUp(opportunity.salesStage);
+        let otherNext = null;
+
+        if (needsNext) {
+            const siblings = await getFollowUpsByOpportunity(opportunity.id).catch(() => []);
+            otherNext = siblings
+                .filter((f) => f.id !== followUp.id && qualifies(f))
+                .sort((a, b) => new Date(a.scheduledDate) - new Date(b.scheduledDate))[0] || null;
+        }
+
+        setOriginal({
+            status: followUp.status,
+            opportunityId: opportunity?.id || null,
+            needsNext,
+            otherNextDate: otherNext?.scheduledDate || null,
+        });
+
         setLeads(leadResponse.content || []);
         setOpportunities(oppResponse.content || []);
 
@@ -82,7 +118,10 @@ export default function EditFollowUp() {
             completedDate: followUp.completedDate
                 ? followUp.completedDate.substring(0, 16)
                 : "",
-            remarks: followUp.remarks || ""
+            remarks: followUp.remarks || "",
+            nextActionDescription: "",
+            nextActionActivityTypeId: "",
+            nextFollowUpDate: ""
         });
 
     } catch (err) {
@@ -98,17 +137,36 @@ export default function EditFollowUp() {
 
 }
 
+    // Being marked Completed now, still on the opportunity it was loaded with.
+    const completing = !!original
+        && original.status !== "COMPLETED"
+        && form.status === "COMPLETED"
+        && original.needsNext
+        && String(form.opportunityId || "") === String(original.opportunityId);
+
+    const completionPrompt = completing
+        ? (original.otherNextDate
+            ? { required: false, existingDate: original.otherNextDate }
+            : { required: true })
+        : null;
+
     async function handleSubmit(e) {
 
         e.preventDefault();
 
+        // The next follow-up is sent only when it is being asked for.
+        const { nextActionDescription, nextActionActivityTypeId, nextFollowUpDate, ...fields } = form;
+
         try {
 
             await updateFollowUp(id,{
-                ...form,
+                ...fields,
                 leadId: form.leadId || null,
                 opportunityId: form.opportunityId || null,
-                employeeId: Number(form.employeeId)
+                employeeId: Number(form.employeeId),
+                ...(completionPrompt?.required
+                    ? nextActionPayload({ nextActionDescription, nextActionActivityTypeId, nextFollowUpDate })
+                    : {})
             });
 
             alert("Follow Up updated successfully.");
@@ -118,7 +176,7 @@ export default function EditFollowUp() {
         } catch(err){
 
             console.error(err);
-            alert("Unable to update Follow Up.");
+            alert(err.response?.data?.message || "Unable to update Follow Up.");
 
         }
 
@@ -142,6 +200,7 @@ export default function EditFollowUp() {
             setForm={setForm}
             onSubmit={handleSubmit}
             submitText="Update Follow Up"
+            completionPrompt={completionPrompt}
         />
 
     );

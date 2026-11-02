@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import TemplateSelect from "./TemplateSelect";
 import DocumentPicker from "./DocumentPicker";
+import ResolvedDraftField from "./ResolvedDraftField";
 
 import { previewLeadEmail, sendLeadEmail } from "../../services/leadEmailService";
 
@@ -40,6 +41,10 @@ export default function EmailComposerModal({ show, lead, onClose, onSent }) {
     const [subject, setSubject] = useState("");
     const [body, setBody] = useState("");
     const [documentIds, setDocumentIds] = useState([]);
+    // Fields the preview could not fill for this lead (left as {{...}} in
+    // the draft, shown as "[... missing]"), and how each field resolves for it.
+    const [issues, setIssues] = useState([]);
+    const [mergeFields, setMergeFields] = useState({});
 
     const [loadingPreview, setLoadingPreview] = useState(false);
     const [sending, setSending] = useState(false);
@@ -56,6 +61,8 @@ export default function EmailComposerModal({ show, lead, onClose, onSent }) {
         setSubject("");
         setBody("");
         setDocumentIds([]);
+        setIssues([]);
+        setMergeFields({});
         setError(null);
 
         setStep(lead.email ? "choose" : "no-email");
@@ -81,6 +88,8 @@ export default function EmailComposerModal({ show, lead, onClose, onSent }) {
             setTemplateId(preview.templateId || null);
             setSubject(preview.subject || "");
             setBody(preview.body || "");
+            setIssues(preview.issues || []);
+            setMergeFields(preview.mergeFields || {});
             setDocumentIds(preview.suggestedDocumentIds || []);
 
         } catch (err) {
@@ -110,6 +119,7 @@ export default function EmailComposerModal({ show, lead, onClose, onSent }) {
         if (!newTemplateId) {
             setSubject("");
             setBody("");
+            setIssues([]);
             return;
         }
 
@@ -122,6 +132,8 @@ export default function EmailComposerModal({ show, lead, onClose, onSent }) {
 
             setSubject(preview.subject || "");
             setBody(preview.body || "");
+            setIssues(preview.issues || []);
+            setMergeFields(preview.mergeFields || {});
 
         } catch (err) {
 
@@ -281,15 +293,24 @@ export default function EmailComposerModal({ show, lead, onClose, onSent }) {
 
                                     </div>
 
+                                    {issues.length > 0 && (
+                                        <div className="alert alert-warning py-2 px-3" role="alert">
+                                            <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                                            This lead has no value for some fields in the message, so it cannot be sent
+                                            as it is: {issues.join("; ")}. Edit the text below, or add the missing
+                                            details to the lead.
+                                        </div>
+                                    )}
+
                                     <div className="mb-3">
 
-                                        <label className="form-label">Subject</label>
+                                        <label className="form-label" htmlFor="lead-email-subject">Subject</label>
 
-                                        <input
-                                            type="text"
-                                            className="form-control"
+                                        <ResolvedDraftField
+                                            id="lead-email-subject"
                                             value={subject}
-                                            onChange={(e) => setSubject(e.target.value)}
+                                            onChange={setSubject}
+                                            fields={mergeFields}
                                             disabled={loadingPreview || sending}
                                         />
 
@@ -297,13 +318,15 @@ export default function EmailComposerModal({ show, lead, onClose, onSent }) {
 
                                     <div className="mb-3">
 
-                                        <label className="form-label">Body</label>
+                                        <label className="form-label" htmlFor="lead-email-body">Body</label>
 
-                                        <textarea
-                                            className="form-control"
-                                            rows="8"
+                                        <ResolvedDraftField
+                                            id="lead-email-body"
                                             value={body}
-                                            onChange={(e) => setBody(e.target.value)}
+                                            onChange={setBody}
+                                            fields={mergeFields}
+                                            multiline
+                                            rows={8}
                                             disabled={loadingPreview || sending}
                                         />
 

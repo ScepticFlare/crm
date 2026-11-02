@@ -16,6 +16,7 @@ const leadService = vi.hoisted(() => ({
 }));
 
 const download = vi.hoisted(() => ({ downloadBlob: vi.fn() }));
+const emailAccess = vi.hoisted(() => ({ getEmailAccess: vi.fn() }));
 
 vi.mock("../../services/leadService", () => leadService);
 vi.mock("../../services/industryService", () => ({ getAllIndustries: vi.fn().mockResolvedValue([]) }));
@@ -27,6 +28,7 @@ vi.mock("../../services/bulkEmailService", async (importActual) => ({
     ...(await importActual()),
     // the review call never answers - these tests only look at what the page offers
     previewBulkEmail: vi.fn(() => new Promise(() => {})),
+    getEmailAccess: emailAccess.getEmailAccess,
 }));
 vi.mock("../../utils/downloadFile", async (importActual) => ({
     ...(await importActual()),
@@ -65,6 +67,7 @@ beforeEach(() => {
         NEW: 4, VALID_UNCONVERTED: 3, INVALID: 2, CONVERTED: 1, TOTAL: 10,
     });
     leadService.exportLeads.mockResolvedValue(new Blob(["x"]));
+    emailAccess.getEmailAccess.mockResolvedValue({ canSend: true, scope: "OWN" });
     window.alert = vi.fn();
 });
 
@@ -255,6 +258,39 @@ describe("Leads page bulk email", () => {
         fireEvent.click(await screen.findByText("Bulk Email"));
 
         expect(await screen.findByText(/Bulk Email - 1 selected lead/)).toBeTruthy();
+    });
+
+    // Visibility follows the role's EMAIL_SEND grant from the backend, not a
+    // list of role names: a Marketing role granted EMAIL_SEND sees it...
+    it("offers Bulk Email to any role the backend grants EMAIL_SEND, e.g. Marketing", async () => {
+        setRole("MARKETING");
+        leadService.getAllLeads.mockResolvedValue({ content: [row], totalPages: 1, totalElements: 1 });
+
+        renderAt("/leads", <Leads />);
+
+        await screen.findByText("Acme Ltd");
+        const checkboxes = screen.getAllByRole("checkbox");
+        fireEvent.click(checkboxes[checkboxes.length - 1]);
+
+        expect(await screen.findByText("Bulk Email")).toBeTruthy();
+        expect(emailAccess.getEmailAccess).toHaveBeenCalled();
+    });
+
+    // ...and a role without it does not, whatever it is called.
+    it("hides Bulk Email when the role has no EMAIL_SEND grant", async () => {
+        setRole("EMPLOYEE");
+        emailAccess.getEmailAccess.mockResolvedValue({ canSend: false, scope: null });
+        leadService.getAllLeads.mockResolvedValue({ content: [row], totalPages: 1, totalElements: 1 });
+
+        renderAt("/leads", <Leads />);
+
+        await screen.findByText("Acme Ltd");
+        const checkboxes = screen.getAllByRole("checkbox");
+        fireEvent.click(checkboxes[checkboxes.length - 1]);
+
+        await waitFor(() => expect(emailAccess.getEmailAccess).toHaveBeenCalled());
+        expect(screen.queryByText("Bulk Email")).toBeNull();
+        expect(screen.queryByText("Send Keep in Touch")).toBeNull();
     });
 
     it("offers to resume an unfinished batch without any selection (the batch survives a refresh)", async () => {

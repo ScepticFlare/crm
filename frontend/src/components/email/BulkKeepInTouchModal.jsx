@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 
 import TemplateSelect from "./TemplateSelect";
 import DocumentPicker from "./DocumentPicker";
+import ResolvedDraftField, { DraftValuesNote } from "./ResolvedDraftField";
 
 import { getEmailTemplates } from "../../services/emailTemplateService";
 import { getBulkKeepInTouchEligibility, sendBulkKeepInTouch } from "../../services/leadEmailService";
+import { layoutDraft } from "../../utils/draftFields";
 
 const TYPE = "KEEP_IN_TOUCH";
 
@@ -28,12 +30,26 @@ export default function BulkKeepInTouchModal({ show, leads, onClose, onSent }) {
     const [body, setBody] = useState("");
     const [documentIds, setDocumentIds] = useState([]);
 
+    // Whose values the draft shows (one of the eligible leads).
+    const [draftRecordId, setDraftRecordId] = useState(null);
+
     const [sending, setSending] = useState(false);
     const [error, setError] = useState(null);
     const [result, setResult] = useState(null);
 
     const leadIds = leads.map((lead) => lead.id);
     const leadsById = Object.fromEntries(leads.map((lead) => [lead.id, lead]));
+
+    const draftRecipients = (eligibility?.eligibleIds || []).map((id) => {
+        const r = eligibility.recipients?.[id];
+        const companyName = r?.companyName || leadsById[id]?.companyName;
+        return {
+            id,
+            label: [companyName, r?.contactPerson].filter(Boolean).join(" - ") || `Lead #${id}`,
+            mergeFields: r?.mergeFields || {},
+        };
+    });
+    const shownRecord = draftRecipients.find((r) => r.id === draftRecordId) || draftRecipients[0];
 
     useEffect(() => {
 
@@ -47,6 +63,7 @@ export default function BulkKeepInTouchModal({ show, leads, onClose, onSent }) {
         setSubject("");
         setBody("");
         setDocumentIds([]);
+        setDraftRecordId(null);
         setError(null);
         setResult(null);
 
@@ -280,10 +297,9 @@ export default function BulkKeepInTouchModal({ show, leads, onClose, onSent }) {
                                 <>
 
                                     <p className="text-muted small">
-                                        Sending to <strong>{eligibility.eligibleCount}</strong> lead(s). Use{" "}
-                                        <code>{"{{contactPerson}}"}</code>, <code>{"{{companyName}}"}</code> and{" "}
-                                        <code>{"{{interestedProduct}}"}</code> — each recipient gets their own
-                                        personalized version when the email is sent.
+                                        Sending to <strong>{eligibility.eligibleCount}</strong> lead(s). Names, companies
+                                        and products from the template are filled in separately for each lead, from their
+                                        own record - a lead missing one is skipped with a reason.
                                     </p>
 
                                     <div className="mb-3">
@@ -299,15 +315,23 @@ export default function BulkKeepInTouchModal({ show, leads, onClose, onSent }) {
 
                                     </div>
 
+                                    <DraftValuesNote
+                                        raws={[subject, body]}
+                                        recipients={draftRecipients}
+                                        shownId={draftRecordId}
+                                        onShow={setDraftRecordId}
+                                        noun="lead"
+                                    />
+
                                     <div className="mb-3">
 
-                                        <label className="form-label">Subject</label>
+                                        <label className="form-label" htmlFor="kit-subject">Subject</label>
 
-                                        <input
-                                            type="text"
-                                            className="form-control"
+                                        <ResolvedDraftField
+                                            id="kit-subject"
                                             value={subject}
-                                            onChange={(e) => setSubject(e.target.value)}
+                                            onChange={setSubject}
+                                            fields={shownRecord?.mergeFields}
                                             disabled={sending}
                                         />
 
@@ -315,13 +339,15 @@ export default function BulkKeepInTouchModal({ show, leads, onClose, onSent }) {
 
                                     <div className="mb-3">
 
-                                        <label className="form-label">Body</label>
+                                        <label className="form-label" htmlFor="kit-body">Body</label>
 
-                                        <textarea
-                                            className="form-control"
-                                            rows="8"
+                                        <ResolvedDraftField
+                                            id="kit-body"
                                             value={body}
-                                            onChange={(e) => setBody(e.target.value)}
+                                            onChange={setBody}
+                                            fields={shownRecord?.mergeFields}
+                                            multiline
+                                            rows={8}
                                             disabled={sending}
                                         />
 
@@ -357,10 +383,16 @@ export default function BulkKeepInTouchModal({ show, leads, onClose, onSent }) {
                                         ))}
                                     </ul>
 
+                                    {shownRecord && (
+                                        <div className="small text-muted mb-1">
+                                            As {shownRecord.label} will receive it (every lead gets their own values):
+                                        </div>
+                                    )}
+
                                     <div className="border rounded p-3 bg-light">
-                                        <div className="fw-semibold">{subject}</div>
+                                        <div className="fw-semibold">{layoutDraft(subject, shownRecord?.mergeFields).display}</div>
                                         <div className="text-muted small mt-1" style={{ whiteSpace: "pre-wrap" }}>
-                                            {body}
+                                            {layoutDraft(body, shownRecord?.mergeFields).display}
                                         </div>
                                     </div>
 

@@ -6,6 +6,7 @@ import {
     listEmailSuppressions,
     removeEmailSuppression,
 } from "../services/emailSuppressionService";
+import { formatDateTime } from "../utils/formatDate";
 
 const REASONS = {
     OPT_OUT: "Opted out",
@@ -268,7 +269,7 @@ export default function EmailSuppressions() {
                                             <td>{REASONS[s.reason] || s.reason}</td>
                                             <td className="small">{s.note || "-"}</td>
                                             <td>{s.createdByName || "-"}</td>
-                                            <td className="small">{new Date(s.createdAt).toLocaleString()}</td>
+                                            <td className="small">{formatDateTime(s.createdAt)}</td>
                                             <td className="text-end" style={{ minWidth: "260px" }}>
                                                 {removingId === s.id ? (
                                                     <div className="d-flex gap-2">
@@ -344,7 +345,7 @@ export default function EmailSuppressions() {
                                 <tbody>
                                     {audit.map((a) => (
                                         <tr key={a.id}>
-                                            <td className="small">{new Date(a.performedAt).toLocaleString()}</td>
+                                            <td className="small">{formatDateTime(a.performedAt)}</td>
                                             <td>{a.action === "ADDED" ? "Added" : "Removed"}</td>
                                             <td>{a.email}</td>
                                             <td>{a.performedByName || "-"}</td>

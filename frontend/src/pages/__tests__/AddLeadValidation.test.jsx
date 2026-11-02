@@ -47,24 +47,50 @@ function submit() {
     fireEvent.submit(document.querySelector("form"));
 }
 
-describe("Add Lead: Product and Battery are mandatory", () => {
+async function loadedSelects() {
+    return waitFor(() => {
+        const selects = Array.from(document.querySelectorAll("select[name='itemId']"));
+        const ready = selects.filter((s) => s.options.length > 1);
+        if (ready.length < 2) throw new Error("options not loaded yet");
+        return ready;
+    });
+}
 
-    it("marks both fields as required", async () => {
+describe("Add Lead: Product is mandatory, Battery is optional", () => {
+
+    it("marks only Product as required", async () => {
         render(<MemoryRouter><AddLead /></MemoryRouter>);
 
         expect(await screen.findByText("Products *")).toBeTruthy();
-        expect(screen.getByText("Battery *")).toBeTruthy();
+        expect(screen.getByText("Battery")).toBeTruthy();
+        expect(screen.queryByText("Battery *")).toBeNull();
     });
 
-    it("does not save without a Product or a Battery, and says which is missing", async () => {
+    it("does not save without a Product, and asks for nothing about Battery", async () => {
         render(<MemoryRouter><AddLead /></MemoryRouter>);
         await screen.findByText("Products *");
 
         submit();
 
         expect(await screen.findByText("Please select at least one Product.")).toBeTruthy();
-        expect(screen.getByText("Please select at least one Battery.")).toBeTruthy();
+        expect(screen.queryByText("Please select at least one Battery.")).toBeNull();
         expect(leadService.createLead).not.toHaveBeenCalled();
+    });
+
+    it("saves with a Product and no Battery, sending no battery rows", async () => {
+        leadService.createLead.mockResolvedValue({ id: 11 });
+        render(<MemoryRouter><AddLead /></MemoryRouter>);
+        await screen.findByText("Products *");
+
+        const [productSelect] = await loadedSelects();
+        fireEvent.change(productSelect, { target: { name: "itemId", value: "1" } });
+
+        submit();
+
+        await waitFor(() => expect(leadService.createLead).toHaveBeenCalled());
+        const sent = leadService.createLead.mock.calls[0][0];
+        expect(sent.products).toEqual([{ productId: 1, quantity: 1 }]);
+        expect(sent.batteries).toEqual([]);
     });
 
     it("saves once both are picked, sending them to the backend", async () => {

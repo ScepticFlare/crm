@@ -34,6 +34,7 @@ import { getAllLeadSources } from "../services/leadSourceService";
 import { getAllProducts } from "../services/productService";
 import { getAllBatteries } from "../services/batteryService";
 import { getAllEmployees } from "../services/employeeService";
+import useEmailAccess from "../hooks/useEmailAccess";
 
 // The Lead Status shown to users is exactly NEW / VALID / INVALID. A lead
 // saved with an older opportunity-style status (WON, LOST, QUOTATION SENT,
@@ -172,12 +173,10 @@ export default function Leads({
     // same "UX/defense-in-depth guard" rationale as AdminRoute.
     const isAdmin = localStorage.getItem("role") === "ADMIN";
 
-    // EMAIL_SEND is granted (at OWN/TEAM/ALL scope respectively) to every
-    // role - see V6 migration / AccessControlService. This only controls
-    // whether the Send Email / Send Keep in Touch affordances are shown at
-    // all; the backend re-checks the real scope on every call regardless.
-    const role = localStorage.getItem("role");
-    const canSendEmail = role === "ADMIN" || role === "MANAGER" || role === "EMPLOYEE";
+    // Whether the user's role grants EMAIL_SEND (see useEmailAccess). This
+    // only controls whether the email actions are shown at all; the backend
+    // re-checks the real scope on every call regardless.
+    const canSendEmail = useEmailAccess();
 
     // Every employee can export leads (LEAD_EXPORT is granted to every role by
     // migration V11); the backend limits the file to the records the caller

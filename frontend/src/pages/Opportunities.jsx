@@ -15,6 +15,7 @@ import ListPagination from "../components/list/ListPagination";
 
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
+import useEmailAccess from "../hooks/useEmailAccess";
 import { formatDate, formatDateTime } from "../utils/formatDate";
 import { downloadBlob, exportCountNotice, exportErrorMessage } from "../utils/downloadFile";
 import { describeLineItems } from "../utils/lineItems";
@@ -35,7 +36,9 @@ import { subStatusLabel } from "../components/workflowConstants";
 // EXPORT_COLUMNS): the exported file contains exactly the visible columns.
 // Contact, product and battery values are the Opportunity's own current
 // values (editable after conversion), not the original Lead's.
-const ALL_OPPORTUNITY_COLUMNS = [
+// Exported only so the report-date tests can check each column renderer.
+// eslint-disable-next-line react-refresh/only-export-components
+export const ALL_OPPORTUNITY_COLUMNS = [
     {
         key: "company", label: "Company", sortable: true, sortKey: "company",
         render: (row) => row.lead?.companyName || "-"
@@ -61,7 +64,10 @@ const ALL_OPPORTUNITY_COLUMNS = [
     },
     {
         key: "value", label: "Value", sortable: true, sortKey: "value",
-        render: (row) => `₹${Number(row.productValue || 0).toLocaleString("en-IN")}`
+        // An older opportunity saved without a value shows that, not ₹0.
+        render: (row) => (row.productValue === null || row.productValue === undefined
+            ? <span className="text-muted">Not set</span>
+            : `₹${Number(row.productValue).toLocaleString("en-IN")}`)
     },
     {
         key: "date", label: "Closing Date", sortable: true, sortKey: "closingDate",
@@ -152,6 +158,10 @@ export default function Opportunities({
     // controls whether the checkbox/bulk-delete/export affordances are
     // shown at all, same "UX/defense-in-depth guard" rationale as AdminRoute.
     const isAdmin = localStorage.getItem("role") === "ADMIN";
+
+    // Whether the user's role grants EMAIL_SEND (see useEmailAccess); the
+    // backend still authorizes every recipient.
+    const canSendEmail = useEmailAccess();
 
     // Every employee can export opportunities (OPPORTUNITY_EXPORT is granted to
     // every role by migration V11); the backend limits the file to the records
@@ -458,13 +468,13 @@ export default function Opportunities({
                     totalElements={list.totalElements}
                     onSelectAllMatching={list.selectAllMatching}
                     actions={[
-                        {
+                        ...(canSendEmail ? [{
                             key: "bulkEmail", label: "Bulk Email", icon: "bi-envelope-paper",
                             variant: "btn-outline-primary", onClick: () => setShowBulkEmail(true),
                             unavailableForAllMatching:
                                 "Bulk Email sends to records you tick individually (at most 100 per batch). " +
                                 "Clear the selection and tick the records instead."
-                        },
+                        }] : []),
                         {
                             key: "export", label: "Export Selected", icon: "bi-download",
                             variant: "btn-outline-secondary", onClick: () => handleExport(true), disabled: exporting

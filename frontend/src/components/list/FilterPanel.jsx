@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Select from "react-select";
 
 import { isActiveFilterValue } from "../../hooks/useServerList";
+import { toIsoDate } from "../../utils/formatDate";
 
 // A multi-select filter's value as an array of strings. Older URLs (and
 // single-select filters that became multi-select) hold a single value.
@@ -26,9 +27,8 @@ const DATE_PRESETS = [
     { key: "lastMonth", label: "Last month" },
 ];
 
-function toIso(date) {
-    return date.toISOString().split("T")[0];
-}
+// The local calendar day - see utils/formatDate.toIsoDate.
+const toIso = toIsoDate;
 
 function startOfDay(date) {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());

@@ -14,6 +14,7 @@ import EmailComposerModal from "../components/email/EmailComposerModal";
 import { getLeadById, deleteLead, getLeadDeleteImpact } from "../services/leadService";
 import { describeDeleteImpact } from "../utils/deleteImpact";
 import { formatDate, formatDateTime } from "../utils/formatDate";
+import useEmailAccess from "../hooks/useEmailAccess";
 
 export default function LeadDetails() {
 
@@ -26,13 +27,10 @@ export default function LeadDetails() {
     // item is offered at all.
     const isAdmin = localStorage.getItem("role") === "ADMIN";
 
-    // EMAIL_SEND is granted (at OWN/TEAM/ALL scope respectively) to every
-    // role - see V6 migration / AccessControlService, same rationale as
-    // pages/Leads.jsx's row-level Send Email action. This only controls
-    // whether the Send Email menu item is offered at all; the backend
+    // Whether the user's role grants EMAIL_SEND (see useEmailAccess). This
+    // only controls whether the email actions are shown at all; the backend
     // re-checks the real scope on every call regardless.
-    const role = localStorage.getItem("role");
-    const canSendEmail = role === "ADMIN" || role === "MANAGER" || role === "EMPLOYEE";
+    const canSendEmail = useEmailAccess();
 
     const [lead, setLead] = useState(null);
     const [loading, setLoading] = useState(true);

@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { getLeadById } from "../services/leadService";
-import { getAllActivityTypes } from "../services/activityTypeService";
+import {
+    getAllActivityTypes,
+    getAllActivityTypesAdmin,
+    createActivityType,
+    deleteActivityType,
+    activateActivityType,
+    updateActivityType
+} from "../services/activityTypeService";
 import {
     getAllSalesStages,
     getAllSalesStagesAdmin,
@@ -10,10 +17,12 @@ import {
     updateSalesStage
 } from "../services/salesStageService";
 import DropdownAddManage from "./DropdownAddManage";
+import { formatDateTime } from "../utils/formatDate";
 import ProductBatteryFields from "./ProductBatteryFields";
 import {
     SUB_STATUS_OPTIONS,
     isLegacySubStage,
+    requiresNextFollowUp,
     typeOfStage
 } from "./workflowConstants";
 
@@ -35,6 +44,8 @@ export default function OpportunityForm({
     // Edit page: whether the opportunity already has a qualifying next action
     // (pending, future, described follow-up) - false asks for one here.
     hasNextAction = null,
+    // Edit page: the date of that next action, shown when there is one.
+    nextFollowUpDate = null,
     // Edit page: which of the opportunity's own contact / product / battery
     // fields are required (those that already have a value - see
     // EditOpportunity), and the messages to show under them.
@@ -75,14 +86,20 @@ export default function OpportunityForm({
         && form.expectedClosingDate !== originalClosingDate
         && (selectedStage ? selectedStage.workflowActive !== false : false);
 
-    // An ACTIVE opportunity must have a pending follow-up with a described
-    // next action. When it has none yet (a new conversion from a lead without
-    // one, or an older record being fixed), it is entered right here and
-    // saved together with the opportunity.
-    const stageIsActive = selectedStage ? selectedStage.workflowActive !== false : false;
+    // An active or Postponed opportunity must have a next follow-up: a
+    // pending follow-up with a described next action and a future date (Won,
+    // Lost and Dropped need none). An existing one (on the opportunity, or on
+    // the lead being converted) is reused - nothing new is created. When
+    // there is none (a conversion from a lead without one, or an older record
+    // being fixed), it is entered right here and saved together with the
+    // opportunity. The backend enforces the same rule.
+    const nextFollowUpRequired = requiresNextFollowUp(selectedStage);
 
-    const needsNextActionInput = stageIsActive
+    const needsNextActionInput = nextFollowUpRequired
         && (isConversion ? (!!lead && lead.hasNextAction === false) : hasNextAction === false);
+
+    const hasExistingNextAction = nextFollowUpRequired
+        && (isConversion ? (!!lead && lead.hasNextAction === true) : hasNextAction === true);
 
     // Choosing a stage clears the fields that only make sense for another
     // stage, so nothing typed for LOST / POSTPONED / IN PROGRESS lingers.
@@ -115,11 +132,18 @@ export default function OpportunityForm({
 
         loadSalesStages();
 
-        getAllActivityTypes()
-            .then(setActivityTypes)
-            .catch((error) => console.error(error));
+        loadActivityTypes();
 
     }, [leadId]);
+
+    // Active activity types only - what can be chosen for a new next action.
+    async function loadActivityTypes() {
+        try {
+            setActivityTypes(await getAllActivityTypes());
+        } catch (error) {
+            console.error(error);
+        }
+    }
 
     async function loadLead() {
 
@@ -415,7 +439,7 @@ export default function OpportunityForm({
                     <div className="col-md-6 mb-3">
 
                         <label className="form-label">
-                            Product Value
+                            Opportunity Value (₹) *
                         </label>
 
                         <input
@@ -424,6 +448,9 @@ export default function OpportunityForm({
                             name="productValue"
                             value={form.productValue}
                             onChange={handleChange}
+                            min="0"
+                            step="any"
+                            required
                         />
 
                     </div>
@@ -650,15 +677,28 @@ export default function OpportunityForm({
 
                     )}
 
+                    {hasExistingNextAction && (
+
+                        <div className="col-12 mb-3">
+                            <div className="form-text">
+                                <i className="bi bi-calendar-check me-1"></i>
+                                {isConversion
+                                    ? "The lead's pending follow-up carries over as this opportunity's next follow-up."
+                                    : `Next follow-up: ${formatDateTime(nextFollowUpDate)}. Change it from the follow-ups list - saving here does not create another one.`}
+                            </div>
+                        </div>
+
+                    )}
+
                     {needsNextActionInput && (
 
                         <div className="col-12 mb-3">
 
                             <div className="alert alert-warning py-2">
-                                <strong>A next action is required for an active opportunity.</strong>{" "}
+                                <strong>A next follow-up date is required for every active or Postponed opportunity.</strong>{" "}
                                 {isConversion
                                     ? "This lead has no pending follow-up with a next action yet - enter it below (it is saved together with the opportunity), or schedule a follow-up for the lead first and come back."
-                                    : "This opportunity has no pending, upcoming follow-up with a next action. Enter it below to fix that (it is saved together with your changes), or close/postpone the opportunity instead."}
+                                    : "This opportunity has no pending, upcoming follow-up with a next action. Enter it below (it is saved together with your changes)."}
                             </div>
 
                             <div className="row">
@@ -678,18 +718,26 @@ export default function OpportunityForm({
 
                                 <div className="col-md-3 mb-3">
                                     <label className="form-label">Activity type *</label>
-                                    <select
-                                        className="form-select"
+                                    {/* Same admin-managed dropdown as the follow-up form:
+                                        managing activity types is ADMIN-only on the server;
+                                        everyone else only picks an active one. */}
+                                    <DropdownAddManage
+                                        title="Activity Type"
                                         name="nextActionActivityTypeId"
                                         value={form.nextActionActivityTypeId || ""}
                                         onChange={handleChange}
+                                        options={activityTypes}
                                         required
-                                    >
-                                        <option value="">Select</option>
-                                        {activityTypes.map((t) => (
-                                            <option key={t.id} value={t.id}>{t.name}</option>
-                                        ))}
-                                    </select>
+                                        isAdmin={role === "ADMIN"}
+                                        canAdd={role === "ADMIN"}
+                                        create={createActivityType}
+                                        getAllIncludingInactive={getAllActivityTypesAdmin}
+                                        deactivate={deleteActivityType}
+                                        activate={activateActivityType}
+                                        rename={updateActivityType}
+                                        onRefresh={loadActivityTypes}
+                                        placeholder="Select"
+                                    />
                                 </div>
 
                                 <div className="col-md-4 mb-3">

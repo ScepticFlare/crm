@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import MergeFieldPicker from "./MergeFieldPicker";
 
 const TYPE_OPTIONS = [
     { value: "PRODUCT_BROCHURE", label: "Product Brochure" },
@@ -14,6 +16,9 @@ export default function EmailTemplateFormModal({ show, editing, saving, onSave, 
     const [form, setForm] = useState({
         name: "", subject: "", body: "", type: "PRODUCT_BROCHURE", isDefault: false,
     });
+
+    const subjectRef = useRef(null);
+    const bodyRef = useRef(null);
 
     useEffect(() => {
 
@@ -96,8 +101,16 @@ export default function EmailTemplateFormModal({ show, editing, saving, onSave, 
                             </div>
 
                             <div className="mb-3">
-                                <label className="form-label">Subject</label>
+                                <div className="d-flex justify-content-between align-items-end mb-1">
+                                    <label className="form-label mb-0" htmlFor="template-subject">Subject</label>
+                                    {/* Templates are shared by lead and opportunity emails, so every field is offered. */}
+                                    <MergeFieldPicker target="OPPORTUNITY" inputRef={subjectRef} value={form.subject}
+                                        onChange={(subject) => setForm((prev) => ({ ...prev, subject }))}
+                                        label="Insert a field into the subject" />
+                                </div>
                                 <input
+                                    id="template-subject"
+                                    ref={subjectRef}
                                     className="form-control"
                                     name="subject"
                                     value={form.subject}
@@ -107,9 +120,16 @@ export default function EmailTemplateFormModal({ show, editing, saving, onSave, 
 
                             <div className="mb-3">
 
-                                <label className="form-label">Body</label>
+                                <div className="d-flex justify-content-between align-items-end mb-1">
+                                    <label className="form-label mb-0" htmlFor="template-body">Body</label>
+                                    <MergeFieldPicker target="OPPORTUNITY" inputRef={bodyRef} value={form.body}
+                                        onChange={(body) => setForm((prev) => ({ ...prev, body }))}
+                                        label="Insert a field into the body" />
+                                </div>
 
                                 <textarea
+                                    id="template-body"
+                                    ref={bodyRef}
                                     className="form-control"
                                     rows="8"
                                     name="body"
@@ -118,8 +138,9 @@ export default function EmailTemplateFormModal({ show, editing, saving, onSave, 
                                 />
 
                                 <div className="form-text">
-                                    Supported placeholders: <code>{"{{contactPerson}}"}</code>,{" "}
-                                    <code>{"{{companyName}}"}</code>, <code>{"{{interestedProduct}}"}</code>
+                                    Use <strong>Insert field</strong> to add the recipient's name, company, products
+                                    and so on - each recipient's own values are filled in when the email is sent.
+                                    Opportunity title only works when emailing opportunities.
                                 </div>
 
                             </div>

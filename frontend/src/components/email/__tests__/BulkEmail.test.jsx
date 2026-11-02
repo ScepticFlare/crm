@@ -28,11 +28,23 @@ const TEMPLATES = [
 
 const NO_DELAY = { delayMs: 0 };
 
+// How the server resolves each merge field for a record (every accepted
+// spelling -> { key, label, value }, value null when the record has none).
+function fieldsFor(id, values = {}) {
+    const f = (key, label, value) => ({ key, label, value });
+    const m = {
+        contactPerson: f("contactPerson", "Contact person", "contactPerson" in values ? values.contactPerson : `Person ${id}`),
+        companyName: f("companyName", "Company", `Company ${id}`),
+        interestedProduct: f("interestedProduct", "Product", "interestedProduct" in values ? values.interestedProduct : `Genset ${id}`),
+    };
+    return { ...m, name: m.contactPerson, company: m.companyName, product: m.interestedProduct };
+}
+
 function recipient(id, extra = {}) {
     return {
         id, companyName: `Company ${id}`, contactPerson: `Person ${id}`, email: `p${id}@x.test`,
         eligible: true, exclusionCode: null, exclusionMessage: null, warnings: [],
-        renderedSubject: null, renderedBody: null, ...extra,
+        renderedSubject: null, renderedBody: null, mergeFields: fieldsFor(id), ...extra,
     };
 }
 
@@ -47,7 +59,7 @@ function excludedRecipient(id, code, message) {
  * a confirmed FAILED can be attempted again, and GET /batches/{id} is the whole
  * batch. `outcomeFor(id, attempt)` decides what the fake provider answers.
  */
-function makeServer({ step1Excluded = {}, outcomeFor = () => "ACCEPTED", templates = TEMPLATES } = {}) {
+function makeServer({ step1Excluded = {}, outcomeFor = () => "ACCEPTED", templates = TEMPLATES, fieldValues = {} } = {}) {
 
     const batches = new Map();
     const calls = { create: [], send: [], preview: [] };
@@ -93,9 +105,10 @@ function makeServer({ step1Excluded = {}, outcomeFor = () => "ACCEPTED", templat
                         if (step1Excluded[id] && !payload.subject) {
                             return excludedRecipient(id, step1Excluded[id].code, step1Excluded[id].message);
                         }
+                        const mergeFields = fieldsFor(id, fieldValues[id]);
                         return recipient(id, payload.subject
-                            ? { renderedSubject: `Subject for ${id}`, renderedBody: `Body for Person ${id}` }
-                            : {});
+                            ? { renderedSubject: `Subject for ${id}`, renderedBody: `Body for Person ${id}`, mergeFields }
+                            : { mergeFields });
                     }),
                 },
             };
@@ -157,7 +170,7 @@ async function chooseTemplateAndReview() {
     fireEvent.click(await screen.findByText(/^Continue/));
     await screen.findByText("Template");
 
-    const select = await screen.findByRole("combobox");
+    const [select] = await screen.findAllByRole("combobox");   // the template picker comes first
     await waitFor(() => expect(within(select).getByText(/Keep in Touch/)).toBeTruthy());
     fireEvent.change(select, { target: { value: "1" } });
 
@@ -470,7 +483,7 @@ describe("BulkEmailModal", () => {
         fireEvent.click(screen.getByText(/^Continue/));
         await screen.findByText("Template");
 
-        const select = await screen.findByRole("combobox");
+        const [select] = await screen.findAllByRole("combobox");   // the template picker comes first
         await waitFor(() => expect(within(select).getByText(/AMC Offer/)).toBeTruthy());
         fireEvent.change(select, { target: { value: "7" } });
 
@@ -479,8 +492,8 @@ describe("BulkEmailModal", () => {
         expect(subject.value).toBe("Your AMC");
         expect(body.value).toContain("[[ADMIN: fill in]]");
 
-        fireEvent.change(body, { target: { value: "My own wording for {{companyName}}" } });
-        expect(body.value).toBe("My own wording for {{companyName}}");
+        fireEvent.change(body, { target: { value: "My own wording", selectionStart: 14, selectionEnd: 14 } });
+        expect(body.value).toBe("My own wording");
 
         expect(api.put).not.toHaveBeenCalled();
         expect(api.post.mock.calls.every(([url]) => url.startsWith("/bulk-email/"))).toBe(true);
@@ -717,6 +730,109 @@ describe("BulkEmailModal", () => {
 });
 
 // ---------------------------------------------------------------- recovery
+
+describe("BulkEmailModal draft", () => {
+
+    async function openDraftWithTemplate(ids, server = {}) {
+
+        const s = makeServer(server);
+        render(<BulkEmailModal show target="LEAD" ids={ids} onClose={vi.fn()} />);
+
+        await screen.findByText(/will receive an email/);
+        fireEvent.click(screen.getByText(/^Continue/));
+        await screen.findByText("Template");
+
+        const [select] = await screen.findAllByRole("combobox");
+        await waitFor(() => expect(within(select).getByText(/Keep in Touch/)).toBeTruthy());
+        fireEvent.change(select, { target: { value: "1" } });
+
+        return s;
+    }
+
+    const subjectBox = () => screen.getByLabelText("Subject");
+    const bodyBox = () => screen.getByLabelText("Message");
+
+    it("shows the template filled in with the chosen record's values - no {{...}} and no field picker", async () => {
+        await openDraftWithTemplate([1, 2]);
+
+        expect(subjectBox().value).toBe("Hello Person 1");
+        expect(bodyBox().value).toBe("Dear Person 1, from Company 1");
+        expect(subjectBox().value + bodyBox().value).not.toContain("{{");
+
+        expect(screen.queryByText(/Insert field/)).toBeNull();
+        expect(screen.queryByLabelText(/Insert a field/)).toBeNull();
+    });
+
+    it("says whose values are shown, and switching the record updates them", async () => {
+        await openDraftWithTemplate([1, 2]);
+
+        const shown = screen.getByLabelText("Draft shows the values of");
+        expect(within(shown).getByText("Company 1 - Person 1")).toBeTruthy();
+        expect(screen.getByText(/every other lead gets their own name/)).toBeTruthy();
+        expect(screen.getByTestId("draft-filled-values").textContent).toContain("Filled in for Company 1 - Person 1");
+
+        fireEvent.change(shown, { target: { value: "2" } });
+
+        expect(subjectBox().value).toBe("Hello Person 2");
+        expect(bodyBox().value).toBe("Dear Person 2, from Company 2");
+    });
+
+    it("switching the template updates the shown values", async () => {
+        await openDraftWithTemplate([1], {
+            templates: [
+                ...TEMPLATES,
+                { id: 3, name: "Product note", type: "KEEP_IN_TOUCH", isDefault: false, subject: "About {{product}}", body: "Hi {{name}}" },
+            ],
+        });
+
+        fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "3" } });
+
+        expect(subjectBox().value).toBe("About Genset 1");
+        expect(bodyBox().value).toBe("Hi Person 1");
+    });
+
+    it("edits change only this batch's raw draft, which Review renders per recipient on the server", async () => {
+        const server = await openDraftWithTemplate([1, 2]);
+
+        // "Hello Person 1" -> "Hello Person 1!" : typed after the value
+        fireEvent.change(subjectBox(), { target: { value: "Hello Person 1!", selectionStart: 15, selectionEnd: 15 } });
+        expect(subjectBox().value).toBe("Hello Person 1!");
+
+        // a partial edit of a value is refused, with an explanation
+        fireEvent.change(subjectBox(), { target: { value: "Hello Persn 1!", selectionStart: 10, selectionEnd: 10 } });
+        expect(subjectBox().value).toBe("Hello Person 1!");
+        expect(screen.getByRole("status").textContent).toMatch(/filled in separately for each recipient/);
+
+        fireEvent.click(screen.getByText("Review"));
+        await screen.findByText(/individual email/);
+
+        const reviewCall = server.calls.preview.filter((p) => p.subject).pop();
+        expect(reviewCall.subject).toBe("Hello {{contactPerson}}!");
+        expect(reviewCall.body).toBe("Dear {{contactPerson}}, from {{companyName}}");
+
+        // Review: each recipient's own server-rendered message
+        expect(screen.getByText("Body for Person 1")).toBeTruthy();
+        fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "2" } });
+        expect(screen.getByText("Body for Person 2")).toBeTruthy();
+
+        expect(api.put).not.toHaveBeenCalled();     // the shared template is never written
+    });
+
+    it("flags every record missing a value the draft uses, and shows it in place when that record is chosen", async () => {
+        await openDraftWithTemplate([1, 2, 3], { fieldValues: { 2: { contactPerson: null } } });
+
+        const missing = screen.getByTestId("draft-missing-values");
+        expect(missing.textContent).toContain("Company 2");
+        expect(missing.textContent).toContain("Contact person is missing");
+        expect(missing.textContent).not.toContain("Company 1");
+        expect(missing.textContent).not.toContain("Company 3");
+
+        fireEvent.change(screen.getByLabelText("Draft shows the values of"), { target: { value: "2" } });
+
+        expect(subjectBox().value).toBe("Hello [Contact person missing]");
+        expect(subjectBox().value).not.toContain("{{");
+    });
+});
 
 describe("recovering an unfinished batch", () => {
 

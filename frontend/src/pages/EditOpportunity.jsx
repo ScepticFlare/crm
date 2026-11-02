@@ -24,6 +24,7 @@ export default function EditOpportunity() {
     const [currentStage, setCurrentStage] = useState(null);
     const [originalClosingDate, setOriginalClosingDate] = useState(null);
     const [hasNextAction, setHasNextAction] = useState(null);
+    const [nextFollowUpDate, setNextFollowUpDate] = useState(null);
 
     const [form, setForm] = useState({
         leadId: "",
@@ -75,6 +76,7 @@ export default function EditOpportunity() {
             setCurrentStage(data.salesStage || null);
             setOriginalClosingDate(data.expectedClosingDate || null);
             setHasNextAction(data.hasNextAction ?? null);
+            setNextFollowUpDate(data.nextFollowUpDate || null);
 
             const details = {
                 contactPerson: data.contactPerson || "",
@@ -90,7 +92,8 @@ export default function EditOpportunity() {
                 ...details,
                 leadId: data.lead?.id || "",
                 title: data.title || "",
-                productValue: data.productValue || "",
+                // ?? keeps a stored 0; a missing value stays blank (required).
+                productValue: data.productValue ?? "",
                 expectedClosingDate: data.expectedClosingDate || "",
                 salesStage: data.salesStage?.name || "NEW",
                 leadValidity: data.leadValidity || "VALID",
@@ -221,6 +224,7 @@ export default function EditOpportunity() {
                         currentStage={currentStage}
                         originalClosingDate={originalClosingDate}
                         hasNextAction={hasNextAction}
+                        nextFollowUpDate={nextFollowUpDate}
                         requiredDetails={requiredOpportunityDetails(originalDetails)}
                         detailErrors={detailErrors}
                     />

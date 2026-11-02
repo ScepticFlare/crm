@@ -1,8 +1,12 @@
 // User-facing date formatting for the whole CRM. Dates are always shown in
-// Indian format DD/MM/YYYY (e.g. 26/08/2026); timestamps keep their time
-// after it (e.g. 26/08/2026, 08:00 pm). This ONLY controls how an
-// already-parsed value is rendered - it never changes what is stored or
-// what is sent to/from the API.
+// British format dd/MM/yyyy (e.g. 04/05/2026 is 4 May 2026); timestamps keep
+// their time after it on a 24-hour clock (e.g. 04/05/2026 20:00). Built from
+// the date parts rather than toLocale*String, so the result never depends on
+// the browser's language. This ONLY controls how an already-parsed value is
+// rendered - it never changes what is stored or what is sent to/from the API,
+// which stays ISO (see toIsoDate).
+
+const pad = (n) => String(n).padStart(2, "0");
 
 // Accepts whatever the API returns (ISO string, epoch millis, Date) and
 // returns a valid Date, or null when there is nothing usable to show.
@@ -29,7 +33,7 @@ function toDate(value) {
     return Number.isNaN(date.getTime()) ? null : date;
 }
 
-// DD/MM/YYYY. Returns "-" when there is no usable date.
+// dd/MM/yyyy. Returns "-" when there is no usable date.
 export function formatDate(value) {
 
     const date = toDate(value);
@@ -38,16 +42,10 @@ export function formatDate(value) {
         return "-";
     }
 
-    return date.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-    });
+    return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
 }
 
-// DD/MM/YYYY, hh:mm am/pm - the date portion in Indian format, the time
-// portion exactly as the detail pages already showed it. Returns "-" when
-// there is no usable date.
+// dd/MM/yyyy HH:mm (24-hour). Returns "-" when there is no usable date.
 export function formatDateTime(value) {
 
     const date = toDate(value);
@@ -56,11 +54,12 @@ export function formatDateTime(value) {
         return "-";
     }
 
-    return date.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
+    return `${formatDate(date)} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+// yyyy-MM-dd (what the API and <input type="date"> use) for the LOCAL
+// calendar day. Date.toISOString() converts to UTC first, which in India
+// (UTC+05:30) turns local midnight into the previous day.
+export function toIsoDate(date) {
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }

@@ -12,7 +12,7 @@ import ListPagination from "../components/list/ListPagination";
 
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
-import { formatDateTime } from "../utils/formatDate";
+import { formatDateTime, toIsoDate } from "../utils/formatDate";
 import { downloadBlob, exportCountNotice, exportErrorMessage } from "../utils/downloadFile";
 
 import {
@@ -184,7 +184,7 @@ export default function FollowUps() {
     const pendingFollowUps = list.data.filter((f) => f.status === "PENDING").length;
     const completedFollowUps = list.data.filter((f) => f.status === "COMPLETED").length;
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = toIsoDate(new Date());
     const todayFollowUps = list.data.filter((f) => f.scheduledDate?.startsWith(today)).length;
 
     return (

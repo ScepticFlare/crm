@@ -14,6 +14,7 @@ import { getAllIndustriesAdmin } from "../services/industryService";
 import { getAllSalesStagesAdmin } from "../services/salesStageService";
 import { getAllProductsAdmin } from "../services/productService";
 import { getAllBatteriesAdmin } from "../services/batteryService";
+import { toIsoDate } from "../utils/formatDate";
 
 const RECORD_TYPE_OPTIONS = [
     { key: "LEAD", label: "Leads" },
@@ -33,13 +34,11 @@ const SECTION_OPTIONS = [
 
 export default function FullReport() {
 
-    const today = new Date().toISOString().split("T")[0];
+    // Local calendar days (toISOString would shift them to UTC - the
+    // previous day in India).
+    const today = toIsoDate(new Date());
 
-    const firstDay = new Date(
-        new Date().getFullYear(),
-        0,
-        1
-    ).toISOString().split("T")[0];
+    const firstDay = toIsoDate(new Date(new Date().getFullYear(), 0, 1));
 
     const [from, setFrom] = useState(firstDay);
     const [to, setTo] = useState(today);

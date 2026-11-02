@@ -9,6 +9,7 @@ import {
     updateActivityType
 } from "../services/activityTypeService";
 import DropdownAddManage from "./DropdownAddManage";
+import { formatDateTime } from "../utils/formatDate";
 
 export default function FollowUpForm({
     form,
@@ -20,6 +21,12 @@ export default function FollowUpForm({
     submitText,
     hideLead = false,
     hideOpportunity = false,
+    // Edit page, while this follow-up is being marked Completed and its
+    // opportunity still needs a next follow-up (it is active or Postponed):
+    // { required: true } asks for the next one here (created together with
+    // the completion); { required: false, existingDate } shows the upcoming
+    // one that already exists, so nothing new is asked for. Null otherwise.
+    completionPrompt = null,
 }) {
 
     const [activityTypes, setActivityTypes] = useState([]);
@@ -296,6 +303,78 @@ export default function FollowUpForm({
                                 )}
 
                             </div>
+
+                            {completionPrompt && !completionPrompt.required && (
+                                <div className="col-12">
+                                    <div className="form-text">
+                                        <i className="bi bi-calendar-check me-1"></i>
+                                        The opportunity's next follow-up is already scheduled
+                                        ({formatDateTime(completionPrompt.existingDate)}) - nothing else is needed.
+                                    </div>
+                                </div>
+                            )}
+
+                            {completionPrompt?.required && (
+
+                                <div className="col-12">
+
+                                    <div className="alert alert-warning py-2 mb-3">
+                                        <strong>Schedule the next follow-up.</strong>{" "}
+                                        This opportunity has no other upcoming follow-up, so completing this one needs
+                                        the next follow-up date and next action. It is created together with the completion.
+                                    </div>
+
+                                    <div className="row g-3">
+
+                                        <div className="col-md-5">
+                                            <label className="form-label" htmlFor="next-action">Next action *</label>
+                                            <input
+                                                id="next-action"
+                                                className="form-control"
+                                                name="nextActionDescription"
+                                                value={form.nextActionDescription || ""}
+                                                onChange={handleChange}
+                                                placeholder="e.g. Send the revised quotation"
+                                                required
+                                                minLength={3}
+                                            />
+                                        </div>
+
+                                        <div className="col-md-3">
+                                            <label className="form-label" htmlFor="next-activity-type">Activity type *</label>
+                                            <select
+                                                id="next-activity-type"
+                                                className="form-select"
+                                                name="nextActionActivityTypeId"
+                                                value={form.nextActionActivityTypeId || ""}
+                                                onChange={handleChange}
+                                                required
+                                            >
+                                                <option value="">Select</option>
+                                                {activityTypes.map((t) => (
+                                                    <option key={t.id} value={t.id}>{t.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="col-md-4">
+                                            <label className="form-label" htmlFor="next-follow-up-date">Next follow-up date &amp; time *</label>
+                                            <input
+                                                id="next-follow-up-date"
+                                                type="datetime-local"
+                                                className="form-control"
+                                                name="nextFollowUpDate"
+                                                value={form.nextFollowUpDate || ""}
+                                                onChange={handleChange}
+                                                required
+                                            />
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            )}
 
                         </div>
 

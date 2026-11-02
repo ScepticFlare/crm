@@ -15,7 +15,7 @@ export default function EditLead() {
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [itemsRequired, setItemsRequired] = useState({ product: false, battery: false });
+    const [itemsRequired, setItemsRequired] = useState({ product: false });
     const [triedToSave, setTriedToSave] = useState(false);
 
     const [form, setForm] = useState({
@@ -60,12 +60,11 @@ export default function EditLead() {
 
             const data = await getLeadById(id);
 
-            // Required only when the lead already has one - an older lead
-            // saved without a Product / Battery stays editable without
-            // inventing a value (the backend applies the same rule).
+            // Product: required only when the lead already has one - an older
+            // lead saved without one stays editable without inventing a value
+            // (the backend applies the same rule). Battery is always optional.
             setItemsRequired({
                 product: (data.leadProducts || []).length > 0,
-                battery: (data.leadBatteries || []).length > 0,
             });
 
             setForm({
@@ -138,7 +137,7 @@ export default function EditLead() {
 
     };
 
-    const itemRules = { productRequired: itemsRequired.product, batteryRequired: itemsRequired.battery };
+    const itemRules = { productRequired: itemsRequired.product };
     const itemErrors = triedToSave ? lineItemErrors(form, itemRules) : {};
 
     const handleSubmit = async (e) => {
@@ -214,7 +213,6 @@ export default function EditLead() {
                         onCancel={() => navigate(returnTo)}
                         leadId={id}
                         productRequired={itemsRequired.product}
-                        batteryRequired={itemsRequired.battery}
                         lineItemErrors={itemErrors}
                     />
 

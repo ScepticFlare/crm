@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import TemplateSelect from "./TemplateSelect";
+import ResolvedDraftField, { DraftValuesNote } from "./ResolvedDraftField";
 
 import { getEmailTemplates } from "../../services/emailTemplateService";
 import {
@@ -17,6 +18,7 @@ import {
     loadBulkEmailRecovery,
     saveBulkEmailRecovery,
 } from "../../services/bulkEmailRecovery";
+import { formatDateTime } from "../../utils/formatDate";
 
 const OUTCOME_STYLE = {
     ACCEPTED: { className: "bg-success", label: "Accepted by provider" },
@@ -39,11 +41,6 @@ const EXCLUSION_TEXT = {
     UNRESOLVED_PLACEHOLDER: "A placeholder in the message had no value for this record.",
     SUPPRESSED: "This email address is on the do-not-email list.",
     RECENTLY_EMAILED: "This address (or record) was already emailed - or may have been - recently.",
-};
-
-const PLACEHOLDERS = {
-    LEAD: ["{{contactPerson}}", "{{companyName}}", "{{interestedProduct}}"],
-    OPPORTUNITY: ["{{contactPerson}}", "{{companyName}}", "{{interestedProduct}}", "{{opportunityTitle}}"],
 };
 
 // Bulk email for the selected Leads or Opportunities. Steps:
@@ -94,6 +91,9 @@ function BulkEmailModalBody({ target, ids = [], resumeOnly = false, onClose, onS
     const [templateId, setTemplateId] = useState(null);
     const [subject, setSubject] = useState("");
     const [body, setBody] = useState("");
+
+    // Whose values the draft editor shows (one of the recipients kept).
+    const [draftRecordId, setDraftRecordId] = useState(null);
 
     const [reviewPreview, setReviewPreview] = useState(null);
     const [selectedPreviewId, setSelectedPreviewId] = useState(null);
@@ -202,6 +202,13 @@ function BulkEmailModalBody({ target, ids = [], resumeOnly = false, onClose, onS
     const eligible = (recipientsPreview?.recipients || []).filter((r) => r.eligible);
     const excluded = (recipientsPreview?.recipients || []).filter((r) => !r.eligible);
     const kept = eligible.filter((r) => !removedIds.includes(r.id));
+
+    const draftRecipients = kept.map((r) => ({
+        id: r.id,
+        label: [r.companyName, r.contactPerson || r.email].filter(Boolean).join(" - ") || `Record #${r.id}`,
+        mergeFields: r.mergeFields || {},
+    }));
+    const shownRecord = draftRecipients.find((r) => r.id === draftRecordId) || draftRecipients[0];
 
     function toggleRemoved(id) {
         setRemovedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -574,7 +581,7 @@ function BulkEmailModalBody({ target, ids = [], resumeOnly = false, onClose, onS
                                     <>
                                         <div className="alert alert-warning py-2 px-3">
                                             You have a bulk email batch that was started earlier
-                                            {resumeView.batch?.createdAt && <> ({new Date(resumeView.batch.createdAt).toLocaleString()})</>}.
+                                            {resumeView.batch?.createdAt && <> ({formatDateTime(resumeView.batch.createdAt)})</>}.
                                             Its recipients and message are fixed and cannot be changed.
                                         </div>
 
@@ -705,33 +712,41 @@ function BulkEmailModalBody({ target, ids = [], resumeOnly = false, onClose, onS
                                         </div>
                                     </div>
 
+                                    <DraftValuesNote
+                                        raws={[subject, body]}
+                                        recipients={draftRecipients}
+                                        shownId={draftRecordId}
+                                        onShow={setDraftRecordId}
+                                        noun={noun}
+                                    />
+
                                     <div className="mb-3">
-                                        <label className="form-label">Subject</label>
-                                        <input
-                                            type="text"
-                                            className="form-control"
+                                        <label className="form-label" htmlFor="bulk-email-subject">Subject</label>
+                                        <ResolvedDraftField
+                                            id="bulk-email-subject"
                                             value={subject}
-                                            maxLength={255}
-                                            onChange={(e) => setSubject(e.target.value)}
+                                            onChange={setSubject}
+                                            fields={shownRecord?.mergeFields}
                                         />
                                     </div>
 
                                     <div className="mb-2">
-                                        <label className="form-label">Message</label>
-                                        <textarea
-                                            className="form-control"
-                                            rows={10}
+                                        <label className="form-label" htmlFor="bulk-email-body">Message</label>
+                                        <ResolvedDraftField
+                                            id="bulk-email-body"
                                             value={body}
-                                            maxLength={20000}
-                                            onChange={(e) => setBody(e.target.value)}
+                                            onChange={setBody}
+                                            fields={shownRecord?.mergeFields}
+                                            multiline
+                                            rows={10}
                                         />
                                     </div>
 
                                     <div className="form-text">
-                                        Personalisation, filled in separately for every recipient:{" "}
-                                        {PLACEHOLDERS[target].map((p) => <code key={p} className="me-2">{p}</code>)}
+                                        Names, companies, products and other details from a template are filled in
+                                        separately for each recipient, from their own record.
                                         <br />
-                                        A recipient whose data is missing for a placeholder, or a message with an unfinished
+                                        A recipient whose data is missing for a field, or a message with an unfinished
                                         <code> [[...]] </code> section, will not be sent - you will see it on the next step.
                                     </div>
 

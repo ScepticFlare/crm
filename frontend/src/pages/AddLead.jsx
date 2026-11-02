@@ -64,11 +64,11 @@ export default function AddLead() {
 
     };
 
-    // Product and Battery are mandatory for a new lead. Messages appear once
-    // the user tries to save, and update live as they fix the fields.
+    // Product is mandatory for a new lead; Battery is optional. Messages
+    // appear once the user tries to save, and update live as they fix the fields.
     const [triedToSave, setTriedToSave] = useState(false);
     const itemErrors = triedToSave
-        ? lineItemErrors(form, { productRequired: true, batteryRequired: true })
+        ? lineItemErrors(form, { productRequired: true })
         : {};
 
     const handleSubmit = async (e) => {
@@ -79,7 +79,7 @@ export default function AddLead() {
 
         setTriedToSave(true);
 
-        if (Object.keys(lineItemErrors(form, { productRequired: true, batteryRequired: true })).length > 0) {
+        if (Object.keys(lineItemErrors(form, { productRequired: true })).length > 0) {
             return;
         }
 
@@ -131,7 +131,6 @@ export default function AddLead() {
                         submitText="Save Lead"
                         onCancel={() => navigate("/leads")}
                         productRequired
-                        batteryRequired
                         lineItemErrors={itemErrors}
                     />
 

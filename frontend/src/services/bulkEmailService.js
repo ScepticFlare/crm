@@ -1,4 +1,5 @@
 import api from "./api";
+import { cachedFetch } from "../utils/apiCache";
 
 // Records sent per request. The backend enforces the same limit (and the
 // browser times out at 30 s), so a batch is sent as a series of small requests
@@ -191,3 +192,9 @@ export async function sendBulkEmail({ batchId, ids }, onProgress, timing = {}) {
 
     return { results: snapshot(), error, paused };
 }
+
+// The caller's own EMAIL_SEND grant: { canSend, scope }. Decides whether the
+// email actions are shown at all (the backend still authorizes every record).
+// Cached per login - the cache is cleared on login/logout.
+export const getEmailAccess = () =>
+    cachedFetch("emailAccess", async () => (await api.get("/bulk-email/access")).data);

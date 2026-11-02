@@ -19,6 +19,32 @@ export function typeOfStage(stage) {
     return stage?.stageType || null;
 }
 
+// Whether an opportunity in this stage must have a next follow-up: an active
+// stage (workflowActive, computed by the backend's OpportunityWorkflow.isActive)
+// or POSTPONED. WON, LOST and the historical closed stages need none. Mirrors
+// OpportunityWorkflow.requiresNextFollowUp; the backend enforces it.
+export function requiresNextFollowUp(stage) {
+
+    if (!stage) {
+        return false;
+    }
+
+    const type = typeOfStage(stage);
+
+    if (type === "POSTPONED") {
+        return true;
+    }
+
+    if (typeof stage.workflowActive === "boolean") {
+        return stage.workflowActive;
+    }
+
+    // Without the flag, judge by the stable type (an untyped custom stage is active).
+    return !CLOSED_STAGE_TYPES.includes(type);
+}
+
+const CLOSED_STAGE_TYPES = ["WON", "LOST", "LEGACY_DROPPED", "LEGACY_UNRESPONSIVE", "LEGACY_INVALID"];
+
 // Historical QUOTATION SENT / NEGOTIATION stages: kept for old records,
 // not offered as a stage choice any more.
 export function isLegacySubStage(stage) {
