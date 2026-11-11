@@ -40,6 +40,7 @@ import ManagementSummary from "./pages/ManagementSummary";
 import EmployeeActivity from "./pages/EmployeeActivity";
 import EmailTemplates from "./pages/EmailTemplates";
 import EmailSuppressions from "./pages/EmailSuppressions";
+import EmailAccount from "./pages/EmailAccount";
 import Documents from "./pages/Documents";
 
 import InProgress from "./pages/InProgress";
@@ -207,6 +208,11 @@ function App() {
                     <Route
                         path="/activity"
                         element={<ManagerOrAdminRoute><EmployeeActivity /></ManagerOrAdminRoute>}
+                    />
+                    {/* Every user: their own sending mailbox (the OAuth flow returns here). */}
+                    <Route
+                        path="/email-account"
+                        element={<EmailAccount />}
                     />
                     <Route
                         path="/email-templates"

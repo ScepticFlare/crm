@@ -56,7 +56,34 @@ export const RETRYABLE_OUTCOMES = ["FAILED", "NOT_ATTEMPTED"];
 // Outcomes that still need a status check with the server before anything else.
 export const UNSETTLED_OUTCOMES = ["IN_PROGRESS", "UNVERIFIED"];
 
-const DEFAULT_TIMING = { reconcileAttempts: 3, settleAttempts: 5, delayMs: 1500 };
+const DEFAULT_TIMING = {
+    reconcileAttempts: 3,
+    settleAttempts: 5,
+    delayMs: 1500,
+    // A 429 with a short Retry-After means "your mailbox is sending too fast for
+    // the provider's limits" (Gmail / Microsoft 365, paced per mailbox on the
+    // server): the same chunk is sent again after waiting, at most this often.
+    throttleWaits: 6,
+    retryAfterUnitMs: 1000,
+};
+
+// Waits longer than this are not waited out in the browser: sending pauses with
+// the server's message (e.g. a daily limit) and the user resumes later.
+const MAX_AUTO_WAIT_SECONDS = 90;
+
+// Seconds to wait before re-sending a throttled chunk, or null when the failure
+// is not a short, explicit "try again in N seconds".
+export function retryAfterSeconds(err) {
+
+    if (err?.response?.status !== 429) {
+        return null;
+    }
+
+    const raw = err.response.headers?.["retry-after"] ?? err.response.headers?.["Retry-After"];
+    const seconds = Number.parseInt(raw, 10);
+
+    return Number.isFinite(seconds) && seconds >= 0 && seconds <= MAX_AUTO_WAIT_SECONDS ? seconds : null;
+}
 
 const sleep = (ms) => (ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve());
 
@@ -105,7 +132,7 @@ function isDefinitive(err) {
 // Results of earlier chunks are always kept.
 export async function sendBulkEmail({ batchId, ids }, onProgress, timing = {}) {
 
-    const { reconcileAttempts, settleAttempts, delayMs } = { ...DEFAULT_TIMING, ...timing };
+    const { reconcileAttempts, settleAttempts, delayMs, throttleWaits, retryAfterUnitMs } = { ...DEFAULT_TIMING, ...timing };
 
     const byId = new Map();
     let error = null;
@@ -121,11 +148,26 @@ export async function sendBulkEmail({ batchId, ids }, onProgress, timing = {}) {
             break;
         }
 
+        let waits = 0;
+
         try {
 
-            const response = await sendBulkEmailChunk({ batchId, ids: chunk });
-
-            response.results.forEach((r) => byId.set(r.id, r));
+            // Re-sending the same chunk is always safe: the server answers recipients
+            // it already handled from its record and never sends them twice.
+            for (;;) {
+                try {
+                    const response = await sendBulkEmailChunk({ batchId, ids: chunk });
+                    response.results.forEach((r) => byId.set(r.id, r));
+                    break;
+                } catch (err) {
+                    const wait = retryAfterSeconds(err);
+                    if (wait === null || waits >= throttleWaits) {
+                        throw err;
+                    }
+                    waits += 1;
+                    await sleep(Math.max(1, wait) * retryAfterUnitMs);
+                }
+            }
 
         } catch (err) {
 

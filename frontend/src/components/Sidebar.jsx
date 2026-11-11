@@ -83,6 +83,13 @@ export default function Sidebar() {
             path: "/followups",
             icon: "bi-calendar-check",
         },
+
+        // Every user's own sending mailbox (Gmail / Microsoft 365).
+        {
+            name: "Email Account",
+            path: "/email-account",
+            icon: "bi-envelope-at-fill",
+        },
         
 
     ];
