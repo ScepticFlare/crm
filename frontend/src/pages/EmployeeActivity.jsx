@@ -19,6 +19,7 @@ const MODULE_OPTIONS = [
     { value: "CUSTOMER", label: "Customer" },
     { value: "FOLLOWUP", label: "Follow-up" },
     { value: "EMPLOYEE", label: "Employee" },
+    { value: "SYSTEM", label: "System" },
 ];
 
 const ACTION_OPTIONS = [
@@ -39,6 +40,10 @@ const ACTION_OPTIONS = [
     { value: "MANAGER_CHANGED", label: "Manager Changed" },
     { value: "EMPLOYEE_ACTIVATED", label: "Employee Activated" },
     { value: "EMPLOYEE_DEACTIVATED", label: "Employee Deactivated" },
+    { value: "BACKUP_STARTED", label: "Backup Started" },
+    { value: "BACKUP_SUCCEEDED", label: "Backup Succeeded" },
+    { value: "BACKUP_FAILED", label: "Backup Failed" },
+    { value: "BACKUP_DOWNLOADED", label: "Backup Downloaded" },
 ];
 
 const MODULE_LABELS = Object.fromEntries(MODULE_OPTIONS.map((m) => [m.value, m.label]));

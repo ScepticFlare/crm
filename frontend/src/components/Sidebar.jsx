@@ -125,6 +125,12 @@ export default function Sidebar() {
         });
 
         menuItems.push({
+            name: "Backups",
+            path: "/backups",
+            icon: "bi-database-fill-down",
+        });
+
+        menuItems.push({
             name: "Email Templates",
             path: "/email-templates",
             icon: "bi-envelope-paper-fill",
