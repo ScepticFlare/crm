@@ -25,6 +25,8 @@ import {
     requiresNextFollowUp,
     typeOfStage
 } from "./workflowConstants";
+import BritishDateInput from "./inputs/BritishDateInput";
+import BritishDateTimeInput from "./inputs/BritishDateTimeInput";
 
 export default function OpportunityForm({
     form,
@@ -461,10 +463,10 @@ export default function OpportunityForm({
                             Expected Closing Date{closingDateRequired ? " *" : ""}
                         </label>
 
-                        <input
-                            type="date"
+                        <BritishDateInput
                             className="form-control"
                             name="expectedClosingDate"
+                            aria-label="Expected closing date"
                             value={form.expectedClosingDate}
                             onChange={handleChange}
                             required={closingDateRequired}
@@ -641,10 +643,10 @@ export default function OpportunityForm({
                                 Review Date (optional)
                             </label>
 
-                            <input
-                                type="date"
+                            <BritishDateInput
                                 className="form-control"
                                 name="postponedReviewDate"
+                                aria-label="Review date"
                                 value={form.postponedReviewDate || ""}
                                 onChange={handleChange}
                             />
@@ -742,10 +744,11 @@ export default function OpportunityForm({
 
                                 <div className="col-md-4 mb-3">
                                     <label className="form-label">Follow-up date &amp; time *</label>
-                                    <input
-                                        type="datetime-local"
+                                    <BritishDateTimeInput
                                         className="form-control"
                                         name="nextFollowUpDate"
+                                        aria-label="Follow-up date"
+                                        timeLabel="Follow-up time (HH:MM, 24-hour)"
                                         value={form.nextFollowUpDate || ""}
                                         onChange={handleChange}
                                         required

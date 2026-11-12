@@ -3,6 +3,7 @@ import Select from "react-select";
 
 import { isActiveFilterValue } from "../../hooks/useServerList";
 import { toIsoDate } from "../../utils/formatDate";
+import BritishDateInput from "../inputs/BritishDateInput";
 
 // A multi-select filter's value as an array of strings. Older URLs (and
 // single-select filters that became multi-select) hold a single value.
@@ -242,9 +243,9 @@ export default function FilterPanel({ filterDefs, filters, onChange, onClear }) 
                                     )}
 
                                     {def.type === "date" && (
-                                        <input
-                                            type="date"
+                                        <BritishDateInput
                                             className="form-control form-control-sm"
+                                            aria-label={def.label}
                                             value={draft[def.key] ?? ""}
                                             onChange={(e) => updateDraft(def.key, e.target.value)}
                                         />
@@ -265,15 +266,13 @@ export default function FilterPanel({ filterDefs, filters, onChange, onClear }) 
                                                 ))}
                                             </div>
                                             <div className="d-flex gap-2">
-                                                <input
-                                                    type="date"
+                                                <BritishDateInput
                                                     className="form-control form-control-sm"
                                                     aria-label={`${def.label} from`}
                                                     value={draft[def.fromKey] ?? ""}
                                                     onChange={(e) => updateDraft(def.fromKey, e.target.value)}
                                                 />
-                                                <input
-                                                    type="date"
+                                                <BritishDateInput
                                                     className="form-control form-control-sm"
                                                     aria-label={`${def.label} to`}
                                                     value={draft[def.toKey] ?? ""}

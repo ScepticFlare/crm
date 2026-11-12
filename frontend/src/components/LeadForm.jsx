@@ -35,6 +35,7 @@ import {
 import DropdownAddManage from "./DropdownAddManage";
 import MultiItemQuantitySelector from "./MultiItemQuantitySelector";
 import DuplicateLeadWarning from "./DuplicateLeadWarning";
+import BritishDateInput from "./inputs/BritishDateInput";
 
 export default function LeadForm({
 
@@ -527,10 +528,10 @@ export default function LeadForm({
             Contact By
         </label>
 
-        <input
-            type="date"
+        <BritishDateInput
             className="form-control"
             name="contactDeadline"
+            aria-label="Contact by"
             value={form.contactDeadline || ""}
             onChange={handleChange}
         />

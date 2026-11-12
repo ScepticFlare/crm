@@ -8,6 +8,7 @@ import {
     getLeadSources
 } from "../services/reportService";
 import { toIsoDate } from "../utils/formatDate";
+import BritishDateInput from "../components/inputs/BritishDateInput";
 
 export default function Reports() {
 
@@ -125,10 +126,10 @@ export default function Reports() {
                                 From Date
                             </label>
 
-                            <input
-                                type="date"
+                            <BritishDateInput
                                 className="form-control"
                                 value={from}
+                                aria-label="From date"
                                 onChange={(e) => setFrom(e.target.value)}
                             />
 
@@ -140,10 +141,10 @@ export default function Reports() {
                                 To Date
                             </label>
 
-                            <input
-                                type="date"
+                            <BritishDateInput
                                 className="form-control"
                                 value={to}
+                                aria-label="To date"
                                 onChange={(e) => setTo(e.target.value)}
                             />
 

@@ -23,6 +23,8 @@ import { getAllActivityTypes } from "../services/activityTypeService";
 import { describeDeleteImpact } from "../utils/deleteImpact";
 import { formatDate, formatDateTime } from "../utils/formatDate";
 import { describeLineItems } from "../utils/lineItems";
+import BritishDateInput from "../components/inputs/BritishDateInput";
+import BritishDateTimeInput from "../components/inputs/BritishDateTimeInput";
 
 export default function OpportunityDetails() {
 
@@ -303,10 +305,10 @@ export default function OpportunityDetails() {
                                 <label className="form-label mb-1 small">
                                     Expected closing date *
                                 </label>
-                                <input
-                                    type="date"
+                                <BritishDateInput
                                     className="form-control form-control-sm"
                                     value={resumeDate}
+                                    aria-label="Expected closing date"
                                     onChange={(e) => setResumeDate(e.target.value)}
                                 />
                             </div>
@@ -337,10 +339,11 @@ export default function OpportunityDetails() {
                                     </div>
                                     <div>
                                         <label className="form-label mb-1 small">Follow-up date &amp; time *</label>
-                                        <input
-                                            type="datetime-local"
+                                        <BritishDateTimeInput
                                             className="form-control form-control-sm"
                                             value={resumeAction.nextFollowUpDate}
+                                            aria-label="Follow-up date"
+                                            timeLabel="Follow-up time (HH:MM, 24-hour)"
                                             onChange={(e) => setResumeAction((a) => ({ ...a, nextFollowUpDate: e.target.value }))}
                                         />
                                     </div>

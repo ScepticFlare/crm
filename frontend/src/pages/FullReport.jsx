@@ -15,6 +15,7 @@ import { getAllSalesStagesAdmin } from "../services/salesStageService";
 import { getAllProductsAdmin } from "../services/productService";
 import { getAllBatteriesAdmin } from "../services/batteryService";
 import { toIsoDate } from "../utils/formatDate";
+import BritishDateInput from "../components/inputs/BritishDateInput";
 
 const RECORD_TYPE_OPTIONS = [
     { key: "LEAD", label: "Leads" },
@@ -247,20 +248,20 @@ export default function FullReport() {
 
                     <div className="col-md-3">
                         <label className="form-label">From Date</label>
-                        <input
-                            type="date"
+                        <BritishDateInput
                             className="form-control"
                             value={from}
+                            aria-label="From date"
                             onChange={(e) => setFrom(e.target.value)}
                         />
                     </div>
 
                     <div className="col-md-3">
                         <label className="form-label">To Date</label>
-                        <input
-                            type="date"
+                        <BritishDateInput
                             className="form-control"
                             value={to}
+                            aria-label="To date"
                             onChange={(e) => setTo(e.target.value)}
                         />
                     </div>

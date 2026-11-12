@@ -10,6 +10,7 @@ import {
 } from "../services/activityTypeService";
 import DropdownAddManage from "./DropdownAddManage";
 import { formatDateTime } from "../utils/formatDate";
+import BritishDateTimeInput from "./inputs/BritishDateTimeInput";
 
 export default function FollowUpForm({
     form,
@@ -245,10 +246,11 @@ export default function FollowUpForm({
                                     Scheduled Date *
                                 </label>
 
-                                <input
-                                    type="datetime-local"
+                                <BritishDateTimeInput
                                     className="form-control"
                                     name="scheduledDate"
+                                    aria-label="Scheduled date"
+                                    timeLabel="Scheduled time (HH:MM, 24-hour)"
                                     value={form.scheduledDate}
                                     onChange={handleChange}
                                     required
@@ -267,10 +269,11 @@ export default function FollowUpForm({
                                     Completed Date
                                 </label>
 
-                                <input
-                                    type="datetime-local"
+                                <BritishDateTimeInput
                                     className="form-control"
                                     name="completedDate"
+                                    aria-label="Completed date"
+                                    timeLabel="Completed time (HH:MM, 24-hour)"
                                     value={form.completedDate}
                                     onChange={handleChange}
                                 />
@@ -359,11 +362,11 @@ export default function FollowUpForm({
 
                                         <div className="col-md-4">
                                             <label className="form-label" htmlFor="next-follow-up-date">Next follow-up date &amp; time *</label>
-                                            <input
+                                            <BritishDateTimeInput
                                                 id="next-follow-up-date"
-                                                type="datetime-local"
                                                 className="form-control"
                                                 name="nextFollowUpDate"
+                                                timeLabel="Next follow-up time (HH:MM, 24-hour)"
                                                 value={form.nextFollowUpDate || ""}
                                                 onChange={handleChange}
                                                 required

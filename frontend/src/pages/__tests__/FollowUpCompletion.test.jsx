@@ -72,7 +72,9 @@ describe("completing a follow-up", () => {
 
         fireEvent.change(screen.getByLabelText("Next action *"), { target: { value: "Negotiate price" } });
         fireEvent.change(screen.getByLabelText("Activity type *"), { target: { value: "3" } });
-        fireEvent.change(screen.getByLabelText(/Next follow-up date/), { target: { value: "2030-05-04T10:30" } });
+        // typed the British way - 04/05/2030 is 4 May - and sent to the API as ISO
+        fireEvent.change(screen.getByLabelText(/Next follow-up date/), { target: { value: "04/05/2030" } });
+        fireEvent.change(screen.getByLabelText(/Next follow-up time/), { target: { value: "10:30" } });
         fireEvent.click(screen.getByText("Update Follow Up"));
 
         await waitFor(() => expect(followups.updateFollowUp).toHaveBeenCalled());

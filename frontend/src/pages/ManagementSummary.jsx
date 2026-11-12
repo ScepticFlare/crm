@@ -8,6 +8,7 @@ import EmptyState from "../components/ui/EmptyState";
 
 import { getManagementSummary } from "../services/managementService";
 import { formatDate, formatDateTime } from "../utils/formatDate";
+import BritishDateInput from "../components/inputs/BritishDateInput";
 
 function money(value) {
     return Number(value || 0).toLocaleString("en-IN", {
@@ -129,12 +130,12 @@ export default function ManagementSummary() {
                 <div className="card-body d-flex flex-wrap align-items-end gap-3">
                     <div>
                         <label className="form-label mb-1 small">Leads created from</label>
-                        <input type="date" className="form-control form-control-sm" value={from}
+                        <BritishDateInput className="form-control form-control-sm" aria-label="Leads created from" value={from}
                             onChange={(e) => setFrom(e.target.value)} />
                     </div>
                     <div>
                         <label className="form-label mb-1 small">to</label>
-                        <input type="date" className="form-control form-control-sm" value={to}
+                        <BritishDateInput className="form-control form-control-sm" aria-label="Leads created to" value={to}
                             onChange={(e) => setTo(e.target.value)} />
                     </div>
                     <button className="btn btn-primary btn-sm" onClick={load} disabled={loading}>
