@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import useListReturn from "../hooks/useListReturn";
 
 import { getFollowUpById, deleteFollowUp } from "../services/followupService";
@@ -10,6 +10,7 @@ import DetailHeader from "../components/detail/DetailHeader";
 import ActivityPlaceholder from "../components/detail/ActivityPlaceholder";
 import DeleteModal from "../components/DeleteModal";
 import { formatDateTime } from "../utils/formatDate";
+import { companyText, linkNote, relatedOf } from "../utils/followUpRelated";
 
 export default function FollowUpDetails() {
 
@@ -85,6 +86,10 @@ export default function FollowUpDetails() {
 
     }
 
+    // Lead / company / opportunity from the follow-up's real relationships
+    // (an opportunity follow-up's lead is its opportunity's lead).
+    const related = relatedOf(followUp);
+
     return (
 
         <>
@@ -92,7 +97,7 @@ export default function FollowUpDetails() {
             <DetailHeader
                 backTo="/followups"
                 title={followUp.activityType?.name || "Follow Up"}
-                subtitle={followUp.lead?.companyName || followUp.opportunity?.title}
+                subtitle={related?.label}
                 status={followUp.status}
                 meta={`Follow Up #${followUp.id}`}
                 onEdit={() => navigate(`/followups/edit/${followUp.id}`, { state: returnState })}
@@ -115,11 +120,31 @@ export default function FollowUpDetails() {
                         <div className="row">
 
                             <div className="col-md-6">
-                                <DetailField label="Lead" value={followUp.lead?.companyName} />
+                                <label className="text-muted small d-block">Company / Lead</label>
+                                <div className="fw-semibold mb-3" data-testid="related-company">
+                                    {related?.leadId
+                                        ? <Link to={`/leads/${related.leadId}`}>{companyText(related)}</Link>
+                                        : <span className="text-muted">{companyText(related)}</span>}
+                                    <div className="small text-muted fw-normal">
+                                        {[related?.contactPerson, linkNote(related)].filter(Boolean).join(" · ")}
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="col-md-6">
-                                <DetailField label="Opportunity" value={followUp.opportunity?.title} />
+                                <label className="text-muted small d-block">Opportunity</label>
+                                <div className="fw-semibold mb-3" data-testid="related-opportunity">
+                                    {related?.opportunityId ? (
+                                        <>
+                                            <Link to={`/opportunities/${related.opportunityId}`}>
+                                                {related.opportunityTitle || "(untitled)"}
+                                            </Link>
+                                            <div className="small text-muted fw-normal">
+                                                {[`#${related.opportunityId}`, related.opportunityStage].filter(Boolean).join(" · ")}
+                                            </div>
+                                        </>
+                                    ) : <span className="text-muted fw-normal">Not linked to an opportunity</span>}
+                                </div>
                             </div>
 
                             <div className="col-md-6">

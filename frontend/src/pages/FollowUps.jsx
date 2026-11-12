@@ -13,6 +13,7 @@ import ListPagination from "../components/list/ListPagination";
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
 import { formatDateTime, toIsoDate } from "../utils/formatDate";
+import { companyText, linkNote, relatedOf } from "../utils/followUpRelated";
 import { downloadBlob, exportCountNotice, exportErrorMessage } from "../utils/downloadFile";
 
 import {
@@ -31,8 +32,43 @@ const FOLLOWUP_STATUS_OPTIONS = [
 ];
 
 const ALL_FOLLOWUP_COLUMNS = [
-    { key: "lead", label: "Lead", render: (row) => row.lead?.companyName || "-" },
-    { key: "opportunity", label: "Opportunity", render: (row) => row.opportunity?.title || "-" },
+    // Company / lead through the follow-up's own lead or, for an opportunity
+    // follow-up (no lead of its own), its opportunity's lead - see related.
+    {
+        key: "lead", label: "Company / Lead",
+        render: (row) => {
+            const r = relatedOf(row);
+            return (
+                <div>
+                    {r?.leadId
+                        ? <RecordLink to={`/leads/${r.leadId}`} className="record-link">{companyText(r)}</RecordLink>
+                        : <span className="text-muted">{companyText(r)}</span>}
+                    <div className="small text-muted">
+                        {[r?.contactPerson, linkNote(r)].filter(Boolean).join(" · ")}
+                    </div>
+                </div>
+            );
+        }
+    },
+    {
+        key: "opportunity", label: "Opportunity",
+        render: (row) => {
+            const r = relatedOf(row);
+            if (!r?.opportunityId) {
+                return <span className="text-muted">-</span>;
+            }
+            return (
+                <div>
+                    <RecordLink to={`/opportunities/${r.opportunityId}`} className="record-link">
+                        {r.opportunityTitle || "(untitled)"}
+                    </RecordLink>
+                    <div className="small text-muted">
+                        {[`#${r.opportunityId}`, r.opportunityStage].filter(Boolean).join(" · ")}
+                    </div>
+                </div>
+            );
+        }
+    },
     { key: "employee", label: "Employee", sortable: true, render: (row) => row.employee?.name || "-" },
     {
         key: "activity", label: "Activity", sortable: true, sortKey: "activityType",

@@ -11,17 +11,22 @@ import {
 import DropdownAddManage from "./DropdownAddManage";
 import { formatDateTime } from "../utils/formatDate";
 import BritishDateTimeInput from "./inputs/BritishDateTimeInput";
+import FollowUpTargetPicker from "./FollowUpTargetPicker";
+import { targetDetails, targetTitle } from "../utils/followUpRelated";
 
 export default function FollowUpForm({
     form,
     setForm,
     employees,
-    leads,
-    opportunities,
     onSubmit,
     submitText,
-    hideLead = false,
-    hideOpportunity = false,
+    // The selected related record (a GET /api/followups/targets item, or the
+    // current one on the edit page) and its setter - see FollowUpTargetPicker.
+    target = null,
+    onTargetChange,
+    // When opened from a lead's or an opportunity's page: that record, shown
+    // read-only instead of the picker.
+    lockedTarget = null,
     // Edit page, while this follow-up is being marked Completed and its
     // opportunity still needs a next follow-up (it is active or Postponed):
     // { required: true } asks for the next one here (created together with
@@ -31,6 +36,7 @@ export default function FollowUpForm({
 }) {
 
     const [activityTypes, setActivityTypes] = useState([]);
+    const [targetError, setTargetError] = useState("");
 
     const role = localStorage.getItem("role");
 
@@ -51,6 +57,30 @@ export default function FollowUpForm({
         }
     }
 
+    // Picking a record links the follow-up to exactly that record: a lead, or
+    // an opportunity (its lead is shown through it - nothing is guessed).
+    function handleTarget(t) {
+        onTargetChange?.(t);
+        setTargetError("");
+        setForm(prev => ({
+            ...prev,
+            leadId: t && t.type === "LEAD" ? t.leadId : "",
+            opportunityId: t && t.type === "OPPORTUNITY" ? t.opportunityId : "",
+            // an admin assigning on someone's behalf: default to the record's owner
+            employeeId: role === "ADMIN" && !prev.employeeId && t?.assignedEmployeeId
+                ? t.assignedEmployeeId : prev.employeeId,
+        }));
+    }
+
+    function handleSubmit(e) {
+        if (!form.leadId && !form.opportunityId) {
+            e.preventDefault();
+            setTargetError("Choose the lead or opportunity this follow-up is for.");
+            return;
+        }
+        onSubmit(e);
+    }
+
     function handleChange(e) {
         const { name, value } = e.target;
 
@@ -66,85 +96,40 @@ export default function FollowUpForm({
 
                 <div className="card-body p-4">
 
-                    <form onSubmit={onSubmit}>
+                    <form onSubmit={handleSubmit}>
 
                         <div className="row g-3">
 
-                            {/* Lead */}
+                            {/* Related record: the lead or opportunity this follow-up is for */}
 
-                            {!hideLead && (
+                            <div className="col-12">
 
-                                <div className="col-md-6">
+                                <label className="form-label" htmlFor="followup-target">
+                                    Related record *
+                                </label>
 
-                                    <label className="form-label">
-                                        Lead
-                                    </label>
+                                {lockedTarget ? (
+                                    <div className="border rounded px-3 py-2 bg-light" data-testid="locked-target">
+                                        <div className="fw-semibold">{targetTitle(lockedTarget)}</div>
+                                        <div className="small text-muted">{targetDetails(lockedTarget)}</div>
+                                    </div>
+                                ) : (
+                                    <FollowUpTargetPicker
+                                        inputId="followup-target"
+                                        value={target}
+                                        onChange={handleTarget}
+                                    />
+                                )}
 
-                                    <select
-                                        className="form-select"
-                                        name="leadId"
-                                        value={form.leadId}
-                                        onChange={handleChange}
-                                    >
+                                {targetError ? (
+                                    <div className="text-danger small mt-1" role="alert">{targetError}</div>
+                                ) : !lockedTarget && (
+                                    <div className="form-text">
+                                        An unconverted lead, or an opportunity. A converted lead is chosen through its opportunity.
+                                    </div>
+                                )}
 
-                                        <option value="">
-                                            Select Lead
-                                        </option>
-
-                                        {leads.map(lead => (
-
-                                            <option
-                                                key={lead.id}
-                                                value={lead.id}
-                                            >
-                                                {lead.companyName}
-                                            </option>
-
-                                        ))}
-
-                                    </select>
-
-                                </div>
-
-                            )}
-
-                            {/* Opportunity */}
-
-                            {!hideOpportunity && (
-
-                                <div className="col-md-6">
-
-                                    <label className="form-label">
-                                        Opportunity
-                                    </label>
-
-                                    <select
-                                        className="form-select"
-                                        name="opportunityId"
-                                        value={form.opportunityId}
-                                        onChange={handleChange}
-                                    >
-
-                                        <option value="">
-                                            Select Opportunity
-                                        </option>
-
-                                        {opportunities.map(opp => (
-
-                                            <option
-                                                key={opp.id}
-                                                value={opp.id}
-                                            >
-                                                {opp.title}
-                                            </option>
-
-                                        ))}
-
-                                    </select>
-
-                                </div>
-
-                            )}
+                            </div>
 
                             {/* Employee (ADMIN only) */}
 

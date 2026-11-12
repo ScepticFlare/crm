@@ -12,10 +12,9 @@ import {
 } from "../services/followupService";
 
 import { getAllEmployees } from "../services/employeeService";
-import { getAllLeads } from "../services/leadService";
-import { getAllOpportunities } from "../services/opportunityService";
 import { getFollowUpsByOpportunity } from "../services/followupService";
 import { nextActionPayload, requiresNextFollowUp } from "../components/workflowConstants";
+import { targetFromFollowUp } from "../utils/followUpRelated";
 
 // A follow-up that counts as an opportunity's next one: pending, scheduled
 // now or later, with a described next action (the backend's FollowUpRules).
@@ -32,8 +31,10 @@ export default function EditFollowUp() {
     const { returnTo } = useListReturn("/followups");
 
     const [employees, setEmployees] = useState([]);
-    const [leads, setLeads] = useState([]);
-    const [opportunities, setOpportunities] = useState([]);
+    // The related record: starts as the one this follow-up is stored with
+    // (from its own response - present even when that lead is converted or
+    // not in any list), changes only if the user picks another.
+    const [target, setTarget] = useState(null);
 
     const [loading, setLoading] = useState(true);
 
@@ -64,15 +65,7 @@ export default function EditFollowUp() {
 
         const role = localStorage.getItem("role");
 
-        const [
-            followUp,
-            leadResponse,
-            oppResponse
-        ] = await Promise.all([
-            getFollowUpById(id),
-            getAllLeads({ page: 0, size: 1000, search: "" }),
-            getAllOpportunities({ page: 0, size: 1000, search: "" })
-        ]);
+        const followUp = await getFollowUpById(id);
 
         // Only an active or Postponed opportunity needs a next follow-up (Won,
         // Lost and Dropped do not). A lead's follow-up whose lead became an
@@ -95,8 +88,7 @@ export default function EditFollowUp() {
             otherNextDate: otherNext?.scheduledDate || null,
         });
 
-        setLeads(leadResponse.content || []);
-        setOpportunities(oppResponse.content || []);
+        setTarget(targetFromFollowUp(followUp));
 
         if (role === "ADMIN") {
 
@@ -194,13 +186,13 @@ export default function EditFollowUp() {
 
         <FollowUpForm
             employees={employees}
-            leads={leads}
-            opportunities={opportunities}
             form={form}
             setForm={setForm}
             onSubmit={handleSubmit}
             submitText="Update Follow Up"
             completionPrompt={completionPrompt}
+            target={target}
+            onTargetChange={setTarget}
         />
 
     );

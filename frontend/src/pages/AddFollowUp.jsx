@@ -5,8 +5,27 @@ import FollowUpForm from "../components/FollowUpForm";
 
 import { createFollowUp } from "../services/followupService";
 import { getAllEmployees } from "../services/employeeService";
-import { getAllLeads } from "../services/leadService";
-import { getAllOpportunities } from "../services/opportunityService";
+import { getLeadById } from "../services/leadService";
+import { getOpportunityById } from "../services/opportunityService";
+
+// The picker item for a record opened from its own page.
+function leadTarget(lead) {
+    return {
+        type: "LEAD", leadId: lead.id, opportunityId: null,
+        companyName: lead.companyName, contactPerson: lead.contactPerson,
+        assignedEmployeeId: lead.assignedEmployee?.id ?? null, assignedEmployeeName: lead.assignedEmployee?.name || null,
+    };
+}
+
+function opportunityTarget(opp) {
+    return {
+        type: "OPPORTUNITY", leadId: opp.lead?.id ?? null, opportunityId: opp.id,
+        companyName: opp.lead?.companyName || null, contactPerson: opp.contactPerson || opp.lead?.contactPerson || null,
+        opportunityTitle: opp.title, stage: opp.salesStage?.name || null,
+        assignedEmployeeId: opp.lead?.assignedEmployee?.id ?? null,
+        assignedEmployeeName: opp.lead?.assignedEmployee?.name || null,
+    };
+}
 
 export default function AddFollowUp() {
 
@@ -20,8 +39,8 @@ export default function AddFollowUp() {
     const loggedInEmployeeId = localStorage.getItem("employeeId");
 
     const [employees, setEmployees] = useState([]);
-    const [leads, setLeads] = useState([]);
-    const [opportunities, setOpportunities] = useState([]);
+    const [target, setTarget] = useState(null);
+    const [lockedTarget, setLockedTarget] = useState(null);
 
     const [form, setForm] = useState({
         leadId: leadIdFromUrl || "",
@@ -45,66 +64,26 @@ export default function AddFollowUp() {
 
         try {
 
-            let emp = [];
-
             if (role === "ADMIN") {
-                emp = await getAllEmployees();
-                setEmployees(emp);
+                setEmployees(await getAllEmployees());
             }
 
-            const [leadResponse, oppResponse] = await Promise.all([
-    getAllLeads({ page: 0, size: 1000, search: "" }),
-    getAllOpportunities({ page: 0, size: 1000, search: "" })
-]);
+            // Opened from an Opportunity's or a Lead's page: that record is
+            // fixed (shown read-only), and an admin defaults to its owner.
+            let preset = null;
 
-const lead = leadResponse.content || [];
-const opp = oppResponse.content || [];
-
-setLeads(lead);
-setOpportunities(opp);
-
-            // Opened from Lead Details
-            if (leadIdFromUrl) {
-
-                const selectedLead = lead.find(
-                    l => l.id === Number(leadIdFromUrl)
-                );
-
-                if (selectedLead) {
-
-                    setForm(prev => ({
-                        ...prev,
-                        employeeId:
-                            role === "ADMIN"
-                                ? selectedLead.assignedEmployee?.id || ""
-                                : loggedInEmployeeId
-                    }));
-
-                }
-
-            }
-
-            // Opened from Opportunity Details
             if (opportunityIdFromUrl) {
+                preset = opportunityTarget(await getOpportunityById(opportunityIdFromUrl));
+            } else if (leadIdFromUrl) {
+                preset = leadTarget(await getLeadById(leadIdFromUrl));
+            }
 
-                const selectedOpportunity = opp.find(
-                    o => o.id === Number(opportunityIdFromUrl)
-                );
-
-                if (selectedOpportunity && selectedOpportunity.lead) {
-
-                    setForm(prev => ({
-                        ...prev,
-                        employeeId:
-                            role === "ADMIN"
-                                ? selectedOpportunity
-                                      .lead
-                                      .assignedEmployee?.id || ""
-                                : loggedInEmployeeId
-                    }));
-
-                }
-
+            if (preset) {
+                setLockedTarget(preset);
+                setForm(prev => ({
+                    ...prev,
+                    employeeId: role === "ADMIN" ? preset.assignedEmployeeId || "" : loggedInEmployeeId
+                }));
             }
 
         } catch (err) {
@@ -141,7 +120,7 @@ setOpportunities(opp);
         } catch (err) {
 
             console.error(err);
-            alert("Unable to create Follow Up.");
+            alert(err?.response?.data?.message || "Unable to create Follow Up.");
 
         }
 
@@ -151,14 +130,13 @@ setOpportunities(opp);
 
         <FollowUpForm
             employees={employees}
-            leads={leads}
-            opportunities={opportunities}
             form={form}
             setForm={setForm}
             onSubmit={handleSubmit}
             submitText="Create Follow Up"
-            hideLead={!!leadIdFromUrl}
-            hideOpportunity={!!opportunityIdFromUrl}
+            target={target}
+            onTargetChange={setTarget}
+            lockedTarget={lockedTarget}
         />
 
     );

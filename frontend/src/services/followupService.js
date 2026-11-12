@@ -55,3 +55,11 @@ export const exportFollowUps = async ({ sort = null, filters = {}, selection = n
     return withRowCount(response);
 
 };
+
+// Leads / opportunities the current user may schedule a follow-up for, with
+// the context needed to tell same-named records apart (see the backend's
+// FollowUpTargetService). type: "LEAD", "OPPORTUNITY" or omitted for both.
+export const getFollowUpTargets = async ({ search = "", type, limit } = {}) => {
+    const response = await api.get("/followups/targets", { params: { search: search || undefined, type, limit } });
+    return response.data;
+};

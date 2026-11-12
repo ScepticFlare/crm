@@ -7,6 +7,7 @@ const followups = vi.hoisted(() => ({
     getFollowUpById: vi.fn(),
     updateFollowUp: vi.fn(),
     getFollowUpsByOpportunity: vi.fn(),
+    getFollowUpTargets: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("../../services/followupService", () => followups);
