@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { logout as logoutRequest } from "../services/activityService";
 import { clearAllCache } from "../utils/apiCache";
+import { clearSession } from "../utils/session";
+import { CURRENT_BUILD } from "../utils/appVersion";
 
 export default function TopNavbar() {
 
@@ -30,9 +32,9 @@ export default function TopNavbar() {
             console.error(err);
         }
 
-        localStorage.removeItem("token");
-        localStorage.removeItem("role");
-        localStorage.removeItem("employeeName");
+        // Every session key (token, role, employeeId, employeeName) - the old
+        // hand-written list missed employeeId.
+        clearSession();
         clearAllCache();
 
         navigate("/");
@@ -47,7 +49,7 @@ export default function TopNavbar() {
 
             <div>
 
-                <h4 className="topbar-title mb-0">
+                <h4 className="topbar-title mb-0" title={`CRM build ${CURRENT_BUILD}`}>
                     Compact Systems CRM
                 </h4>
 
