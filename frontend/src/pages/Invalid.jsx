@@ -18,7 +18,13 @@ export default function Invalid() {
                 <Opportunities
                     title="Invalid Opportunities"
                     fetchOpportunities={getInvalidOpportunities}
-                    exportParams={{ stageType: "LEGACY_INVALID" }}
+                    // Invalid was retired into Lost: the page (and its
+                    // export) lists those still Invalid or moved to Lost
+                    // from it.
+                    exportParams={{ formerStageType: "LEGACY_INVALID" }}
+                    // Own URL state: paging / searching this list never
+                    // moves the leads list above it.
+                    listParamPrefix="opp_"
                 />
             </div>
         </>

@@ -1,5 +1,9 @@
 // actions: [{ key, label, icon, variant, onClick, disabled, title,
-//             unavailableForAllMatching }]
+//             unavailableForAllMatching, maxCount, overLimitMessage }]
+//
+// maxCount: the most records the action takes in one go (e.g. 100 for Bulk
+// Email / WhatsApp). With more selected it is disabled and the reason is
+// shown under the bar - the selection is never silently cut down.
 //
 // Selection scope is always spelled out, so nobody exports "everything" when
 // they meant one page (or the reverse):
@@ -12,6 +16,11 @@
 // actual rows in the browser, or has its own size limit) sets
 // unavailableForAllMatching to the reason, and is disabled with that reason
 // as its tooltip while that selection is active.
+function limitMessage(action) {
+    return action.overLimitMessage
+        || `${action.label} handles at most ${action.maxCount} records at a time - untick some to use it.`;
+}
+
 export default function BulkActionBar({
     count,
     actions,
@@ -22,17 +31,38 @@ export default function BulkActionBar({
     pageRowCount = 0,
     totalElements = 0,
     onSelectAllMatching = null,
+    // How many of the selected records are on the page shown (ticked records
+    // on other pages stay selected).
+    pageSelectedCount = null,
+    // e.g. "Your selection was cleared because the search or filters
+    // changed." (list.selectionNotice), with its dismiss handler.
+    notice = null,
+    onDismissNotice = null,
 }) {
 
+    const noticeBanner = notice && (
+        <div className="alert alert-info py-2 d-flex justify-content-between align-items-center mb-3"
+             role="status" data-testid="selection-notice">
+            <span className="small">{notice}</span>
+            {onDismissNotice && (
+                <button type="button" className="btn-close btn-sm" aria-label="Dismiss" onClick={onDismissNotice}></button>
+            )}
+        </div>
+    );
+
     if (count === 0 && !allMatching) {
-        return null;
+        return noticeBanner || null;
     }
+
+    const acrossPages = !allMatching && pageSelectedCount !== null && pageSelectedCount < count;
 
     const canOfferAllMatching =
         !allMatching && onSelectAllMatching && pageFullySelected && totalElements > pageRowCount;
 
     return (
 
+        <>
+        {noticeBanner}
         <div className="bulk-action-bar mb-3">
 
             <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
@@ -46,7 +76,10 @@ export default function BulkActionBar({
                         </strong>
                     ) : (
                         <strong data-testid="selection-summary">
-                            {count} selected{pageFullySelected ? " on this page" : ""}
+                            {count} selected
+                            {acrossPages
+                                ? ` (${pageSelectedCount} on this page, ${count - pageSelectedCount} on other pages)`
+                                : pageFullySelected ? " on this page" : ""}
                         </strong>
                     )}
 
@@ -70,7 +103,9 @@ export default function BulkActionBar({
 
                     {actions.map((action) => {
 
-                        const blocked = allMatching && action.unavailableForAllMatching;
+                        const overLimit = !allMatching && action.maxCount != null && count > action.maxCount;
+                        const blocked = (allMatching && action.unavailableForAllMatching)
+                            || (overLimit && limitMessage(action));
 
                         return (
 
@@ -80,7 +115,7 @@ export default function BulkActionBar({
                                 className={`btn btn-sm ${action.variant || "btn-outline-primary"}`}
                                 onClick={action.onClick}
                                 disabled={action.disabled || !!blocked || count === 0}
-                                title={blocked ? action.unavailableForAllMatching : action.title}
+                                title={blocked || action.title}
                             >
                                 {action.icon && <i className={`bi ${action.icon} me-1`}></i>}
                                 {action.label}
@@ -94,6 +129,12 @@ export default function BulkActionBar({
 
             </div>
 
+            {!allMatching && actions.filter((a) => a.maxCount != null && count > a.maxCount).map((a) => (
+                <div key={a.key} className="small text-warning-emphasis mt-1" data-testid={`limit-${a.key}`}>
+                    {limitMessage(a)}
+                </div>
+            ))}
+
             {allMatching && (
                 <div className="small text-muted mt-1">
                     Every record matching the current search and filters is selected, on all pages -
@@ -102,6 +143,7 @@ export default function BulkActionBar({
             )}
 
         </div>
+        </>
 
     );
 

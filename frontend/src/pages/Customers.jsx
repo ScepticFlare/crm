@@ -171,11 +171,12 @@ export default function Customers() {
             if (result.skippedIds && result.skippedIds.length > 0) {
                 alert(
                     `Deleted ${result.succeededIds.length}. Skipped ${result.skippedIds.length} ` +
-                    "(not authorized or no longer exist)."
+                    "(not authorized or no longer exist) - they are still selected."
                 );
             }
 
-            list.clearSelection();
+            // Deleted records leave the selection; skipped ones stay ticked.
+            list.removeFromSelection(result.succeededIds || []);
             await list.reload();
 
         } catch (error) {
@@ -373,6 +374,9 @@ export default function Customers() {
                     pageRowCount={list.data.length}
                     totalElements={list.totalElements}
                     onSelectAllMatching={list.selectAllMatching}
+                    pageSelectedCount={list.pageSelectedCount}
+                    notice={list.selectionNotice}
+                    onDismissNotice={list.dismissSelectionNotice}
                     actions={[
                         {
                             key: "export", label: "Export Selected", icon: "bi-download",

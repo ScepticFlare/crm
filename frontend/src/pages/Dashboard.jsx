@@ -28,13 +28,20 @@ export default function Dashboard() {
     const [recentLeads, setRecentLeads] = useState([]);
     const [upcomingFollowUps, setUpcomingFollowUps] = useState([]);
 
+    // The five main stages (NEW is retired - its opportunities count as
+    // IN_PROGRESS).
     const [pipeline, setPipeline] = useState({
-        NEW: 0,
         IN_PROGRESS: 0,
         POSTPONED: 0,
         WON: 0,
-        LOST: 0
+        LOST: 0,
+        DROPPED: 0
     });
+
+    // Opportunities still in a stage that is not a main stage (historical
+    // Unresponsive / Invalid, or a custom stage) - shown as a note, never as
+    // extra pipeline stages, so no opportunity is left out.
+    const [otherStages, setOtherStages] = useState({});
 
     // Of the IN_PROGRESS count: how many are at each sub-status. A
     // breakdown of that one card, not extra opportunities.
@@ -80,6 +87,7 @@ const employeeName =
             setRecentLeads(data.recentLeads || []);
             setUpcomingFollowUps(data.upcomingFollowUps || []);
             setPipeline(data.pipeline || {});
+            setOtherStages(data.otherStages || {});
             setInProgressBreakdown(data.inProgressBreakdown || {});
 
         }
@@ -562,6 +570,24 @@ const employeeName =
                     }
 
                 </div>
+
+                {Object.values(otherStages).some((count) => count > 0) && (
+
+                    <div className="small text-muted mt-3" data-testid="other-stages-note">
+
+                        Not in a main stage:{" "}
+                        {[
+                            ["UNRESPONSIVE", "Unresponsive"],
+                            ["INVALID", "Invalid"],
+                            ["CUSTOM", "Other (older custom stages)"],
+                        ]
+                            .filter(([key]) => (otherStages[key] || 0) > 0)
+                            .map(([key, label]) => `${label}: ${otherStages[key]}`)
+                            .join(" · ")}
+
+                    </div>
+
+                )}
 
             </div>
 

@@ -16,6 +16,7 @@ import { getAllProductsAdmin } from "../services/productService";
 import { getAllBatteriesAdmin } from "../services/batteryService";
 import { toIsoDate } from "../utils/formatDate";
 import BritishDateInput from "../components/inputs/BritishDateInput";
+import { isMainStage } from "../components/workflowConstants";
 
 const RECORD_TYPE_OPTIONS = [
     { key: "LEAD", label: "Leads" },
@@ -322,11 +323,24 @@ export default function FullReport() {
                             onChange={(e) => setSalesStageId(e.target.value)}
                         >
                             <option value="">All</option>
-                            {salesStages.map((stage) => (
+                            {/* The five main stages; older stages that
+                                historical opportunities may still be in stay
+                                filterable, grouped separately so they never
+                                look like extra main stages. */}
+                            {salesStages.filter(isMainStage).map((stage) => (
                                 <option key={stage.id} value={stage.id}>
                                     {stage.name}
                                 </option>
                             ))}
+                            {salesStages.some((stage) => !isMainStage(stage)) && (
+                                <optgroup label="Older stages (history)">
+                                    {salesStages.filter((stage) => !isMainStage(stage)).map((stage) => (
+                                        <option key={stage.id} value={stage.id}>
+                                            {stage.name}
+                                        </option>
+                                    ))}
+                                </optgroup>
+                            )}
                         </select>
                     </div>
 

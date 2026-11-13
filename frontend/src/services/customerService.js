@@ -1,4 +1,4 @@
-import api, { selectionParams, toListParams, withRowCount } from "./api";
+import api, { requestExport, toListParams, withRowCount } from "./api";
 
 export const getAllCustomers = async (listArgs) => {
     const response = await api.get("/customers", { params: toListParams(listArgs) });
@@ -100,16 +100,12 @@ export const bulkDeleteCustomers = async (ids) => {
 // keys, in order - the file contains exactly those columns.
 export const exportCustomers = async ({ sort = null, filters = {}, selection = null, columns = null } = {}) => {
 
-    const response = await api.get("/customers/export", {
-        params: {
-            sortBy: sort?.field || undefined,
-            sortDir: sort?.dir || undefined,
-            ...filters,
-            ...selectionParams(selection),
-            columns: columns && columns.length > 0 ? columns.join(",") : undefined,
-        },
-        responseType: "blob",
-    });
+    const response = await requestExport("/customers/export", {
+        sortBy: sort?.field || undefined,
+        sortDir: sort?.dir || undefined,
+        ...filters,
+        columns: columns && columns.length > 0 ? columns.join(",") : undefined,
+    }, selection);
 
     return withRowCount(response);
 

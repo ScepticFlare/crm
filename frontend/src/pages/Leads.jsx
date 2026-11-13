@@ -15,7 +15,11 @@ import EmailComposerModal from "../components/email/EmailComposerModal";
 import BulkKeepInTouchModal from "../components/email/BulkKeepInTouchModal";
 import BulkEmailModal from "../components/email/BulkEmailModal";
 import BulkEmailResumeBanner from "../components/email/BulkEmailResumeBanner";
+import BulkWhatsAppModal from "../components/whatsapp/BulkWhatsAppModal";
+import BulkWhatsAppResumeBanner from "../components/whatsapp/BulkWhatsAppResumeBanner";
 
+import { BULK_EMAIL_MAX_RECORDS } from "../services/bulkEmailService";
+import { BULK_WHATSAPP_MAX_RECORDS } from "../services/bulkWhatsAppService";
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
 import { formatDate } from "../utils/formatDate";
@@ -35,6 +39,7 @@ import { getAllProducts } from "../services/productService";
 import { getAllBatteries } from "../services/batteryService";
 import { getAllEmployees } from "../services/employeeService";
 import useEmailAccess from "../hooks/useEmailAccess";
+import useWhatsAppAccess from "../hooks/useWhatsAppAccess";
 
 // The Lead Status shown to users is exactly NEW / VALID / INVALID. A lead
 // saved with an older opportunity-style status (WON, LOST, QUOTATION SENT,
@@ -161,7 +166,10 @@ export default function Leads({
     // status page's forced server-side filter (e.g. { status: "DROPPED" }).
     exportCategory = undefined,
     exportParams = {},
-    showAddLead = true
+    showAddLead = true,
+    // Prefix for this list's URL state (see useServerList) - set when the
+    // page shows a second list, so the two never share paging or search.
+    listParamPrefix = ""
 }) {
 
     const navigate = useNavigate();
@@ -177,6 +185,8 @@ export default function Leads({
     // only controls whether the email actions are shown at all; the backend
     // re-checks the real scope on every call regardless.
     const canSendEmail = useEmailAccess();
+    // Whether the role grants WHATSAPP_SEND (provider readiness is checked in the dialog).
+    const canSendWhatsApp = useWhatsAppAccess();
 
     // Every employee can export leads (LEAD_EXPORT is granted to every role by
     // migration V11); the backend limits the file to the records the caller
@@ -187,7 +197,8 @@ export default function Leads({
 
     const list = useServerList({
         fetchFn: fetchLeads,
-        initialSort: { field: "createdDate", dir: "desc" }
+        initialSort: { field: "createdDate", dir: "desc" },
+        paramPrefix: listParamPrefix
     });
 
     const columns = usePersistedColumns("crm.columns.leads", ALL_LEAD_COLUMNS, DEFAULT_VISIBLE_LEAD_COLUMNS);
@@ -273,6 +284,9 @@ export default function Leads({
     const [showBulkEmail, setShowBulkEmail] = useState(false);
     // Re-opening an unfinished batch (no selection needed) - see BulkEmailResumeBanner.
     const [resumeBulkEmail, setResumeBulkEmail] = useState(false);
+    // Bulk WhatsApp (admin-made template, opted-in numbers only) - see BulkWhatsAppModal.
+    const [showBulkWhatsApp, setShowBulkWhatsApp] = useState(false);
+    const [resumeBulkWhatsApp, setResumeBulkWhatsApp] = useState(false);
 
     // Row-level Delete Lead (row menu) - same delete-impact-preview flow
     // LeadDetails.jsx already uses, now also reachable directly from the list.
@@ -364,11 +378,12 @@ export default function Leads({
             if (result.skippedIds && result.skippedIds.length > 0) {
                 alert(
                     `Deleted ${result.succeededIds.length} lead(s). ` +
-                    `Skipped ${result.skippedIds.length} you're not authorized to delete or that no longer exist.`
+                    `Skipped ${result.skippedIds.length} you're not authorized to delete or that no longer exist - they are still selected.`
                 );
             }
 
-            list.clearSelection();
+            // Deleted records leave the selection; skipped ones stay ticked.
+            list.removeFromSelection(result.succeededIds || []);
             await list.reload();
 
         } catch (error) {
@@ -434,6 +449,10 @@ export default function Leads({
 
             {!showBulkEmail && !resumeBulkEmail && (
                 <BulkEmailResumeBanner target="LEAD" onResume={() => setResumeBulkEmail(true)} />
+            )}
+
+            {canSendWhatsApp && !showBulkWhatsApp && !resumeBulkWhatsApp && (
+                <BulkWhatsAppResumeBanner target="LEAD" onResume={() => setResumeBulkWhatsApp(true)} />
             )}
 
             <div className="card shadow-sm border-0 mb-3">
@@ -525,6 +544,9 @@ export default function Leads({
                     pageRowCount={list.data.length}
                     totalElements={list.totalElements}
                     onSelectAllMatching={list.selectAllMatching}
+                    pageSelectedCount={list.pageSelectedCount}
+                    notice={list.selectionNotice}
+                    onDismissNotice={list.dismissSelectionNotice}
                     actions={[
                         {
                             key: "export", label: "Export Selected", icon: "bi-download",
@@ -538,10 +560,19 @@ export default function Leads({
                                     "Delete only works on records you tick individually, so nothing is deleted by accident."
                             },
                         ] : []),
+                        ...(canSendWhatsApp ? [{
+                            key: "bulkWhatsApp", label: "Bulk WhatsApp", icon: "bi-whatsapp",
+                            variant: "btn-outline-success", onClick: () => setShowBulkWhatsApp(true),
+                            maxCount: BULK_WHATSAPP_MAX_RECORDS,
+                            unavailableForAllMatching:
+                                "Bulk WhatsApp sends to records you tick individually (at most 100 per batch). " +
+                                "Clear the selection and tick the records instead."
+                        }] : []),
                         ...(canSendEmail ? [
                             {
                                 key: "bulkEmail", label: "Bulk Email", icon: "bi-envelope-paper",
                                 variant: "btn-outline-primary", onClick: () => setShowBulkEmail(true),
+                                maxCount: BULK_EMAIL_MAX_RECORDS,
                                 unavailableForAllMatching:
                                     "Bulk Email sends to records you tick individually (at most 100 per batch). " +
                                     "Clear the selection and tick the records instead."
@@ -549,8 +580,11 @@ export default function Leads({
                             {
                                 key: "keepInTouch", label: "Send Keep in Touch", icon: "bi-envelope",
                                 variant: "btn-outline-primary", onClick: () => setShowBulkEmailModal(true),
+                                // Same per-batch limit as Bulk Email (its eligibility
+                                // check sends the ids in the request URL).
+                                maxCount: BULK_EMAIL_MAX_RECORDS,
                                 unavailableForAllMatching:
-                                    "Keep in Touch sends to records you tick on this page. " +
+                                    "Keep in Touch sends to records you tick individually. " +
                                     "Clear the selection and tick the records instead."
                             },
                         ] : []),
@@ -603,6 +637,21 @@ export default function Leads({
                 onSent={() => list.reload()}
             />
 
+            <BulkWhatsAppModal
+                show={showBulkWhatsApp || resumeBulkWhatsApp}
+                target="LEAD"
+                ids={resumeBulkWhatsApp ? [] : list.selectedIds}
+                resumeOnly={resumeBulkWhatsApp}
+                onClose={() => {
+                    setShowBulkWhatsApp(false);
+                    setResumeBulkWhatsApp(false);
+                }}
+                onSent={async () => {
+                    await list.reload();
+                    list.clearSelection();
+                }}
+            />
+
             <BulkEmailModal
                 show={showBulkEmail || resumeBulkEmail}
                 target="LEAD"
@@ -620,7 +669,7 @@ export default function Leads({
 
             <BulkKeepInTouchModal
                 show={showBulkEmailModal}
-                leads={list.data.filter((lead) => list.selectedIds.includes(lead.id))}
+                leads={list.selectedRows}
                 onClose={() => setShowBulkEmailModal(false)}
                 onSent={() => {
                     list.clearSelection();

@@ -18,6 +18,9 @@ export default function Dropped() {
                     title="Dropped Opportunities"
                     fetchOpportunities={getDroppedOpportunities}
                     exportParams={{ stageType: "LEGACY_DROPPED" }}
+                    // Own URL state: paging / searching this list never
+                    // moves the leads list above it.
+                    listParamPrefix="opp_"
                 />
             </div>
         </>

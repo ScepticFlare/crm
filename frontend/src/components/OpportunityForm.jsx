@@ -11,7 +11,6 @@ import {
 import {
     getAllSalesStages,
     getAllSalesStagesAdmin,
-    createSalesStage,
     deleteSalesStage,
     activateSalesStage,
     updateSalesStage
@@ -22,6 +21,7 @@ import ProductBatteryFields from "./ProductBatteryFields";
 import {
     SUB_STATUS_OPTIONS,
     isLegacySubStage,
+    isMainStage,
     requiresNextFollowUp,
     typeOfStage
 } from "./workflowConstants";
@@ -516,18 +516,23 @@ export default function OpportunityForm({
                             name="salesStage"
                             value={form.salesStage}
                             onChange={handleStageChange}
-                            options={salesStages.filter((s) =>
-                                !isLegacySubStage(s)
-                                || s.name === form.salesStage
-                            )}
+                            // Only the five main stages can be chosen. An
+                            // opportunity still in an older stage keeps showing
+                            // it (fallback option) until it is moved.
+                            options={salesStages.filter(isMainStage)}
+                            fallbackSuffix="(no longer selectable)"
                             required
                             isAdmin={role === "ADMIN"}
                             canAdd={role === "ADMIN"}
+                            allowCreate={false}
                             valueKey="name"
-                            create={createSalesStage}
                             getAllIncludingInactive={getAllSalesStagesAdmin}
                             deactivate={deleteSalesStage}
                             activate={activateSalesStage}
+                            // Main stages are mandatory; retired / custom ones
+                            // stay retired. Only a leftover active non-main
+                            // stage may still be deactivated.
+                            canToggle={(item) => !item.mainStage && item.isActive}
                             rename={updateSalesStage}
                             onRefresh={loadSalesStages}
                             placeholder="Select Sales Stage"

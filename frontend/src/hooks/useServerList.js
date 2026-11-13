@@ -64,6 +64,11 @@ export default function useServerList({
     fetchFn,
     initialSort = null,
     defaultPageSize = 50,
+    // Prefix for this list's URL keys (q, filters, sort, page, size). Empty
+    // for a page with one list; a page showing two lists (Dropped,
+    // Unresponsive, Invalid: leads + opportunities) gives the second one its
+    // own prefix so paging or searching one list never moves the other.
+    paramPrefix = "",
 }) {
 
     const [searchParams, setSearchParams] = useSearchParams();
@@ -75,7 +80,21 @@ export default function useServerList({
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
 
+    // Ticked record ids - kept across pages, page sizes and sort orders, so
+    // records ticked on page 1, 2 and 3 are all acted on together. Cleared
+    // when the search or filters change (a different set of records - see
+    // below), by clearSelection, or when the list page is left (component
+    // state only, never stored in the browser).
     const [selectedIds, setSelectedIds] = useState([]);
+
+    // The row objects behind selectedIds, as last seen on screen. Rows on
+    // other pages are not loaded, so an action that needs more than ids
+    // (e.g. names for a confirmation) reads them from here.
+    const [selectedRowsById, setSelectedRowsById] = useState({});
+
+    // Shown once after the selection had to be cleared because the search or
+    // filters changed (null when there is nothing to say).
+    const [selectionNotice, setSelectionNotice] = useState(null);
 
     // "Select all N matching records": the selection is every record that
     // matches the current search + filters (on the server, across all pages)
@@ -92,11 +111,13 @@ export default function useServerList({
     // that returns to the exact list URL) restores it for free. A fresh
     // visit (sidebar link, no query) starts from defaults, so nothing is
     // carried between unrelated pages or sessions.
-    const urlSearch = searchParams.get("q") || "";
-    const rawFilters = searchParams.get("filters") || "";
-    const rawSort = searchParams.get("sort");
-    const page = Math.max(0, (parseInt(searchParams.get("page"), 10) || 1) - 1);
-    const pageSize = parseInt(searchParams.get("size"), 10) || defaultPageSize;
+    const key = useCallback((name) => `${paramPrefix}${name}`, [paramPrefix]);
+
+    const urlSearch = searchParams.get(key("q")) || "";
+    const rawFilters = searchParams.get(key("filters")) || "";
+    const rawSort = searchParams.get(key("sort"));
+    const page = Math.max(0, (parseInt(searchParams.get(key("page")), 10) || 1) - 1);
+    const pageSize = parseInt(searchParams.get(key("size")), 10) || defaultPageSize;
 
     const filters = useMemo(() => parseFilters(rawFilters), [rawFilters]);
     const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
@@ -123,18 +144,18 @@ export default function useServerList({
 
             const next = new URLSearchParams(prev);
 
-            Object.entries(changes).forEach(([key, value]) => {
-                if (value === null || value === "") next.delete(key);
-                else next.set(key, value);
+            Object.entries(changes).forEach(([name, value]) => {
+                if (value === null || value === "") next.delete(key(name));
+                else next.set(key(name), value);
             });
 
-            if (!keepPage) next.delete("page");
+            if (!keepPage) next.delete(key("page"));
 
             return next;
 
         }, { replace: true });
 
-    }, [setSearchParams]);
+    }, [setSearchParams, key]);
 
     // The input box is local state (instant typing); the URL only receives
     // the value after the debounce so every keystroke doesn't fire a request.
@@ -202,7 +223,22 @@ export default function useServerList({
                 filters,
             });
 
-            setData(response.content || []);
+            const rows = response.content || [];
+
+            setData(rows);
+
+            // Refresh the stored copies of selected rows that are on this page.
+            setSelectedRowsById((prev) => {
+
+                const fresh = rows.filter((row) => prev[row.id]);
+
+                if (fresh.length === 0) return prev;
+
+                const next = { ...prev };
+                fresh.forEach((row) => { next[row.id] = row; });
+                return next;
+
+            });
             setTotalPages(response.totalPages || 0);
             setTotalElements(
                 response.totalElements ?? (response.content ? response.content.length : 0)
@@ -216,14 +252,10 @@ export default function useServerList({
 
         } finally {
 
+            // The selection is NOT cleared here: paging, page size and sort
+            // show the same set of records, so ticked rows on other pages
+            // stay ticked. A search / filter change clears it (below).
             setLoading(false);
-
-            // A freshly loaded page is a new row set - any prior selection
-            // no longer safely corresponds to what's on screen, regardless
-            // of whether the reload was caused by a page, filter, search,
-            // or sort change. (An "all matching" selection is not tied to
-            // one page; it is reset below whenever what matches changes.)
-            setSelectedIds([]);
 
         }
 
@@ -245,13 +277,23 @@ export default function useServerList({
     // with the old selection.
     const [selectionScope, setSelectionScope] = useState({ fetchFn, search: urlSearch, filtersKey });
 
+    // The same applies to individually ticked records: they may no longer
+    // match (and could not be seen), so acting on them would surprise the
+    // user - the selection is cleared and the user is told.
     if (selectionScope.fetchFn !== fetchFn
         || selectionScope.search !== urlSearch
         || selectionScope.filtersKey !== filtersKey) {
 
+        const hadSelection = allMatching || selectedIds.length > 0;
+
         setSelectionScope({ fetchFn, search: urlSearch, filtersKey });
         setAllMatching(false);
         setExcludedIds([]);
+        setSelectedIds([]);
+        setSelectedRowsById({});
+        setSelectionNotice(hadSelection
+            ? "Your selection was cleared because the search or filters changed."
+            : null);
     }
 
     // If rows were removed (e.g. the last record on the final page was
@@ -291,15 +333,38 @@ export default function useServerList({
         return allMatching ? !excludedIds.includes(id) : selectedIds.includes(id);
     }
 
+    function rememberRows(rows, selected) {
+
+        setSelectedRowsById((prev) => {
+
+            const next = { ...prev };
+
+            rows.forEach((row) => {
+                if (selected) next[row.id] = row;
+                else delete next[row.id];
+            });
+
+            return next;
+
+        });
+
+    }
+
     // In "all matching" mode a row's checkbox toggles its exclusion.
+    // Otherwise it ticks / unticks that one record only - records ticked on
+    // other pages are unaffected.
     function toggleSelect(id) {
 
         const toggle = (prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
 
+        setSelectionNotice(null);
+
         if (allMatching) {
             setExcludedIds(toggle);
         } else {
+            const nowSelected = !selectedIds.includes(id);
             setSelectedIds(toggle);
+            rememberRows([data.find((r) => r.id === id) || { id }], nowSelected);
         }
 
     }
@@ -326,17 +391,17 @@ export default function useServerList({
             return;
         }
 
-        setSelectedIds((prev) => {
+        setSelectionNotice(null);
 
-            const allSelected = pageIds.length > 0 && pageIds.every((id) => prev.includes(id));
+        // Only this page's rows are added or removed; rows ticked on other
+        // pages stay as they are.
+        const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
 
-            if (allSelected) {
-                return prev.filter((id) => !pageIds.includes(id));
-            }
+        setSelectedIds((prev) => (allSelected
+            ? prev.filter((id) => !pageIds.includes(id))
+            : Array.from(new Set([...prev, ...pageIds]))));
 
-            return Array.from(new Set([...prev, ...pageIds]));
-
-        });
+        rememberRows(data, !allSelected);
 
     }
 
@@ -349,13 +414,39 @@ export default function useServerList({
         setAllMatching(true);
         setExcludedIds([]);
         setSelectedIds([]);
+        setSelectedRowsById({});
+        setSelectionNotice(null);
 
     }
 
     function clearSelection() {
         setSelectedIds([]);
+        setSelectedRowsById({});
         setAllMatching(false);
         setExcludedIds([]);
+        setSelectionNotice(null);
+    }
+
+    // After a bulk action: drop the records it processed from the selection
+    // and keep the ones it skipped (inaccessible / already gone / failed)
+    // ticked, so the user sees exactly what is left.
+    function removeFromSelection(ids) {
+
+        const done = new Set((ids || []).map((id) => Number(id)));
+
+        if (done.size === 0) return;
+
+        setSelectedIds((prev) => prev.filter((id) => !done.has(Number(id))));
+        setSelectedRowsById((prev) => {
+            const next = { ...prev };
+            done.forEach((id) => { delete next[id]; });
+            return next;
+        });
+
+    }
+
+    function dismissSelectionNotice() {
+        setSelectionNotice(null);
     }
 
     // How many records the selection covers. In "all matching" mode every
@@ -367,6 +458,11 @@ export default function useServerList({
 
     const pageIds = data.map((row) => row.id);
     const pageFullySelected = pageIds.length > 0 && pageIds.every((id) => isSelected(id));
+    const pageSelectedCount = pageIds.filter((id) => isSelected(id)).length;
+
+    // Selected rows (as last seen) in selection order; a row that was never
+    // on screen in this session is not included.
+    const selectedRows = selectedIds.map((id) => selectedRowsById[id]).filter(Boolean);
 
     // What an export / bulk action should act on - see api.selectionParams.
     // null when nothing is selected.
@@ -393,6 +489,11 @@ export default function useServerList({
         totalPages,
         totalElements,
         selectedIds,
+        selectedRows,
+        pageSelectedCount,
+        removeFromSelection,
+        selectionNotice,
+        dismissSelectionNotice,
         toggleSelect,
         toggleSelectAll,
         clearSelection,

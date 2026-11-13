@@ -1,9 +1,11 @@
 // Opportunity-workflow helpers. Stages are identified by the stable
 // `stageType` the API sends with every sales stage (IN_PROGRESS, LOST,
-// POSTPONED, WON, NEW, LEGACY_QUOTATION_SENT, LEGACY_NEGOTIATION, or none
-// for a custom stage) - never by display name, because Admins may rename
-// any stage. `workflowActive` (also from the API) says whether an
-// opportunity in that stage is still being worked.
+// POSTPONED, WON, LEGACY_DROPPED, the historical/retired types, or none for
+// a custom stage) - never by display name, because Admins may rename a
+// stage. `workflowActive` (also from the API) says whether an opportunity in
+// that stage is still being worked; `mainStage` says whether it is one of the
+// five main stages (In Progress, Won, Lost, Postponed, Dropped) - the only
+// stages that can be chosen.
 
 export const SUB_STATUS_OPTIONS = [
     { value: "QUOTATION_SENT", label: "Quotation Sent" },
@@ -46,9 +48,17 @@ export function requiresNextFollowUp(stage) {
 const CLOSED_STAGE_TYPES = ["WON", "LOST", "LEGACY_DROPPED", "LEGACY_UNRESPONSIVE", "LEGACY_INVALID"];
 
 // Historical QUOTATION SENT / NEGOTIATION stages: kept for old records,
-// not offered as a stage choice any more.
+// not offered as a stage choice any more (they are sub-statuses of IN
+// PROGRESS now).
 export function isLegacySubStage(stage) {
-    return (typeOfStage(stage) || "").startsWith("LEGACY_");
+    const type = typeOfStage(stage);
+    return type === "LEGACY_QUOTATION_SENT" || type === "LEGACY_NEGOTIATION";
+}
+
+// One of the five main stages - the only stages a dropdown or stage filter
+// offers. Decided by the backend (SalesStage.mainStage).
+export function isMainStage(stage) {
+    return stage?.mainStage === true;
 }
 
 // Request-body fields for the workflow additions; empty strings become null.

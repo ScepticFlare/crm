@@ -162,11 +162,12 @@ export default function FollowUps() {
             if (result.skippedIds && result.skippedIds.length > 0) {
                 alert(
                     `Deleted ${result.succeededIds.length}. Skipped ${result.skippedIds.length} ` +
-                    "(not authorized or no longer exist)."
+                    "(not authorized or no longer exist) - they are still selected."
                 );
             }
 
-            list.clearSelection();
+            // Deleted records leave the selection; skipped ones stay ticked.
+            list.removeFromSelection(result.succeededIds || []);
             await list.reload();
 
         } catch (error) {
@@ -230,8 +231,9 @@ export default function FollowUps() {
             <PageHeader
                 title="Follow Ups"
                 subtitle={`${list.totalElements} Follow Up(s) Found`}
-                buttonText="Add Follow Up"
-                onButtonClick={() => navigate("/followups/add")}
+                // No "Add Follow Up" here: follow-ups are scheduled from the
+                // opportunity's (or lead's) own page, which links them to that
+                // record. This page lists and manages existing follow-ups.
             />
 
             <div className="row mb-4">
@@ -362,6 +364,9 @@ export default function FollowUps() {
                     pageRowCount={list.data.length}
                     totalElements={list.totalElements}
                     onSelectAllMatching={list.selectAllMatching}
+                    pageSelectedCount={list.pageSelectedCount}
+                    notice={list.selectionNotice}
+                    onDismissNotice={list.dismissSelectionNotice}
                     actions={[
                         {
                             key: "export", label: "Export Selected", icon: "bi-download",

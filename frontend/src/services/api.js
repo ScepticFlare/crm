@@ -138,6 +138,28 @@ export const selectionParams = (selection) => {
 
 };
 
+// Downloads an export file. Filters, sort and columns go in the query string
+// as before; a selection's record ids (ids / excludeIds - see
+// selectionParams) go in a POST form body instead, so a large selection
+// ticked across many pages never exceeds the server's URL size limit. The
+// backend export endpoints accept the same parameters by GET or POST, with
+// the same permission checks and filters. Without ids it is a plain GET.
+export const requestExport = (url, params, selection) => {
+
+    const ids = selectionParams(selection);
+
+    if (Object.keys(ids).length === 0) {
+        return api.get(url, { params, responseType: "blob" });
+    }
+
+    return api.post(url, new URLSearchParams(ids), {
+        params,
+        responseType: "blob",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    });
+
+};
+
 // An export's file, with the number of rows the server put in it (the
 // X-Export-Row-Count header) attached as blob.rowCount when available.
 export const withRowCount = (response) => {

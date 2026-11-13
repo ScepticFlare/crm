@@ -1,4 +1,4 @@
-import api, { selectionParams, toListParams, withRowCount } from "./api";
+import api, { requestExport, toListParams, withRowCount } from "./api";
 
 // listArgs: { page, size, search, sort: {field, dir}|null, filters } - see
 // hooks/useServerList, which is what actually calls these.
@@ -115,17 +115,13 @@ export const bulkDeleteLeads = async (ids) => {
 // Returns an .xlsx workbook.
 export const exportLeads = async ({ sort = null, filters = {}, selection = null, category = undefined } = {}) => {
 
-    const response = await api.get("/leads/export", {
-        params: {
-            sortBy: sort?.field || undefined,
-            sortDir: sort?.dir || undefined,
-            ...filters,
-            category,
-            // [ids] or { allMatching, excludedIds } - see api.selectionParams.
-            ...selectionParams(selection),
-        },
-        responseType: "blob",
-    });
+    // [ids] or { allMatching, excludedIds } - see api.requestExport.
+    const response = await requestExport("/leads/export", {
+        sortBy: sort?.field || undefined,
+        sortDir: sort?.dir || undefined,
+        ...filters,
+        category,
+    }, selection);
 
     return withRowCount(response);
 

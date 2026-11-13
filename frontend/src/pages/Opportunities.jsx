@@ -11,11 +11,16 @@ import RecordLink from "../components/list/RecordLink";
 import RowActionsMenu from "../components/list/RowActionsMenu";
 import BulkEmailModal from "../components/email/BulkEmailModal";
 import BulkEmailResumeBanner from "../components/email/BulkEmailResumeBanner";
+import BulkWhatsAppModal from "../components/whatsapp/BulkWhatsAppModal";
+import BulkWhatsAppResumeBanner from "../components/whatsapp/BulkWhatsAppResumeBanner";
 import ListPagination from "../components/list/ListPagination";
 
+import { BULK_EMAIL_MAX_RECORDS } from "../services/bulkEmailService";
+import { BULK_WHATSAPP_MAX_RECORDS } from "../services/bulkWhatsAppService";
 import useServerList from "../hooks/useServerList";
 import usePersistedColumns from "../hooks/usePersistedColumns";
 import useEmailAccess from "../hooks/useEmailAccess";
+import useWhatsAppAccess from "../hooks/useWhatsAppAccess";
 import { formatDate, formatDateTime } from "../utils/formatDate";
 import { downloadBlob, exportCountNotice, exportErrorMessage } from "../utils/downloadFile";
 import { describeLineItems } from "../utils/lineItems";
@@ -30,7 +35,7 @@ import { getAllProducts } from "../services/productService";
 import { getAllBatteries } from "../services/batteryService";
 import { getAllIndustries } from "../services/industryService";
 import { getAllEmployees } from "../services/employeeService";
-import { subStatusLabel } from "../components/workflowConstants";
+import { isMainStage, subStatusLabel } from "../components/workflowConstants";
 
 // Column keys double as export column keys (backend OpportunityController.
 // EXPORT_COLUMNS): the exported file contains exactly the visible columns.
@@ -101,6 +106,22 @@ export const ALL_OPPORTUNITY_COLUMNS = [
                         title="Postponed review date reached"
                     ></i>
                 )}
+                {row.previouslyNew && (
+                    <div
+                        className="small text-muted mt-1"
+                        title="This opportunity was in the NEW stage and was moved to In Progress when NEW was retired"
+                    >
+                        Previously New
+                    </div>
+                )}
+                {row.retiredStageName && (
+                    <div
+                        className="small text-muted mt-1"
+                        title={`This opportunity was in the "${row.retiredStageName}" stage and was moved here when that stage was retired`}
+                    >
+                        Previously {row.retiredStageName}
+                    </div>
+                )}
             </>
         )
     },
@@ -128,6 +149,18 @@ export const ALL_OPPORTUNITY_COLUMNS = [
     { key: "postponedReason", label: "Postponed Reason", render: (row) => row.postponedReason || "-" },
     { key: "lostReason", label: "Lost Reason", render: (row) => row.lostReason || "-" },
     {
+        // Stored provenance (set when the retired NEW stage was moved to In
+        // Progress) - never inferred from the current stage.
+        key: "previouslyNew", label: "Previously New",
+        render: (row) => (row.previouslyNew ? "Yes" : "-")
+    },
+    {
+        // Stored provenance: the retired stage (Unresponsive, Invalid, an old
+        // or custom stage) this opportunity was moved out of.
+        key: "retiredStageName", label: "Previous Stage (retired)",
+        render: (row) => row.retiredStageName || "-"
+    },
+    {
         key: "createdAt", label: "Created Date", sortable: true, sortKey: "createdDate",
         render: (row) => formatDate(row.createdAt)
     },
@@ -147,7 +180,10 @@ export default function Opportunities({
     fetchOpportunities = getAllOpportunities,
     // Export parameters mirroring a stage page's forced server-side filter
     // (e.g. { stageType: "LOST" }), so Export matches what the page lists.
-    exportParams = {}
+    exportParams = {},
+    // Prefix for this list's URL state (see useServerList) - set when the
+    // page shows a second list, so the two never share paging or search.
+    listParamPrefix = ""
 }) {
 
     const navigate = useNavigate();
@@ -162,6 +198,8 @@ export default function Opportunities({
     // Whether the user's role grants EMAIL_SEND (see useEmailAccess); the
     // backend still authorizes every recipient.
     const canSendEmail = useEmailAccess();
+    // Whether the role grants WHATSAPP_SEND (provider readiness is checked in the dialog).
+    const canSendWhatsApp = useWhatsAppAccess();
 
     // Every employee can export opportunities (OPPORTUNITY_EXPORT is granted to
     // every role by migration V11); the backend limits the file to the records
@@ -169,7 +207,8 @@ export default function Opportunities({
 
     const list = useServerList({
         fetchFn: fetchOpportunities,
-        initialSort: { field: "createdDate", dir: "desc" }
+        initialSort: { field: "createdDate", dir: "desc" },
+        paramPrefix: listParamPrefix
     });
 
     const columns = usePersistedColumns(
@@ -200,7 +239,8 @@ export default function Opportunities({
         const defs = [
             {
                 key: "salesStageId", label: "Stage", type: "multiselect",
-                options: salesStages.map((s) => ({ value: s.id, label: s.name }))
+                // The five main stages only (the API offers no other).
+                options: salesStages.filter(isMainStage).map((s) => ({ value: s.id, label: s.name }))
             },
             {
                 key: "productId", label: "Product", type: "multiselect",
@@ -243,6 +283,9 @@ export default function Opportunities({
     const [showBulkEmail, setShowBulkEmail] = useState(false);
     // Re-opening an unfinished batch (no selection needed) - see BulkEmailResumeBanner.
     const [resumeBulkEmail, setResumeBulkEmail] = useState(false);
+    // Bulk WhatsApp (admin-made template, opted-in numbers only) - see BulkWhatsAppModal.
+    const [showBulkWhatsApp, setShowBulkWhatsApp] = useState(false);
+    const [resumeBulkWhatsApp, setResumeBulkWhatsApp] = useState(false);
     const [exporting, setExporting] = useState(false);
 
     async function handleBulkDelete() {
@@ -263,11 +306,12 @@ export default function Opportunities({
             if (result.skippedIds && result.skippedIds.length > 0) {
                 alert(
                     `Deleted ${result.succeededIds.length}. Skipped ${result.skippedIds.length} ` +
-                    "(not authorized or no longer exist)."
+                    "(not authorized or no longer exist) - they are still selected."
                 );
             }
 
-            list.clearSelection();
+            // Deleted records leave the selection; skipped ones stay ticked.
+            list.removeFromSelection(result.succeededIds || []);
             await list.reload();
 
         } catch (error) {
@@ -339,6 +383,10 @@ export default function Opportunities({
 
             {!showBulkEmail && !resumeBulkEmail && (
                 <BulkEmailResumeBanner target="OPPORTUNITY" onResume={() => setResumeBulkEmail(true)} />
+            )}
+
+            {canSendWhatsApp && !showBulkWhatsApp && !resumeBulkWhatsApp && (
+                <BulkWhatsAppResumeBanner target="OPPORTUNITY" onResume={() => setResumeBulkWhatsApp(true)} />
             )}
 
             <div className="row mb-4">
@@ -467,10 +515,22 @@ export default function Opportunities({
                     pageRowCount={list.data.length}
                     totalElements={list.totalElements}
                     onSelectAllMatching={list.selectAllMatching}
+                    pageSelectedCount={list.pageSelectedCount}
+                    notice={list.selectionNotice}
+                    onDismissNotice={list.dismissSelectionNotice}
                     actions={[
+                        ...(canSendWhatsApp ? [{
+                            key: "bulkWhatsApp", label: "Bulk WhatsApp", icon: "bi-whatsapp",
+                            variant: "btn-outline-success", onClick: () => setShowBulkWhatsApp(true),
+                            maxCount: BULK_WHATSAPP_MAX_RECORDS,
+                            unavailableForAllMatching:
+                                "Bulk WhatsApp sends to records you tick individually (at most 100 per batch). " +
+                                "Clear the selection and tick the records instead."
+                        }] : []),
                         ...(canSendEmail ? [{
                             key: "bulkEmail", label: "Bulk Email", icon: "bi-envelope-paper",
                             variant: "btn-outline-primary", onClick: () => setShowBulkEmail(true),
+                            maxCount: BULK_EMAIL_MAX_RECORDS,
                             unavailableForAllMatching:
                                 "Bulk Email sends to records you tick individually (at most 100 per batch). " +
                                 "Clear the selection and tick the records instead."
@@ -531,6 +591,21 @@ export default function Opportunities({
                     No matching opportunities found.
                 </div>
             )}
+
+            <BulkWhatsAppModal
+                show={showBulkWhatsApp || resumeBulkWhatsApp}
+                target="OPPORTUNITY"
+                ids={resumeBulkWhatsApp ? [] : list.selectedIds}
+                resumeOnly={resumeBulkWhatsApp}
+                onClose={() => {
+                    setShowBulkWhatsApp(false);
+                    setResumeBulkWhatsApp(false);
+                }}
+                onSent={async () => {
+                    await list.reload();
+                    list.clearSelection();
+                }}
+            />
 
             <BulkEmailModal
                 show={showBulkEmail || resumeBulkEmail}

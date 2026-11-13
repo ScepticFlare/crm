@@ -42,6 +42,8 @@ import EmployeeActivity from "./pages/EmployeeActivity";
 import EmailTemplates from "./pages/EmailTemplates";
 import EmailSuppressions from "./pages/EmailSuppressions";
 import EmailAccount from "./pages/EmailAccount";
+import WhatsAppTemplates from "./pages/WhatsAppTemplates";
+import WhatsAppConsent from "./pages/WhatsAppConsent";
 import Documents from "./pages/Documents";
 
 import InProgress from "./pages/InProgress";
@@ -226,6 +228,14 @@ function App() {
                     <Route
                         path="/email-suppressions"
                         element={<AdminRoute><EmailSuppressions /></AdminRoute>}
+                    />
+                    <Route
+                        path="/whatsapp-templates"
+                        element={<AdminRoute><WhatsAppTemplates /></AdminRoute>}
+                    />
+                    <Route
+                        path="/whatsapp-consent"
+                        element={<AdminRoute><WhatsAppConsent /></AdminRoute>}
                     />
                     <Route
                         path="/documents"

@@ -143,6 +143,18 @@ export default function Sidebar() {
         });
 
         menuItems.push({
+            name: "WhatsApp Templates",
+            path: "/whatsapp-templates",
+            icon: "bi-whatsapp",
+        });
+
+        menuItems.push({
+            name: "WhatsApp Consent",
+            path: "/whatsapp-consent",
+            icon: "bi-person-check-fill",
+        });
+
+        menuItems.push({
             name: "Documents",
             path: "/documents",
             icon: "bi-folder-fill",

@@ -469,6 +469,24 @@ export default function OpportunityDetails() {
                             {subStatus && (
                                 <div className="small text-muted">Sub-status: {subStatus}</div>
                             )}
+                            {opportunity.previouslyNew && (
+                                <div
+                                    className="small text-muted mt-1"
+                                    data-testid="previously-new"
+                                    title="This opportunity was in the NEW stage and was moved to In Progress when NEW was retired"
+                                >
+                                    Previously New
+                                </div>
+                            )}
+                            {opportunity.retiredStageName && (
+                                <div
+                                    className="small text-muted mt-1"
+                                    data-testid="previous-retired-stage"
+                                    title={`This opportunity was in the "${opportunity.retiredStageName}" stage and was moved here when that stage was retired`}
+                                >
+                                    Previously {opportunity.retiredStageName}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

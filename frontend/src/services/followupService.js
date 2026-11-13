@@ -1,4 +1,4 @@
-import api, { selectionParams, toListParams, withRowCount } from "./api";
+import api, { requestExport, toListParams, withRowCount } from "./api";
 
 export const getAllFollowUps = async (listArgs) => {
     const response = await api.get("/followups", { params: toListParams(listArgs) });
@@ -41,16 +41,12 @@ export const bulkDeleteFollowUps = async (ids) => {
 
 export const exportFollowUps = async ({ sort = null, filters = {}, selection = null } = {}) => {
 
-    const response = await api.get("/followups/export", {
-        params: {
-            sortBy: sort?.field || undefined,
-            sortDir: sort?.dir || undefined,
-            ...filters,
-            // [ids] or { allMatching, excludedIds } - see api.selectionParams.
-            ...selectionParams(selection),
-        },
-        responseType: "blob",
-    });
+    // [ids] or { allMatching, excludedIds } - see api.requestExport.
+    const response = await requestExport("/followups/export", {
+        sortBy: sort?.field || undefined,
+        sortDir: sort?.dir || undefined,
+        ...filters,
+    }, selection);
 
     return withRowCount(response);
 

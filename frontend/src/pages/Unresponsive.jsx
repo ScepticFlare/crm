@@ -17,7 +17,13 @@ export default function Unresponsive() {
                 <Opportunities
                     title="Unresponsive Opportunities"
                     fetchOpportunities={getUnresponsiveOpportunities}
-                    exportParams={{ stageType: "LEGACY_UNRESPONSIVE" }}
+                    // Unresponsive was retired into Dropped: the page (and
+                    // its export) lists those still Unresponsive or moved to
+                    // Dropped from it.
+                    exportParams={{ formerStageType: "LEGACY_UNRESPONSIVE" }}
+                    // Own URL state: paging / searching this list never
+                    // moves the leads list above it.
+                    listParamPrefix="opp_"
                 />
             </div>
         </>

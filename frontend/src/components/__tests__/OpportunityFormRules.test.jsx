@@ -17,11 +17,11 @@ const activityTypes = vi.hoisted(() => ({
 vi.mock("../../services/activityTypeService", () => activityTypes);
 vi.mock("../../services/salesStageService", () => ({
     getAllSalesStages: vi.fn().mockResolvedValue([
-        { id: 1, name: "IN PROGRESS", stageType: "IN_PROGRESS", workflowActive: true },
-        { id: 2, name: "POSTPONED", stageType: "POSTPONED", workflowActive: false },
-        { id: 3, name: "LOST", stageType: "LOST", workflowActive: false },
-        { id: 4, name: "WON", stageType: "WON", workflowActive: false },
-        { id: 5, name: "DROPPED", stageType: "LEGACY_DROPPED", workflowActive: false },
+        { id: 1, name: "IN PROGRESS", stageType: "IN_PROGRESS", workflowActive: true, mainStage: true },
+        { id: 2, name: "POSTPONED", stageType: "POSTPONED", workflowActive: false, mainStage: true },
+        { id: 3, name: "LOST", stageType: "LOST", workflowActive: false, mainStage: true },
+        { id: 4, name: "WON", stageType: "WON", workflowActive: false, mainStage: true },
+        { id: 5, name: "DROPPED", stageType: "LEGACY_DROPPED", workflowActive: false, mainStage: true },
     ]),
     getAllSalesStagesAdmin: vi.fn(),
     createSalesStage: vi.fn(),

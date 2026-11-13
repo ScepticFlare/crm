@@ -31,7 +31,8 @@ export default function EditOpportunity() {
         title: "",
         productValue: "",
         expectedClosingDate: "",
-        salesStage: "NEW",
+        // No default stage: NEW is retired, and a stage is never guessed.
+        salesStage: "",
         leadValidity: "VALID",
         subStatus: "",
         lostReason: "",
@@ -95,7 +96,11 @@ export default function EditOpportunity() {
                 // ?? keeps a stored 0; a missing value stays blank (required).
                 productValue: data.productValue ?? "",
                 expectedClosingDate: data.expectedClosingDate || "",
-                salesStage: data.salesStage?.name || "NEW",
+                // A missing stage stays blank, so the required Sales Stage
+                // field must be chosen (one of the five main stages) before
+                // saving - never silently defaulted (the backend also rejects
+                // a blank stage).
+                salesStage: data.salesStage?.name || "",
                 leadValidity: data.leadValidity || "VALID",
                 subStatus: data.subStatus || "",
                 lostReason: data.lostReason || "",

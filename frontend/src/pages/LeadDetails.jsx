@@ -10,6 +10,7 @@ import DetailHeader from "../components/detail/DetailHeader";
 import LeadActivityHistory from "../components/detail/LeadActivityHistory";
 import DeleteModal from "../components/DeleteModal";
 import EmailComposerModal from "../components/email/EmailComposerModal";
+import WhatsAppConsentPanel from "../components/whatsapp/WhatsAppConsentPanel";
 
 import { getLeadById, deleteLead, getLeadDeleteImpact } from "../services/leadService";
 import { describeDeleteImpact } from "../utils/deleteImpact";
@@ -315,6 +316,8 @@ export default function LeadDetails() {
                         <DetailField label="Source" value={lead.leadSource?.name} />
 
                     </SectionCard>
+
+                    <WhatsAppConsentPanel leadId={lead.id} />
 
                     <SectionCard title="Assigned Employee">
 

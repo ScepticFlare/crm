@@ -14,6 +14,18 @@ export default function DropdownAddManage({
     // before; Sales Stage passes false for non-Admins (the backend also
     // rejects non-Admin stage changes).
     canAdd = true,
+    // Whether the dialog offers "Add New". Defaults to true (every existing
+    // dropdown unchanged). Sales Stage passes false: the five main stages
+    // are fixed, so the dialog only manages (renames) existing ones - the
+    // backend refuses to create a stage as well.
+    allowCreate = true,
+    // Whether an item's Activate / Deactivate button is shown. Defaults to
+    // every item (every existing dropdown unchanged). Sales Stage restricts
+    // it: the five main stages cannot be deactivated and a retired / custom
+    // stage can never be reactivated (the backend refuses both as well).
+    canToggle = () => true,
+    // Label shown after the current value when it is not among `options`.
+    fallbackSuffix = "(Inactive)",
     create,
     getAllIncludingInactive,
     deactivate,
@@ -195,7 +207,7 @@ export default function DropdownAddManage({
 
                     {showFallbackOption && (
                         <option value={value}>
-                            {fallbackLabel} (Inactive)
+                            {fallbackLabel} {fallbackSuffix}
                         </option>
                     )}
 
@@ -218,7 +230,7 @@ export default function DropdownAddManage({
                         className="btn btn-outline-primary text-nowrap"
                         onClick={openModal}
                     >
-                        + Add
+                        {allowCreate ? "+ Add" : "Manage"}
                     </button>
                 )}
 
@@ -232,6 +244,7 @@ export default function DropdownAddManage({
 
                 <Modal.Body>
 
+                    {allowCreate && (
                     <Form.Group className="mb-3">
 
                         <Form.Label>
@@ -259,12 +272,13 @@ export default function DropdownAddManage({
                         </div>
 
                     </Form.Group>
+                    )}
 
                     {isAdmin && (
 
                         <>
 
-                            <hr />
+                            {allowCreate && <hr />}
 
                             <Form.Label>
                                 Existing {title}s
@@ -342,13 +356,15 @@ export default function DropdownAddManage({
                                                         </Button>
                                                     )}
 
-                                                    <Button
-                                                        size="sm"
-                                                        variant={item.isActive ? "outline-danger" : "outline-success"}
-                                                        onClick={() => handleToggle(item)}
-                                                    >
-                                                        {item.isActive ? "Deactivate" : "Activate"}
-                                                    </Button>
+                                                    {canToggle(item) && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant={item.isActive ? "outline-danger" : "outline-success"}
+                                                            onClick={() => handleToggle(item)}
+                                                        >
+                                                            {item.isActive ? "Deactivate" : "Activate"}
+                                                        </Button>
+                                                    )}
 
                                                 </div>
 
